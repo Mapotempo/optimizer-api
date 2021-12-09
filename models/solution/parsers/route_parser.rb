@@ -29,7 +29,7 @@ module Parsers
       compute_total_time
       compute_route_waiting_times unless @route.stops.empty?
       compute_route_total_dimensions(matrix)
-      return unless ([:polylines, :encoded_polylines] & vrp.restitution_geometry).any? &&
+      return unless ([:polylines, :encoded_polylines] & vrp.configuration.restitution.geometry).any? &&
                     @route.stops.any?(&:service_id)
 
       route_data ||= route_info(vrp)
@@ -208,7 +208,7 @@ module Parsers
       unless segments.empty?
         info = vrp.router.compute_batch(OptimizerWrapper.config[:router][:url],
                                                      @route.vehicle.router_mode.to_sym, @route.vehicle.router_dimension,
-                                                     segments, vrp.restitution_geometry.include?(:encoded_polylines),
+                                                     segments, vrp.configuration.restitution.geometry.include?(:encoded_polylines),
                                                      @route.vehicle.router_options)
         raise RouterError.new('Route info cannot be received') unless info
       end

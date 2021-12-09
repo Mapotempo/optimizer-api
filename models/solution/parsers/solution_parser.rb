@@ -34,13 +34,13 @@ module Parsers
       compute_result_total_dimensions_and_round_route_stats(solution)
       solution.cost_info = solution.routes.map(&:cost_info).reduce(&:+) ||
                            Models::Solution::CostInfo.new({})
-      solution.configuration.geometry = vrp.restitution_geometry
-      solution.configuration.schedule_start_date = vrp.schedule_start_date
+      solution.configuration.geometry = vrp.configuration.restitution.geometry
+      solution.configuration.schedule_start_date = vrp.configuration.schedule&.start_date
 
       log "solution - unassigned rate: #{solution.unassigned.size} of (ser: #{vrp.visits} " \
           "(#{(solution.unassigned.size.to_f / vrp.visits * 100).round(1)}%)"
       used_vehicle_count = solution.routes.count{ |r| r.stops.any?(&:service_id) }
-      log "result - #{used_vehicle_count}/#{vrp.vehicles.size}(limit: #{vrp.resolution_vehicle_limit}) " \
+      log "result - #{used_vehicle_count}/#{vrp.vehicles.size}(limit: #{vrp.configuration.resolution.vehicle_limit}) " \
           "vehicles used: #{used_vehicle_count}"
       log "<---- parse_result elapsed: #{Time.now - tic_parse_result}sec", level: :debug
       solution

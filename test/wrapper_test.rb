@@ -2630,14 +2630,14 @@ class WrapperTest < Minitest::Test
   def test_work_day_entity_after_eventual_vehicle
     problem = VRP.lat_lon_periodic_two_vehicles
     problem[:configuration][:preprocessing][:partitions] = [{
-      method: 'balanced_kmeans',
+      technique: 'balanced_kmeans',
       metric: 'duration',
       entity: :work_day
     }]
     assert_empty OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem))
 
     problem[:configuration][:preprocessing][:partitions] << {
-      method: 'balanced_kmeans',
+      technique: 'balanced_kmeans',
       metric: 'duration',
       entity: :vehicle
     }
@@ -2686,7 +2686,7 @@ class WrapperTest < Minitest::Test
 
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
-    assert_equal vrp.resolution_several_solutions, solutions.size
+    assert_equal vrp.configuration.resolution.several_solutions, solutions.size
   end
 
   def test_add_unassigned
@@ -2748,15 +2748,15 @@ class WrapperTest < Minitest::Test
   def test_default_repetition
     [
       [VRP.periodic, nil, 1],
-      [VRP.periodic, [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 3],
-      [VRP.basic, [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 1],
+      [VRP.periodic, [{ technique: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 3],
+      [VRP.basic, [{ technique: 'balanced_kmeans', metric: 'duration', entity: :vehicle }], 1],
       [VRP.basic, nil, 1]
     ].each{ |problem_set|
       vrp, partition, expected_repetitions = problem_set
 
       solve_call = 0
       vrp = TestHelper.create(vrp)
-      vrp.preprocessing_partitions = partition
+      vrp.configuration.preprocessing.partitions = partition
       OptimizerWrapper.stub(:solve, lambda { |_vrp, _job, _block|
         solve_call += 1
         Models::Solution.new(unassigned: vrp.services.map{ |service| Models::Solution::Stop.new(service) })
@@ -2764,7 +2764,7 @@ class WrapperTest < Minitest::Test
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
       end
       assert_equal expected_repetitions, solve_call,
-                   "#{expected_repetitions} repetitions expected, with#{vrp.preprocessing_partitions ? '' : 'no'} " \
+                   "#{expected_repetitions} repetitions expected, with#{vrp.configuration.preprocessing.partitions ? '' : 'no'} " \
                    "partitions and #{vrp.schedule? ? '' : 'no'} periodic"
     }
   end
@@ -2810,8 +2810,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_lapse_with_unavailable_work_days
-    vrp = Marshal.load(File.binread('test/fixtures/check_lapse_with_unav_days_vrp.bindump')) # rubocop: disable Security/MarshalLoad
-
+    vrp = TestHelper.load_vrp(self, fixture_file: 'check_lapse_with_unav_days_vrp')
     refute vrp.can_affect_all_visits?(vrp.services.find{ |s| s.visits_number == 12 })
   end
 
@@ -2939,8 +2938,9 @@ class WrapperTest < Minitest::Test
       [['vehicle_2'], ['service_1', 'service_6']],
     ]
     assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
-    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
-    assert_equal 0, (split_vrps.count{ |s| s.resolution_duration.zero? })
+    assert_in_delta split_vrps.sum{ |s| s.configuration.resolution.duration },
+                    vrp.configuration.resolution.duration, split_vrps.size
+    assert_equal 0, (split_vrps.count{ |s| s.configuration.resolution.duration.zero? })
 
     expected_relations = problem[:relations].map{ |r| r[:linked_ids] }.sort
     actual_relation = split_vrps.map{ |svrp| svrp.relations.flat_map(&:linked_ids) }.sort
@@ -2958,33 +2958,42 @@ class WrapperTest < Minitest::Test
       [['vehicle_2'], ['service_1', 'service_6']],
     ]
     assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
-    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
-    assert_equal 0, (split_vrps.count{ |s| s.resolution_duration.zero? })
+    assert_in_delta split_vrps.sum{ |s_v| s_v.configuration.resolution.duration },
+                    vrp.configuration.resolution.duration, split_vrps.size
+    assert_equal 0, (split_vrps.count{ |s| s.configuration.resolution.duration.zero? })
 
     # add services that can not be served by any vehicle (different configurations)
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
-    vrp.services << Models::Service.create(id: 'fake_service_1', skills: ['fake_skill1'], activity: { point: vrp.points.first })
-    vrp.services << Models::Service.create(id: 'fake_service_2', skills: ['fake_skill1'], activity: { point: vrp.points.first })
+    vrp.services << Models::Service.create(id: 'fake_service_1', skills: ['fake_skill1'],
+                                           activity: { point: vrp.points.first })
+    vrp.services << Models::Service.create(id: 'fake_service_2', skills: ['fake_skill1'],
+                                           activity: { point: vrp.points.first })
     split_vrps = OptimizerWrapper.split_independent_vrp(vrp)
-    assert_equal 4, split_vrps.size, 'split_independent_vrp function does not generate expected number of split_vrps'
+    assert_equal 4, split_vrps.size,
+                 'split_independent_vrp function does not generate expected number of split_vrps'
     expected_split.unshift [[], ['fake_service_1', 'fake_service_2']]
     assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
-    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
-    assert_equal 1, (split_vrps.count{ |s| s.resolution_duration.zero? })
+    assert_in_delta split_vrps.sum{ |s_v| s_v.configuration.resolution.duration },
+                    vrp.configuration.resolution.duration, split_vrps.size
+    assert_equal 1, (split_vrps.count{ |s| s.configuration.resolution.duration.zero? })
 
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
-    vrp.services << Models::Service.create(id: 'fake_service_1', skills: ['fake_skill1'], activity: { point: vrp.points.first })
-    vrp.services << Models::Service.create(id: 'fake_service_3', skills: ['fake_skill2'], activity: { point: vrp.points.first })
+    vrp.services << Models::Service.create(id: 'fake_service_1', skills: ['fake_skill1'],
+                                           activity: { point: vrp.points.first })
+    vrp.services << Models::Service.create(id: 'fake_service_3', skills: ['fake_skill2'],
+                                           activity: { point: vrp.points.first })
     split_vrps = OptimizerWrapper.split_independent_vrp(vrp)
-    assert_equal 5, split_vrps.size, 'split_independent_vrp function does not generate expected number of split_vrps'
+    assert_equal 5, split_vrps.size,
+                 'split_independent_vrp function does not generate expected number of split_vrps'
     expected_split.shift
     expected_split.unshift [[], ['fake_service_3']]
     expected_split.unshift [[], ['fake_service_1']]
     assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
-    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
-    assert_equal 2, (split_vrps.count{ |s| s.resolution_duration.zero? })
+    assert_in_delta split_vrps.sum{ |s_v| s_v.configuration.resolution.duration },
+                    vrp.configuration.resolution.duration, split_vrps.size
+    assert_equal 2, (split_vrps.count{ |s| s.configuration.resolution.duration.zero? })
 
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
@@ -2996,8 +3005,9 @@ class WrapperTest < Minitest::Test
       [['vehicle_2'], ['service_1', 'service_6']],
     ]
     assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
-    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
-    assert_equal 0, (split_vrps.count{ |s| s.resolution_duration.zero? })
+    assert_in_delta split_vrps.sum{ |s_v| s_v.configuration.resolution.duration },
+                    vrp.configuration.resolution.duration, split_vrps.size
+    assert_equal 0, (split_vrps.count{ |s| s.configuration.resolution.duration.zero? })
   end
 
   def test_split_independent_with_trip_relation
@@ -3009,10 +3019,10 @@ class WrapperTest < Minitest::Test
     }]
     vrp = TestHelper.create(problem)
 
-    vrp.matrices = nil
-    services_vrps = OptimizerWrapper.split_independent_vrp(vrp)
-    assert_equal 1, services_vrps.size, 'split_independent_vrp function does not generate expected number of services_vrps'
-    assert_equal vrp.resolution_duration, services_vrps.sum(&:resolution_duration)
+    split_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 1, split_vrps.size, 'split_independent_vrp function does not generate expected number of split_vrps'
+    assert_equal vrp.configuration.resolution.duration,
+                 (split_vrps.sum{ |s_v| s_v.configuration.resolution.duration })
   end
 
   def test_split_independent_skills_with_trip_relation
@@ -3051,9 +3061,9 @@ class WrapperTest < Minitest::Test
     [['periodic', false], ['savings', true]].each{ |parameters|
       strategy, solver = parameters
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia2')
-      vrp.preprocessing_first_solution_strategy = [strategy]
-      vrp.resolution_duration = 6000
-      vrp.resolution_solver = solver
+      vrp.configuration.preprocessing.first_solution_strategy = [strategy]
+      vrp.configuration.resolution.duration = 6000
+      vrp.configuration.resolution.solver = solver
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       refute_empty solutions[0].unassigned
       assert(solutions[0].unassigned.all?(&:id))
@@ -3116,7 +3126,7 @@ class WrapperTest < Minitest::Test
 
     vrp = TestHelper.create(VRP.periodic)
     vrp.services = []
-    expected_days = vrp.schedule_range_indices[:end] - vrp.schedule_range_indices[:start] + 1
+    expected_days = vrp.configuration.schedule.range_indices[:end] - vrp.configuration.schedule.range_indices[:start] + 1
     nb_vehicles = vrp.vehicles.size
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal expected_days * nb_vehicles, solutions[0].routes.size
@@ -3308,8 +3318,8 @@ class WrapperTest < Minitest::Test
     # solve WITHOUT simplification but from the last solution with evaluate_only
     solution_wo_simplification = Wrappers::Wrapper.stub_any_instance(:simplify_vehicle_pause, proc{ nil }) do
       vrp = TestHelper.load_vrp(self, fixture_file: 'problem_w_pause_that_can_be_simplified')
-      vrp.resolution_evaluate_only = true
-      vrp.preprocessing_first_solution_strategy = nil
+      vrp.configuration.resolution.evaluate_only = true
+      vrp.configuration.preprocessing.first_solution_strategy = nil
       vrp.routes = solution_w_simplification.routes.collect{ |r|
         next if r.stops.none?(&:service_id)
 
@@ -3339,8 +3349,8 @@ class WrapperTest < Minitest::Test
 
     # solve WITH simplification but from the last solution with evaluate_only
     vrp = TestHelper.load_vrp(self, fixture_file: 'problem_w_pause_that_can_be_simplified')
-    vrp.resolution_evaluate_only = true
-    vrp.preprocessing_first_solution_strategy = nil
+    vrp.configuration.resolution.evaluate_only = true
+    vrp.configuration.preprocessing.first_solution_strategy = nil
     vrp.routes = solution_wo_simplification.routes.collect{ |r|
       next if r.stops.none?(&:service_id)
 
@@ -3525,12 +3535,12 @@ class WrapperTest < Minitest::Test
     ]
     vrp = TestHelper.create(vrp)
 
-    solutions[0] = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
     assert_empty solutions[0].unassigned, 'There should be no unsigned services'
-    assert_equal 1, solutions[0].routes.count{ |r| r.steps.any?{ |a| a.service_id } }, 'All services must be assigned to one vehicle'
+    assert_equal 1, solutions[0].routes.count{ |r| r.stops.any?{ |a| a.service_id } }, 'All services must be assigned to one vehicle'
 
-    planned_order = solutions[0].routes[0].steps.map{ |a| a.service_id }.compact
+    planned_order = solutions[0].routes[0].stops.map(&:service_id).compact
     feasible_orders = [%w[service_1 service_2 service_3], %w[service_2 service_1 service_3]]
     assert_includes feasible_orders, planned_order, 'Complex shipment relation is violated'
   end
@@ -3560,7 +3570,7 @@ class WrapperTest < Minitest::Test
     vrp.services[0].first_possible_days = [3]
     vrp.services[0].last_possible_days = [0]
 
-    vrp.services[1].first_possible_days = [vrp.schedule_range_indices[:end] + 1]
+    vrp.services[1].first_possible_days = [vrp.configuration.schedule.range_indices[:end] + 1]
 
     vrp.services[2].last_possible_days = [-1]
 
@@ -3571,7 +3581,7 @@ class WrapperTest < Minitest::Test
 
   def test_possible_days_consistency_regarding_other_visits_possible_days
     vrp = TestHelper.create(VRP.lat_lon_periodic_two_vehicles)
-    vrp.schedule_range_indices[:end] = 100
+    vrp.configuration.schedule.range_indices[:end] = 100
     vrp.services.each{ |s| s.visits_number = 3 }
     # this one should not be rejected
     vrp.services[0].first_possible_days = [0, 1, 0]

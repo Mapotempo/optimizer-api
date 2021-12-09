@@ -155,7 +155,7 @@ class Numeric
   #
   # ndigits: the number of decimal places (when nsteps = 0)
   #
-  # nsteps: the number of stops between val.round(ndigits) and val.round(ndigits) + 1/10**ndigits
+  # nsteps: the number of steps between val.round(ndigits) and val.round(ndigits) + 1/10**ndigits
   #
   # For example,
   # array = [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]
@@ -166,15 +166,15 @@ class Numeric
   #
   # With nsteps the number of uniq elements between two decimals can be controlled:
   # array.collect{ |val| val.round_with_steps(1, 0) }.uniq      :=>     [0.1, 0.2]                                                         # same with round(1)
-  # array.collect{ |val| val.round_with_steps(1, 1) }.uniq      :=>     [0.1, 0.15, 0.2]                                                   # one extra stop in between
-  # array.collect{ |val| val.round_with_steps(1, 2) }.uniq      :=>     [0.1, 0.13, 0.17, 0.2]                                             # two extra stop in between
+  # array.collect{ |val| val.round_with_steps(1, 1) }.uniq      :=>     [0.1, 0.15, 0.2]                                                   # one extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 2) }.uniq      :=>     [0.1, 0.13, 0.17, 0.2]                                             # two extra step in between
   # ...
-  # array.collect{ |val| val.round_with_steps(1, 8) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2]         # eigth extra stop in between
+  # array.collect{ |val| val.round_with_steps(1, 8) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2]         # eigth extra step in between
   # array.collect{ |val| val.round_with_steps(1, 9) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]   # same with round(2)
   #
   # Theoretically, val.round_with_steps(ndigits, nsteps) is
   # equivalent to  val.round_to_multiple_of(1.0 / (nsteps + 1) / 10**ndigits )
   def round_with_steps(ndigits, nsteps = 0)
-    self.round_to_multiple_of(1.fdiv((nsteps + 1) * 10**ndigits)).round(ndigits + 1) # same as ((self * (nstops + 1.0)).round(ndigits) / (nstops + 1.0)).round(ndigits + 1)
+    self.round_to_multiple_of(1.fdiv((nsteps + 1) * 10**ndigits)).round(ndigits + 1) # same as ((self * (nsteps + 1.0)).round(ndigits) / (nsteps + 1.0)).round(ndigits + 1)
   end
 end

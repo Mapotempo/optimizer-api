@@ -44,10 +44,9 @@ module Interpreters
     def self.split_clusters(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
 
-      if vrp.preprocessing_partitions&.any?
+      if vrp.configuration.preprocessing.partitions&.any?
         splited_service_vrps = generate_split_vrps(service_vrp, job, block)
-
-        OutputHelper::Clustering.generate_files(splited_service_vrps, vrp.preprocessing_partitions.size == 2, job) if OptimizerWrapper.config[:debug][:output_clusters] && service_vrp.size < splited_service_vrps.size
+        OutputHelper::Clustering.generate_files(splited_service_vrps, vrp.configuration.preprocessing.partitions.size == 2, job) if OptimizerWrapper.config[:debug][:output_clusters] && service_vrp.size < splited_service_vrps.size
 
         split_solutions = splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
           cluster_ref = i + 1
@@ -91,20 +90,19 @@ module Interpreters
     def self.generate_split_vrps(service_vrp, _job = nil, block = nil)
       log '--> generate_split_vrps (clustering by partition)'
       vrp = service_vrp[:vrp]
-      if vrp.preprocessing_partitions && !vrp.preprocessing_partitions.empty?
+      if vrp.configuration.preprocessing.partitions && !vrp.configuration.preprocessing.partitions.empty?
         current_service_vrps = [service_vrp]
-        partitions = vrp.preprocessing_partitions
-        vrp.preprocessing_partitions = []
+        partitions = vrp.configuration.preprocessing.partitions
+        vrp.configuration.preprocessing.partitions = []
         partitions.each_with_index{ |partition, partition_index|
           cut_symbol = (partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] }) ? partition[:metric] : :duration
-
-          case partition[:method]
+          case partition[:technique]
           when 'balanced_kmeans'
             generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
               block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
 
               # TODO : global variable to know if work_day entity
-              s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].schedule_range_indices, s_v[:vrp].vehicles, partition[:entity])
+              s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices, s_v[:vrp].vehicles, partition[:entity])
               options = { cut_symbol: cut_symbol, entity: partition[:entity] }
               options[:restarts] = partition[:restarts] if partition[:restarts]
               split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options, &block)
@@ -113,25 +111,25 @@ module Interpreters
           when 'hierarchical_tree'
             generated_service_vrps = current_service_vrps.collect{ |s_v|
               current_vrp = s_v[:vrp]
-              current_vrp.vehicles = list_vehicles(s_v[:vrp].schedule_range_indices, [current_vrp.vehicles.first], partition[:entity])
+              current_vrp.vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices, [current_vrp.vehicles.first], partition[:entity])
               split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol: cut_symbol, entity: partition[:entity])
             }
             current_service_vrps = generated_service_vrps.flatten
           else
-            raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{vrp.preprocessing_partition_method}"
+            raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{vrp.configuration.preprocessing.partition_technique}"
           end
         }
         current_service_vrps
-      elsif vrp.preprocessing_partition_method
-        cut_symbol = (vrp.preprocessing_partition_metric == :duration || vrp.preprocessing_partition_metric == :visits ||
-          vrp.units.any?{ |unit| unit.id.to_sym == vrp.preprocessing_partition_metric }) ? vrp.preprocessing_partition_metric : :duration
-        case vrp.preprocessing_partition_method
+      elsif vrp.configuration.preprocessing.partition_technique
+        cut_symbol = (vrp.configuration.preprocessing.partition_metric == :duration || vrp.configuration.preprocessing.partition_metric == :visits ||
+          vrp.units.any?{ |unit| unit.id.to_sym == vrp.configuration.preprocessing.partition_metric }) ? vrp.configuration.preprocessing.partition_metric : :duration
+        case vrp.configuration.preprocessing.partition_technique
         when 'balanced_kmeans'
           split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol: cut_symbol)
         when 'hierarchical_tree'
           split_hierarchical(service_vrp, vrp.vehicles.size, cut_symbol: cut_symbol)
         else
-          raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{vrp.preprocessing_partition_method}"
+          raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{vrp.configuration.preprocessing.partition_technique}"
         end
       end
     end
@@ -142,10 +140,10 @@ module Interpreters
         empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
 
         !vrp.schedule? &&
-          vrp.preprocessing_max_split_size &&
+          vrp.configuration.preprocessing.max_split_size &&
           vrp.vehicles.size > 1 &&
-          (vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit > 1) &&
-          (vrp.services.size - empties_or_fills.size) > vrp.preprocessing_max_split_size
+          (vrp.configuration.resolution.vehicle_limit.nil? || vrp.configuration.resolution.vehicle_limit > 1) &&
+          (vrp.services.size - empties_or_fills.size) > vrp.configuration.preprocessing.max_split_size
       else
         ss_data = service_vrp[:split_solve_data]
         return false if ss_data[:cannot_split_further]
@@ -161,7 +159,7 @@ module Interpreters
         current_vehicle_ids.size > 1 && (ss_data[:current_vehicle_limit] || Helper.fixnum_max) > 1 &&
           ss_data[:current_vehicles].sum{ |vehicle|
             ss_data[:service_vehicle_assignments][vehicle.id].size
-          } > vrp.preprocessing_max_split_size
+          } > vrp.configuration.preprocessing.max_split_size
       end
     end
 
@@ -187,11 +185,11 @@ module Interpreters
       service_vrp[:split_level] = 0
       service_vrp[:split_solve_data] = {
         current_vehicles: vrp.vehicles.map(&:itself), # new array but original objects
-        current_vehicle_limit: vrp.resolution_vehicle_limit,
+        current_vehicle_limit: vrp.configuration.resolution.vehicle_limit,
         vehicle_has_complete_matrix: vrp.vehicles.map{ |v| [v.id, !v.matrix_id.blank?] }.to_h,
         transferred_empties_or_fills: empties_or_fills.map(&:itself), # new array but original objects
         transferred_vehicles: [],
-        transferred_vehicle_limit: vrp.resolution_vehicle_limit && 0,
+        transferred_vehicle_limit: vrp.configuration.resolution.vehicle_limit && 0,
         transferred_time_limit: 0.0,
         service_vehicle_assignments: vrp.vehicles.map.with_index{ |v, i| [v.id, split_by_vehicle[i]] }.to_h,
         original_vrp: vrp,
@@ -295,7 +293,7 @@ module Interpreters
       ss_data = split_solve_data
       o_vrp = ss_data[:original_vrp]
 
-      sub_vrp = ::Models::Vrp.create({}, false)
+      sub_vrp = ::Models::Vrp.create({}, delete: false)
 
       # Select the vehicles and services belonging to this sub-problem from the service_vehicle_assignments
       # transfer a vehicle with a forcing linked relation only if all of its linked vehicles can be transferred as well
@@ -322,13 +320,13 @@ module Interpreters
       sub_vrp.zones = o_vrp.zones
       sub_vrp.subtours = o_vrp.subtours
 
-      sub_vrp.configuration = Oj.load(Oj.dump(o_vrp.config)) # time and other limits are correct below
+      sub_vrp.configuration = Oj.load(Oj.dump(o_vrp.configuration)) # time and other limits are correct below
       # split the limits
-      sub_vrp.resolution_vehicle_limit = ss_data[:current_vehicle_limit] + ss_data[:transferred_vehicle_limit] if ss_data[:current_vehicle_limit]
+      sub_vrp.configuration.resolution.vehicle_limit = ss_data[:current_vehicle_limit] + ss_data[:transferred_vehicle_limit] if ss_data[:current_vehicle_limit]
       ratio = sub_vrp.services.size.to_f / o_vrp.services.size
-      sub_vrp.resolution_duration = (o_vrp.resolution_duration * ratio + ss_data[:transferred_time_limit]).ceil if o_vrp.resolution_duration
-      sub_vrp.resolution_minimum_duration = (o_vrp.resolution_minimum_duration || o_vrp.resolution_initial_time_out)&.*(ratio)&.ceil
-      sub_vrp.resolution_iterations_without_improvment = o_vrp.resolution_iterations_without_improvment&.*(ratio)&.ceil
+      sub_vrp.configuration.resolution.duration = (o_vrp.configuration.resolution.duration * ratio + ss_data[:transferred_time_limit]).ceil if o_vrp.configuration.resolution.duration
+      sub_vrp.configuration.resolution.minimum_duration = o_vrp.configuration.resolution.minimum_duration&.*(ratio)&.ceil
+      sub_vrp.configuration.resolution.iterations_without_improvment = o_vrp.configuration.resolution.iterations_without_improvment&.*(ratio)&.ceil
 
       sub_vrp.name = "#{o_vrp.name}_#{ss_data[:current_level]}_#{Digest::MD5.hexdigest(sub_vrp.vehicles.map(&:id).join)}"
 
@@ -421,7 +419,7 @@ module Interpreters
         vehicles: Array.new(2){ |i| { id: "v#{i}", router_mode: 'car' } },
         services: services,
         relations: relations
-      }, false)
+      }, delete: false)
 
       # To make sure that each point reflects the "weight" of all the points merged under this point
       # Due to the fact that visits_number is available only with scheduling, we set the visits_number
@@ -435,7 +433,7 @@ module Interpreters
       # This is the sub vrp representing the original vrp with "reduced" services
       # (see create_representative_vrp function above for more explanation)
       representative_vrp = split_solve_data[:representative_vrp]
-      r_sub_vrp = ::Models::Vrp.create({ name: 'representative_sub_vrp' }, false)
+      r_sub_vrp = ::Models::Vrp.create({ name: 'representative_sub_vrp' }, delete: false)
       r_sub_vrp.vehicles = representative_vrp.vehicles # 2-fake-vehicles
       r_sub_vrp.services = representative_vrp.services.select{ |representative_service|
         # the service which represent the services of vehicle `v`, has its id include `v.id`
@@ -499,7 +497,7 @@ module Interpreters
       # empty poorly populated routes only if necessary
       if solution.unassigned.empty? &&
          solution.routes.size == vrp.vehicles.size &&
-         (vrp.resolution_vehicle_limit.nil? || solution.routes.size == vrp.resolution_vehicle_limit)
+         (vrp.configuration.resolution.vehicle_limit.nil? || solution.routes.size == vrp.configuration.resolution.vehicle_limit)
         remove_poorly_populated_routes(vrp, solution, 0.1)
       end
 
@@ -530,9 +528,9 @@ module Interpreters
 
       # transfer unused resources
       if split_solve_data[:transferred_vehicle_limit]
-        split_solve_data[:transferred_vehicle_limit] = vrp.resolution_vehicle_limit - solution.routes.size
+        split_solve_data[:transferred_vehicle_limit] = vrp.configuration.resolution.vehicle_limit - solution.routes.size
       end
-      split_solve_data[:transferred_time_limit] = [vrp.resolution_duration.to_f - solution.elapsed, 0].max # to_f incase nil
+      split_solve_data[:transferred_time_limit] = [vrp.configuration.resolution.duration.to_f - solution.elapsed, 0].max # to_f incase nil
       nil
     end
 
@@ -618,7 +616,7 @@ module Interpreters
       Models.delete_all
       tic = Time.now
       vrp = service_vrp[:vrp]
-      vrp_hash = JSON.parse(vrp.to_json(config_only: true), symbolize_names: true)
+      vrp_hash = JSON.parse(vrp.empty_json, symbolize_names: true)
       sub_vrp = Models::Vrp.create(vrp_hash)
       sub_vehicles = []
       if available_vehicles_indices
@@ -643,6 +641,10 @@ module Interpreters
         sub_vrp.vehicles = vrp.vehicles
         sub_vrp.routes = vrp.routes
       end
+
+      matrix_ids = sub_vrp.vehicles.map(&:matrix_id).uniq
+      sub_vrp.matrices = vrp.matrices
+      sub_vrp.units = vrp.units
 
       sub_vrp.services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }
       rest_ids = sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.uniq
@@ -677,7 +679,12 @@ module Interpreters
 
       sub_vrp_hash = JSON.parse(sub_vrp.to_json, symbolize_names: true)
 
-      sub_vrp = Models::Vrp.create(sub_vrp_hash)
+      vehicle_ids = sub_vrp_hash[:vehicles]&.map{ |v| v[:id] } || []
+      sub_vrp_hash[:services].each{ |service|
+        service[:sticky_vehicle_ids]&.delete_if{ |stick| !vehicle_ids.include?(stick) }
+      }
+
+      sub_vrp = Models::Vrp.create(sub_vrp_hash, check: false)
 
       if !sub_vrp.matrices&.empty?
         matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
@@ -797,7 +804,7 @@ module Interpreters
 
             limits = { metric_limit: centroid_limits(vrp, nb_clusters, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
 
-            options[:centroid_indices] = vrp[:preprocessing_kmeans_centroids] if vrp[:preprocessing_kmeans_centroids]&.size == nb_clusters && options[:entity] != :work_day
+            options[:centroid_indices] = vrp.configuration.preprocessing.kmeans_centroids if vrp.configuration.preprocessing.kmeans_centroids&.size == nb_clusters && options[:entity] != :work_day
 
             if vrp.vehicles.any?{ |v| v.skills.count{ |skill| skill.is_a?(Array) && !skill.empty? } > 1 }
               raise OptimizerWrapper::UnsupportedProblemError.new(
@@ -923,12 +930,12 @@ module Interpreters
 
     def self.collect_cluster_data(vrp, nb_clusters)
       # TODO: due to historical dev, this function is in two pieces but
-      # it is possbile to do the same task in one stop. That is, instead of
+      # it is possbile to do the same task in one step. That is, instead of
       # collecting vehicles then eliminating to have nb_clusters vehicles,
       # we can create one with nb_clusters items directly.
 
-      r_start = vrp.schedule? ? vrp.schedule_range_indices[:start] : 0
-      r_end = vrp.schedule? ? vrp.schedule_range_indices[:end] : 0
+      r_start = vrp.schedule? ? vrp.configuration.schedule.range_indices[:start] : 0
+      r_end = vrp.schedule? ? vrp.configuration.schedule.range_indices[:end] : 0
 
       vehicles = vrp.vehicles.collect.with_index{ |vehicle, v_i|
         total_work_days = vrp.schedule? ? vehicle.total_work_days_in_range(r_start, r_end) : 1
@@ -1054,12 +1061,12 @@ module Interpreters
         decimal = if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty? # If there is a matrix, zip_dataitems will be called so no need to group by lat/lon aggresively
                     {
                       digits: 4, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
-                      stops: 5   # digits.stops 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m, 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
+                      steps: 5   # digits.steps 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m, 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
                     }
                   else
                     {
                       digits: 3, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
-                      stops: 8   # digits.stops 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
+                      steps: 8   # digits.steps 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
                     }
                   end
 
@@ -1090,8 +1097,8 @@ module Interpreters
         }]
         min_vehicle_capacities[:duration] = vrp.vehicles.collect{ |vehicle|
           if vehicle.sequence_timewindows.any?
-            schedule_start = vrp.schedule_range_indices[:start]
-            schedule_end = vrp.schedule_range_indices[:end]
+            schedule_start = vrp.configuration.schedule.range_indices[:start]
+            schedule_end = vrp.configuration.schedule.range_indices[:end]
             total_work_time_in_range = vehicle.total_work_time_in_range(schedule_start, schedule_end)
             total_work_days_in_range = vehicle.total_work_days_in_range(schedule_start, schedule_end)
             (total_work_time_in_range / total_work_days_in_range).round
@@ -1120,8 +1127,8 @@ module Interpreters
             end
 
           {
-            lat: location.lat.round_with_steps(decimal[:digits], decimal[:stops]),
-            lon: location.lon.round_with_steps(decimal[:digits], decimal[:stops]),
+            lat: location.lat.round_with_steps(decimal[:digits], decimal[:steps]),
+            lon: location.lon.round_with_steps(decimal[:digits], decimal[:steps]),
             v_id: s[:sticky_vehicle_ids].to_a |
               [vrp.routes.find{ |r| r.mission_ids.include? s.id }&.vehicle_id].compact, # split respects initial routes
             skills: s.skills.to_a.dup,
@@ -1412,9 +1419,9 @@ module Interpreters
       def centroid_limits(vrp, nb_clusters, cumulated_metrics, cut_symbol, entity)
         limits = []
 
-        if entity == :vehicle && vrp.schedule_range_indices
-          r_start = vrp.schedule_range_indices[:start]
-          r_end = vrp.schedule_range_indices[:end]
+        if entity == :vehicle && vrp.schedule? && vrp.configuration.schedule.range_indices
+          r_start = vrp.configuration.schedule.range_indices[:start]
+          r_end = vrp.configuration.schedule.range_indices[:end]
 
           total_work_time = vrp.total_work_time.to_f
 

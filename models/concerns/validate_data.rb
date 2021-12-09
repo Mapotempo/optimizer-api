@@ -26,8 +26,6 @@ module ValidateData
     hash[:relations] ||= []
     @hash = hash
 
-    ensure_no_conflicting_skills
-
     configuration = @hash[:configuration]
     schedule = configuration && configuration[:schedule]
     periodic_heuristic = schedule &&

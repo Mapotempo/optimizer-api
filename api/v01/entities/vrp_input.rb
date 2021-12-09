@@ -142,7 +142,10 @@ module VrpConfiguration
   end
 
   params :vrp_request_partition do
-    requires(:method, type: String, values: %w[hierarchical_tree balanced_kmeans], desc: 'Method used to partition')
+    optional(:method, type: String, values: %w[hierarchical_tree balanced_kmeans], desc: '[ DEPRECATED ] use technique instead')
+    optional(:technique, type: String, values: %w[hierarchical_tree balanced_kmeans], desc: 'Method used to partition')
+    exactly_one_of :method, :technique
+
     optional(:metric, type: Symbol, desc: 'Defines partition reference metric. Values should be either duration, visits or any unit you defined in units.')
     requires(:entity, type: Symbol, values: [:vehicle, :work_day], desc: 'Describes what the partition corresponds to. Available only if method in [balanced_kmeans hierarchical_tree].', coerce_with: ->(value) { value.to_sym })
     optional(:threshold, type: Integer, desc: 'Maximum size of partition. Available only if method in [iterative_kmean clique].')
@@ -173,7 +176,7 @@ module VrpConfiguration
     optional(:minimum_duration, type: Integer, allow_blank: false, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
     optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
     optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
-    optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use preprocessing_first_solution_strategy instead ]')
+    optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use configuration.preprocessing.first_solution_strategy instead ]')
     optional(:solver, type: Boolean, desc: 'Defines if solver should be called')
     optional(:minimize_days_worked, type: Boolean, default: false, desc: '(Periodic heuristic only) Starts filling earlier days of the period first and minimizes the total number of days worked. Available only if first_solution_strategy is \'periodic\'. Not available with ORtools.')
     optional(:same_point_day, type: Boolean, desc: '(Periodic heuristic only) Forces all services with the same point_id to take place on the same days. Available only if first_solution_strategy is \'periodic\'. Not available ORtools.')

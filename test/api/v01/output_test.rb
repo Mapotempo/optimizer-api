@@ -231,8 +231,8 @@ class Api::V01::OutputTest < Minitest::Test
     vrp = VRP.lat_lon_periodic
     vrp[:name] = name
     vrp[:configuration][:preprocessing][:partitions] = [
-      {method: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :vehicle},
-      {method: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :work_day}
+      {technique: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :vehicle},
+      {technique: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :work_day}
     ]
     vrp[:configuration][:resolution][:repetition] = 1
     vrp = TestHelper.create(vrp)

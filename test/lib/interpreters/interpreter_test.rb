@@ -1447,7 +1447,7 @@ class InterpreterTest < Minitest::Test
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
     vrp = TestHelper.create(problem)
-    refute_empty vrp.schedule_months_indices
+    refute_empty vrp.configuration.schedule.months_indices
     expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
   end
@@ -1472,7 +1472,7 @@ class InterpreterTest < Minitest::Test
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
     vrp = TestHelper.create(problem)
-    refute_empty vrp.schedule_months_indices
+    refute_empty vrp.configuration.schedule.months_indices
     expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
   end

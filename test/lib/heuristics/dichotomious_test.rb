@@ -22,7 +22,7 @@ class DichotomiousTest < Minitest::Test
     def test_dichotomious_approach
       vrp = TestHelper.load_vrp(self)
       # TODO: Remove it once the dicho contions are stabilized
-      vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance.
+      vrp.configuration.resolution.dicho_algorithm_service_limit = 457 # There are 458 services in the instance.
 
       t1 = Time.now
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -55,8 +55,8 @@ class DichotomiousTest < Minitest::Test
       end
 
       # Check elapsed time
-      min_dur = vrp.resolution_minimum_duration / 1000.0
-      max_dur = vrp.resolution_duration / 1000.0
+      min_dur = vrp.configuration.resolution.minimum_duration / 1000.0
+      max_dur = vrp.configuration.resolution.duration / 1000.0
 
       assert solutions[0].elapsed / 1000 < max_dur, # Should never be violated!
              "Time spent in optimization (#{solutions[0].elapsed / 1000}) is greater than " \
@@ -125,10 +125,10 @@ class DichotomiousTest < Minitest::Test
 
       problem = TestHelper.create(vrp)
 
-      problem.resolution_dicho_algorithm_vehicle_limit = 1
-      problem.resolution_dicho_division_vehicle_limit = 1
-      problem.resolution_dicho_algorithm_service_limit = 5
-      problem.resolution_dicho_division_service_limit = 5
+      problem.configuration.resolution.dicho_algorithm_vehicle_limit = 1
+      problem.configuration.resolution.dicho_division_vehicle_limit = 1
+      problem.configuration.resolution.dicho_algorithm_service_limit = 5
+      problem.configuration.resolution.dicho_division_service_limit = 5
 
       counter = 0
       Interpreters::Dichotomious.stub(:kmeans, lambda{ |vrpi, cut_symbol|
@@ -187,7 +187,7 @@ class DichotomiousTest < Minitest::Test
       vrp = TestHelper.create(problem)
       service_vrp = { vrp: vrp, service: :demo }
 
-      vrp.resolution_dicho_algorithm_vehicle_limit = 0
+      vrp.configuration.resolution.dicho_algorithm_vehicle_limit = 0
 
       refute Interpreters::Dichotomious.dichotomious_candidate?(service_vrp), 'no dicho if no location'
 
@@ -199,7 +199,7 @@ class DichotomiousTest < Minitest::Test
 
     def test_split_matrix
       vrp = TestHelper.load_vrp(self, fixture_file: 'dichotomious_approach')
-      vrp.resolution_dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
+      vrp.configuration.resolution.dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
       service_vrp = { vrp: vrp, service: :demo, dicho_level: 0 }
 
       services_vrps = Interpreters::Dichotomious.split(service_vrp)
@@ -234,8 +234,8 @@ class DichotomiousTest < Minitest::Test
 
       Interpreters::Dichotomious.stub(:dichotomious_candidate?, lambda{ |service_vrp|
         # modify limits so that the vrp will be dicho_split one and only one time
-        service_vrp[:vrp].resolution_dicho_division_service_limit = 5
-        service_vrp[:vrp].resolution_dicho_division_vehicle_limit = 1
+        service_vrp[:vrp].configuration.resolution.dicho_division_service_limit = 5
+        service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit = 1
         true
       }) do
         Interpreters::Dichotomious.stub(:transfer_unused_vehicles, lambda{ |service_vrp, result, sub_service_vrps|

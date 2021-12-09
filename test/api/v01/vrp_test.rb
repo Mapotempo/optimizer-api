@@ -166,7 +166,7 @@ class Api::V01::VrpTest < Minitest::Test
     OptimizerWrapper.stub(
       :wrapper_vrp,
       lambda { |_api_key, _services, vrp_in, _checksum|
-        assert_equal ['a', 'b'], vrp_in.preprocessing_first_solution_strategy
+        assert_equal ['a', 'b'], vrp_in.configuration.preprocessing.first_solution_strategy
         'job_id'
       }
     ) do
@@ -271,7 +271,7 @@ class Api::V01::VrpTest < Minitest::Test
     vrp2[:configuration][:preprocessing] = {
       max_split_size: 4,
       partitions: [
-        { method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }
+        { technique: 'balanced_kmeans', metric: 'duration', entity: :vehicle }
       ]
     }
 
@@ -365,15 +365,15 @@ class Api::V01::VrpTest < Minitest::Test
       OptimizerWrapper.stub(:define_main_process, lambda { |services_vrps, _job|
           case case_index
           when 0
-            assert_empty services_vrps.first[:vrp].restitution_geometry
+            assert_empty services_vrps.first[:vrp].configuration.restitution.geometry
           when 1 || 5 || 8
-            assert_equal %i[polylines partitions], services_vrps.first[:vrp].restitution_geometry
+            assert_equal %i[polylines partitions], services_vrps.first[:vrp].configuration.restitution.geometry
           when 2
-            assert_equal %i[encoded_polylines partitions], services_vrps.first[:vrp].restitution_geometry
+            assert_equal %i[encoded_polylines partitions], services_vrps.first[:vrp].configuration.restitution.geometry
           when 3 || 4
-            assert_equal %i[polylines], services_vrps.first[:vrp].restitution_geometry
+            assert_equal %i[polylines], services_vrps.first[:vrp].configuration.restitution.geometry
           when 7
-            assert_equal %i[partitions], services_vrps.first[:vrp].restitution_geometry
+            assert_equal %i[partitions], services_vrps.first[:vrp].configuration.restitution.geometry
           end
           []
         }

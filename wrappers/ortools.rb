@@ -25,7 +25,6 @@ module Wrappers
       super(hash)
       @exec_ortools = hash[:exec_ortools] || 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'
       @optimize_time = hash[:optimize_time]
-      @resolution_stable_iterations = hash[:optimize_time]
       @previous_result = nil
       @killed ||= nil
       @iterations_without_improvment ||= nil
@@ -485,21 +484,24 @@ module Wrappers
 
       correspondant = { 'path_cheapest_arc' => 0, 'global_cheapest_arc' => 1, 'local_cheapest_insertion' => 2, 'savings' => 3, 'parallel_cheapest_insertion' => 4, 'first_unbound' => 5, 'christofides' => 6 }
 
-      raise StandardError, "Inconsistent first solution strategy used internally: #{vrp.preprocessing_first_solution_strategy}" if vrp.preprocessing_first_solution_strategy.any? && correspondant[vrp.preprocessing_first_solution_strategy.first].nil?
+      raise StandardError, "Inconsistent first solution strategy used internally: #{vrp.configuration.preprocessing.first_solution_strategy}" if vrp.configuration.preprocessing.first_solution_strategy.any? && correspondant[vrp.configuration.preprocessing.first_solution_strategy.first].nil?
 
+      config = vrp.configuration
+      resolution = config.resolution
+      preprocessing = config.preprocessing
       cmd = [
               "#{@exec_ortools} ",
-              (vrp.resolution_duration || @optimize_time) && '-time_limit_in_ms ' + (vrp.resolution_duration || @optimize_time).round.to_s,
-              vrp.preprocessing_prefer_short_segment ? '-nearby' : nil,
-              (vrp.resolution_evaluate_only ? nil : (vrp.preprocessing_neighbourhood_size ? "-neighbourhood #{vrp.preprocessing_neighbourhood_size}" : nil)),
-              (vrp.resolution_iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (vrp.resolution_iterations_without_improvment || @iterations_without_improvment).to_s,
-              (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out) && '-minimum_duration ' + (vrp.resolution_minimum_duration || vrp.resolution_initial_time_out).round.to_s,
-              (vrp.resolution_time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (vrp.resolution_time_out_multiplier || @time_out_multiplier).to_s,
-              vrp.resolution_init_duration ? "-init_duration #{vrp.resolution_init_duration.round}" : nil,
-              (vrp.resolution_vehicle_limit && vrp.resolution_vehicle_limit < problem.vehicles.size) ? "-vehicle_limit #{vrp.resolution_vehicle_limit}" : nil,
-              vrp.preprocessing_first_solution_strategy.any? ? "-solver_parameter #{correspondant[vrp.preprocessing_first_solution_strategy.first]}" : nil,
-              (vrp.resolution_evaluate_only || vrp.resolution_batch_heuristic) ? '-only_first_solution' : nil,
-              vrp.restitution_intermediate_solutions ? '-intermediate_solutions' : nil,
+              (resolution.duration || @optimize_time) && '-time_limit_in_ms ' + (resolution.duration || @optimize_time).round.to_s,
+              preprocessing.prefer_short_segment ? '-nearby' : nil,
+              (resolution.evaluate_only ? nil : (preprocessing.neighbourhood_size ? "-neighbourhood #{preprocessing.neighbourhood_size}" : nil)),
+              (resolution.iterations_without_improvment || @iterations_without_improvment) && '-no_solution_improvement_limit ' + (resolution.iterations_without_improvment || @iterations_without_improvment).to_s,
+              (resolution.minimum_duration) && '-minimum_duration ' + (resolution.minimum_duration).round.to_s,
+              (resolution.time_out_multiplier || @time_out_multiplier) && '-time_out_multiplier ' + (resolution.time_out_multiplier || @time_out_multiplier).to_s,
+              resolution.init_duration ? "-init_duration #{resolution.init_duration.round}" : nil,
+              (resolution.vehicle_limit && resolution.vehicle_limit < problem.vehicles.size) ? "-vehicle_limit #{resolution.vehicle_limit}" : nil,
+              preprocessing.first_solution_strategy.any? ? "-solver_parameter #{correspondant[preprocessing.first_solution_strategy.first]}" : nil,
+              (resolution.evaluate_only || resolution.batch_heuristic) ? '-only_first_solution' : nil,
+              config.restitution.intermediate_solutions ? '-intermediate_solutions' : nil,
               "-instance_file '#{input.path}'",
               "-solution_file '#{output.path}'"
             ].compact.join(' ')
@@ -542,7 +544,7 @@ module Wrappers
         next unless r && t # if there is no iteration and time then there is nothing to do
 
         begin
-          @previous_result = if vrp.restitution_intermediate_solutions && s && !/Final Iteration :/.match(line)
+          @previous_result = if vrp.configuration.restitution.intermediate_solutions && s && !/Final Iteration :/.match(line)
                                parse_output(vrp, output)
                              end
           block&.call(self, iterations, nil, nil, cost, time, @previous_result) # if @previous_result=nil, it will not override the existing solution

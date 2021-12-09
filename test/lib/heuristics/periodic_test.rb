@@ -26,7 +26,7 @@ class HeuristicTest < Minitest::Test
 
       periodic = Interpreters::PeriodicVisits.new(vrp)
       periodic.expand(vrp, nil)
-      assert vrp.preprocessing_heuristic_result
+      assert vrp.configuration.preprocessing.heuristic_result
     end
 
     def test_not_allowing_partial_affectation
@@ -652,7 +652,7 @@ class HeuristicTest < Minitest::Test
 
       vrp = TestHelper.create(VRP.periodic_seq_timewindows)
       vrp.vehicles.first.sequence_timewindows.delete_if{ |tw| tw.day_index < 2 }
-      vrp.schedule_range_indices[:end] = 3
+      vrp.configuration.schedule.range_indices[:end] = 3
       # 1 vehicle, 2 days available / 4 days in schedule
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 1 * 2, solutions[0].routes.size
@@ -662,7 +662,7 @@ class HeuristicTest < Minitest::Test
       solutions = Wrappers::PeriodicHeuristic.stub_any_instance(
         :compute_initial_solution,
         lambda { |vrp_in|
-          vrp.preprocessing_heuristic_result = vrp_in.empty_solution(:heuristic)
+          vrp.configuration.preprocessing.heuristic_result = vrp_in.empty_solution(:heuristic)
           return []
         }
       ) do

@@ -43,7 +43,7 @@ class HeuristicTest < Minitest::Test
 
     def test_instance_baleares2
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_minimize_days_worked = true
+      vrp.configuration.resolution.minimize_days_worked = true
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert solutions[0].unassigned.size <= 3
 
@@ -60,7 +60,7 @@ class HeuristicTest < Minitest::Test
       assert(solutions[0].unassigned.any?{ |service| service.service_id.include?('3359') })
 
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_minimize_days_worked = true
+      vrp.configuration.resolution.minimize_days_worked = true
       vrp.services.find{ |s| s.id == '3359' }.priority = 0
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert(solutions[0].unassigned.none?{ |service| service.service_id.include?('3359') })
@@ -69,7 +69,7 @@ class HeuristicTest < Minitest::Test
 
     def test_instance_andalucia2
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_minimize_days_worked = true
+      vrp.configuration.resolution.minimize_days_worked = true
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       # voluntarily equal to watch evolution of periodic algorithm performance :
       assert_equal 25, solutions[0].unassigned.size, 'Do not have the expected number of unassigned visits'
@@ -78,7 +78,7 @@ class HeuristicTest < Minitest::Test
 
     def test_instance_andalucia1_two_vehicles
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_minimize_days_worked = true
+      vrp.configuration.resolution.minimize_days_worked = true
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_empty solutions[0].unassigned
       check_quantities(vrp, solutions[0])
@@ -93,7 +93,7 @@ class HeuristicTest < Minitest::Test
 
     def test_vrp_allow_partial_assigment_false
       vrp = TestHelper.load_vrp(self)
-      vrp.preprocessing_partitions.each{ |p| p.restarts = 3 }
+      vrp.configuration.preprocessing.partitions.each{ |p| p.restarts = 3 }
       # make sure there will be unassigned visits
       vrp.vehicles.each{ |v| v.sequence_timewindows.each{ |tw| tw.end -= ((tw.end - tw.start) / 2.75).round } }
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -127,7 +127,7 @@ class HeuristicTest < Minitest::Test
 
     def test_minimum_stop_in_route
       vrp = TestHelper.load_vrps(self, fixture_file: 'performance_13vl')[25]
-      vrp.resolution_allow_partial_assignment = true
+      vrp.configuration.resolution.allow_partial_assignment = true
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},  Marshal.load(Marshal.dump(vrp)), nil)
       assert solutions[0].routes.any?{ |r| r.stops.size - 2 < 5 },
              'We expect at least one route with less than 5 services, this test is useless otherwise'
@@ -155,7 +155,7 @@ class HeuristicTest < Minitest::Test
       expected = vrps.sum(&:visits)
       seen = 0
       vrps.each{ |vrp|
-        vrp.preprocessing_partitions = nil
+        vrp.configuration.preprocessing.partitions = nil
         solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_visits << solutions[0].unassigned.size
         seen += solutions[0].unassigned.size + solutions[0].routes.sum{ |r| r.stops.count(&:service_id) }
@@ -169,7 +169,7 @@ class HeuristicTest < Minitest::Test
     def test_fill_days_and_post_processing
       # checks performance on instance calling post_processing
       vrp = TestHelper.load_vrp(self, fixture_file: 'periodic_with_post_process')
-      vrp.resolution_minimize_days_worked = true
+      vrp.configuration.resolution.minimize_days_worked = true
       found_uninserted_visits = nil
       Wrappers::PeriodicHeuristic.stub_any_instance(
         :compute_initial_solution,
@@ -198,7 +198,7 @@ class HeuristicTest < Minitest::Test
     def test_treatment_site
       # treatment site
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_minimize_days_worked = true
+      vrp.configuration.resolution.minimize_days_worked = true
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_empty solutions[0].unassigned
       assert_equal(262, solutions[0].routes.count{ |r|
@@ -235,7 +235,7 @@ class HeuristicTest < Minitest::Test
 
     def test_quality_with_minimum_stops_in_route
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_minimize_days_worked = true
+      vrp.configuration.resolution.minimize_days_worked = true
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_operator solutions[0].unassigned.size, :<=, 10
     end

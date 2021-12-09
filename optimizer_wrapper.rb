@@ -28,8 +28,8 @@ module OptimizerWrapper
 
     Filters.filter(vrp)
 
-    vrp.resolution_repetition ||=
-      if !vrp.preprocessing_partitions.empty? && vrp.periodic_heuristic?
+    vrp.configuration.resolution.repetition ||=
+      if !vrp.configuration.preprocessing.partitions.empty? && vrp.periodic_heuristic?
         config[:solve][:repetition]
       else
         1
@@ -57,7 +57,7 @@ module OptimizerWrapper
       raise UnsupportedProblemError.new('Cannot apply any of the solver services', inapplicable_services)
     elsif config[:solve][:synchronously] || (
             services_vrps.size == 1 &&
-            !vrp.preprocessing_cluster_threshold &&
+            !vrp.configuration.preprocessing.cluster_threshold &&
             config[:services][services_vrps[0][:service]].solve_synchronous?(vrp)
           )
       # The job seems easy enough to perform it with the server
@@ -77,9 +77,9 @@ module OptimizerWrapper
     log "--> define_main_process #{services_vrps.size} VRPs", level: :info
     log "activities: #{services_vrps.map{ |sv| sv[:vrp].services.size}}", level: :info
     log "vehicles: #{services_vrps.map{ |sv| sv[:vrp].vehicles.size }}", level: :info
-    log "resolution_vehicle_limit: #{services_vrps.map{ |sv| sv[:vrp].resolution_vehicle_limit }}", level: :info
-    log "min_durations: #{services_vrps.map{ |sv| sv[:vrp].resolution_minimum_duration&.round }}", level: :info
-    log "max_durations: #{services_vrps.map{ |sv| sv[:vrp].resolution_duration&.round }}", level: :info
+    log "configuration.resolution.vehicle_limit: #{services_vrps.map{ |sv| sv[:vrp].configuration.resolution.vehicle_limit }}", level: :info
+    log "min_durations: #{services_vrps.map{ |sv| sv[:vrp].configuration.resolution.minimum_duration&.round }}", level: :info
+    log "max_durations: #{services_vrps.map{ |sv| sv[:vrp].configuration.resolution.duration&.round }}", level: :info
     tic = Time.now
 
     expected_activity_count = services_vrps.collect{ |sv| sv[:vrp].visits }.sum
@@ -139,9 +139,9 @@ module OptimizerWrapper
     split_level = service_vrp[:split_level].to_i
     shipment_size = vrp.relations.count{ |r| r.type == :shipment }
     log "--> define_process VRP (service: #{vrp.services.size} including #{shipment_size} shipment relations, " \
-        "vehicle: #{vrp.vehicles.size}, v_limit: #{vrp.resolution_vehicle_limit}) " \
+        "vehicle: #{vrp.vehicles.size}, v_limit: #{vrp.configuration.resolution.vehicle_limit}) " \
         "with levels (dicho: #{dicho_level}, split: #{split_level})", level: :info
-    log "min_duration #{vrp.resolution_minimum_duration&.round} max_duration #{vrp.resolution_duration&.round}",
+    log "min_duration #{vrp.configuration.resolution.minimum_duration&.round} max_duration #{vrp.configuration.resolution.duration&.round}",
         level: :info
 
     tic = Time.now
@@ -155,7 +155,7 @@ module OptimizerWrapper
 
     check_solutions_consistency(expected_activity_count, [solution]) if service_vrp[:service] != :demo # demo solver returns a fixed solution
     log "<-- define_process levels (dicho: #{dicho_level}, split: #{split_level}) elapsed: #{(Time.now - tic).round(2)} sec", level: :info
-    solution.configuration.deprecated_headers = vrp.restitution_use_deprecated_csv_headers
+    solution.configuration.deprecated_headers = vrp.configuration.restitution.use_deprecated_csv_headers
     solution
   end
 
@@ -165,7 +165,7 @@ module OptimizerWrapper
     dicho_level = service_vrp[:dicho_level]
     shipment_size = vrp.relations.count{ |r| r.type == :shipment }
     log "--> optim_wrap::solve VRP (service: #{vrp.services.size} including #{shipment_size} shipment relations, " \
-        "vehicle: #{vrp.vehicles.size} v_limit: #{vrp.resolution_vehicle_limit}) with levels " \
+        "vehicle: #{vrp.vehicles.size} v_limit: #{vrp.configuration.resolution.vehicle_limit}) with levels " \
         "(dicho: #{service_vrp[:dicho_level]}, split: #{service_vrp[:split_level].to_i})", level: :debug
 
     tic = Time.now
@@ -202,12 +202,12 @@ module OptimizerWrapper
       if vrp.schedule?
         periodic = Interpreters::PeriodicVisits.new(vrp)
         vrp = periodic.expand(vrp, job, &block)
-        optim_solution = vrp.preprocessing_heuristic_result if vrp.periodic_heuristic?
+        optim_solution = vrp.configuration.preprocessing.heuristic_result if vrp.periodic_heuristic?
       end
 
-      if vrp.resolution_solver && !vrp.periodic_heuristic?
-        block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.preprocessing_cluster_threshold.to_f}) ", nil, nil, nil) if vrp.preprocessing_cluster_threshold.to_f.positive?
-        optim_solution = clique_cluster(vrp, vrp.preprocessing_cluster_threshold, vrp.preprocessing_force_cluster) { |cliqued_vrp|
+      if vrp.configuration.resolution.solver && !vrp.periodic_heuristic?
+        block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.configuration.preprocessing.cluster_threshold.to_f}) ", nil, nil, nil) if vrp.configuration.preprocessing.cluster_threshold.to_f.positive?
+        optim_solution = clique_cluster(vrp, vrp.configuration.preprocessing.cluster_threshold, vrp.configuration.preprocessing.force_cluster) { |cliqued_vrp|
           time_start = Time.now
 
           OptimizerWrapper.config[:services][service].simplify_constraints(cliqued_vrp)
@@ -239,13 +239,13 @@ module OptimizerWrapper
 
           if cliqued_solution.is_a?(Models::Solution)
             # cliqued_solution[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-            block&.call(nil, nil, nil, "process #{vrp.resolution_split_number}/#{vrp.resolution_total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(cliqued_solution.elapsed) / 1000).to_i}/" + "#{vrp.resolution_total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
+            block&.call(nil, nil, nil, "process #{vrp.configuration.resolution.split_number}/#{vrp.configuration.resolution.total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(cliqued_solution.elapsed) / 1000).to_i}/" + "#{vrp.configuration.resolution.total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
             cliqued_solution
           elsif cliqued_solution.status == :killed
             next
           elsif cliqued_solution.is_a?(String)
             raise RuntimeError, cliqued_solution
-          elsif (vrp.preprocessing_heuristic_result.nil? || vrp.preprocessing_heuristic_result.empty?) && !vrp.restitution_allow_empty_result
+          elsif (vrp.configuration.preprocessing.heuristic_result.nil? || vrp.configuration.preprocessing.heuristic_result.empty?) && !vrp.configuration.restitution.allow_empty_result
             puts cliqued_solution
             raise RuntimeError, 'No solution provided'
           end
@@ -259,13 +259,13 @@ module OptimizerWrapper
     if optim_solution # Job might have been killed
       Cleanse.cleanse(vrp, optim_solution)
       optim_solution.name = vrp.name
-      optim_solution.configuration.csv = vrp.restitution_csv
-      optim_solution.configuration.geometry = vrp.restitution_geometry
+      optim_solution.configuration.csv = vrp.configuration.restitution.csv
+      optim_solution.configuration.geometry = vrp.configuration.restitution.geometry
       optim_solution.unassigned += unfeasible_services.values.flatten
       optim_solution.parse(vrp)
 
-      if vrp.preprocessing_first_solution_strategy
-        optim_solution.heuristic_synthesis = vrp.preprocessing_heuristic_synthesis
+      if vrp.configuration.preprocessing.first_solution_strategy
+        optim_solution.heuristic_synthesis = vrp.configuration.preprocessing.heuristic_synthesis
       end
     else
       optim_solution = vrp.empty_solution(service, unfeasible_services.values)
@@ -352,12 +352,12 @@ module OptimizerWrapper
                                                               service_ids,
                                                               vehicle_indices)[:vrp]
     }
-    total_size = vrp.services.all?{ |service| service.sticky_vehicles.any? } ? vrp.vehicles.size :
+    total_size = vrp.services.all?{ |service| service.sticky_vehicle_ids.any? } ? vrp.vehicles.size :
      independent_vrps.collect{ |s_vrp| s_vrp.services.size * [1, s_vrp.vehicles.size].min }.sum
     independent_vrps.each{ |sub_vrp|
       # If one sub vrp has no vehicle or no service, duration can be zero.
       # We only split duration among sub_service_vrps that have at least one vehicle and one service.
-      this_sub_size = vrp.services.all?{ |service| service.sticky_vehicles.any? } ? sub_vrp.vehicles.size :
+      this_sub_size = vrp.services.all?{ |service| service.sticky_vehicle_ids.any? } ? sub_vrp.vehicles.size :
         sub_vrp.services.size * [1, sub_vrp.vehicles.size].min
       adjust_independent_duration(sub_vrp, this_sub_size, total_size)
     }
@@ -372,11 +372,11 @@ module OptimizerWrapper
 
   def self.adjust_independent_duration(vrp, this_sub_size, total_size)
     split_ratio = this_sub_size.to_f / total_size
-    vrp.resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
-    vrp.resolution_minimum_duration =
-      vrp.resolution_minimum_duration&.*(split_ratio)&.ceil
-    vrp.resolution_iterations_without_improvment =
-      vrp.resolution_iterations_without_improvment&.*(split_ratio)&.ceil
+    vrp.configuration.resolution.duration = vrp.configuration.resolution.duration&.*(split_ratio)&.ceil
+    vrp.configuration.resolution.minimum_duration =
+      vrp.configuration.resolution.minimum_duration&.*(split_ratio)&.ceil
+    vrp.configuration.resolution.iterations_without_improvment =
+      vrp.configuration.resolution.iterations_without_improvment&.*(split_ratio)&.ceil
     vrp
   end
 

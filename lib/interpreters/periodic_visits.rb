@@ -30,8 +30,8 @@ module Interpreters
         have_rest_day_index = vrp.rests.any?{ |rest| rest.timewindows.any?(&:day_index) }
         @have_day_index = have_services_day_index || have_vehicles_day_index || have_rest_day_index
 
-        @schedule_start = vrp.schedule_range_indices[:start]
-        @schedule_end = vrp.schedule_range_indices[:end]
+        @schedule_start = vrp.configuration.schedule.range_indices[:start]
+        @schedule_end = vrp.configuration.schedule.range_indices[:end]
 
         compute_possible_days(vrp)
       end
@@ -57,7 +57,7 @@ module Interpreters
       @periods.uniq!
       generate_relations_on_periodic_vehicles(vrp, vehicles_linking_relations)
 
-      if vrp.preprocessing_first_solution_strategy.to_a.first != 'periodic' && vrp.services.any?{ |service| service.visits_number > 1 }
+      if vrp.configuration.preprocessing.first_solution_strategy.to_a.first != 'periodic' && vrp.services.any?{ |service| service.visits_number > 1 }
         vrp.routes = generate_routes(vrp)
       end
 
@@ -207,7 +207,7 @@ module Interpreters
       new_vehicles = vrp.vehicles.collect{ |vehicle|
         @equivalent_vehicles[vehicle.id] = []
         @equivalent_vehicles[vehicle.original_id] = []
-        vehicles = (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |vehicle_day_index|
+        vehicles = (vrp.configuration.schedule.range_indices[:start]..vrp.configuration.schedule.range_indices[:end]).collect{ |vehicle_day_index|
           next if vehicle.unavailable_days.include?(vehicle_day_index)
 
           timewindows = [vehicle.timewindow || vehicle.sequence_timewindows].flatten
@@ -475,7 +475,7 @@ module Interpreters
           schedule_week_indices = collect_weeks_in_schedule
           cut_linking_vehicle_relation_by_period(relation, schedule_week_indices, :vehicle_group_duration)
         when :vehicle_group_duration_on_months
-          cut_linking_vehicle_relation_by_period(relation, vrp.schedule_months_indices, :vehicle_group_duration)
+          cut_linking_vehicle_relation_by_period(relation, vrp.configuration.schedule.months_indices, :vehicle_group_duration)
         when :vehicle_trips
           # we want want vehicle_trip relation per day :
           all_days = (@schedule_start..@schedule_end).to_a

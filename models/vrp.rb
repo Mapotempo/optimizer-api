@@ -25,115 +25,44 @@ require './models/concerns/periodic_service'
 
 module Models
   class Vrp < Base
-    include IndependentAsJson
     include VrpAsJson
+
     include DistanceMatrix
     include ValidateData
     include ExpandData
     include PeriodicService
 
     field :name, default: nil
-    field :preprocessing_max_split_size, default: nil
-    field :preprocessing_partition_method, default: nil
-    field :preprocessing_partition_metric, default: nil
-    field :preprocessing_kmeans_centroids, default: nil
-    field :preprocessing_cluster_threshold, default: nil
-    field :preprocessing_force_cluster, default: false
-    field :preprocessing_prefer_short_segment, default: false
-    field :preprocessing_neighbourhood_size, default: nil
-    field :preprocessing_heuristic_result, default: {}
-    field :preprocessing_heuristic_synthesis, default: nil
-    field :preprocessing_first_solution_strategy, default: []
-    has_many :preprocessing_partitions, class_name: 'Models::Partition'
-
-    # The following 7 variables are used for dicho development
-    # TODO: Wait for the dev to finish to expose the dicho parameters
-    field :resolution_dicho_level_coeff, default: 1.1 # This variable is calculated inside dicho by default (TODO: check if it is really necessary)
-    field :resolution_dicho_algorithm_service_limit, default: 500
-    field :resolution_dicho_algorithm_vehicle_limit, default: 10
-    field :resolution_dicho_division_service_limit, default: 100 # This variable needs to corrected using the average number of services per vehicle.
-    field :resolution_dicho_division_vehicle_limit, default: 3
-    field :resolution_dicho_exclusion_scaling_angle, default: 38
-    field :resolution_dicho_exclusion_rate, default: 0.6
-
-    field :resolution_duration, default: nil
-    field :resolution_total_duration, default: nil
-    field :resolution_iterations, default: nil
-    field :resolution_iterations_without_improvment, default: nil
-    field :resolution_stable_iterations, default: nil
-    field :resolution_stable_coefficient, default: nil
-    field :resolution_initial_time_out, default: nil
-    field :resolution_minimum_duration, default: nil
-    field :resolution_init_duration, default: nil
-    field :resolution_time_out_multiplier, default: nil
-    field :resolution_vehicle_limit, default: nil
-    field :resolution_solver, default: true
-    field :resolution_same_point_day, default: false
-    field :resolution_minimize_days_worked, default: false
-    field :resolution_allow_partial_assignment, default: true
-    field :resolution_evaluate_only, default: false
-    field :resolution_split_number, default: 1
-    field :resolution_total_split_number, default: 2
-    field :resolution_several_solutions, default: 1
-    field :resolution_variation_ratio, default: nil
-    field :resolution_batch_heuristic, default: false
-    field :resolution_repetition, default: nil
-
-    field :restitution_geometry, default: []
-    field :restitution_intermediate_solutions, default: true
-    field :restitution_csv, default: false
-    field :restitution_use_deprecated_csv_headers, default: false
-    field :restitution_allow_empty_result, default: false
-
-    field :schedule_range_indices, default: nil # extends schedule_range_date
-    field :schedule_start_date, default: nil
-    field :schedule_unavailable_days, default: Set[] # extends unavailable_date and schedule_unavailable_indices
-    field :schedule_months_indices, default: []
-
-    field :router, default: OptimizerWrapper.router(OptimizerWrapper.config[:router][:api_key])
-
-    # ActiveHash doesn't validate the validator of the associated objects
-    # Forced to do the validation in Grape params
-    #
-    # validates_numericality_of :preprocessing_max_split_size, allow_nil: true
-    # validates_numericality_of :preprocessing_cluster_threshold, allow_nil: true
-    # validates_numericality_of :resolution_duration, allow_nil: true
-    # validates_numericality_of :resolution_iterations, allow_nil: true
-    # validates_numericality_of :resolution_iterations_without_improvment, allow_nil: true
-    # validates_numericality_of :resolution_stable_iterations, allow_nil: true
-    # validates_numericality_of :resolution_stable_coefficient, allow_nil: true
-    # validates_numericality_of :resolution_initial_time_out, allow_nil: true
-    # validates_numericality_of :resolution_minimum_duration, allow_nil: true
-    # validates_numericality_of :resolution_time_out_multiplier, allow_nil: true
-    # validates_numericality_of :resolution_vehicle_limit, allow_nil: true
-    # validates_numericality_of :resolution_several_solutions, allow_nil: true
-    # validates_numericality_of :resolution_variation_ratio, allow_nil: true
-    #
-    # validates_inclusion_of :preprocessing_partition_method, allow_nil: true, in: %w[hierarchical_tree balanced_kmeans]
+    field :router, default: OptimizerWrapper.router(OptimizerWrapper.config[:router][:api_key]), as_json: :none
 
     has_many :matrices, class_name: 'Models::Matrix'
     has_many :points, class_name: 'Models::Point'
     has_many :units, class_name: 'Models::Unit'
     has_many :rests, class_name: 'Models::Rest'
-    has_many :timewindows, class_name: 'Models::Timewindow'
-    has_many :capacities, class_name: 'Models::Capacity'
-    has_many :quantities, class_name: 'Models::Quantity'
+    has_many :timewindows, class_name: 'Models::Timewindow', as_json: :none
+    has_many :capacities, class_name: 'Models::Capacity', as_json: :none
+    has_many :quantities, class_name: 'Models::Quantity', as_json: :none
     has_many :vehicles, class_name: 'Models::Vehicle'
     has_many :services, class_name: 'Models::Service'
     has_many :relations, class_name: 'Models::Relation'
     has_many :routes, class_name: 'Models::Route'
     has_many :subtours, class_name: 'Models::Subtour'
     has_many :zones, class_name: 'Models::Zone'
-    belongs_to :config, class_name: 'Models::Configuration' # can be renamed to configuration after the transition if wanted
+    belongs_to :configuration, class_name: 'Models::Configuration'
 
-    def self.create(hash, delete = true)
-      Models.delete_all if delete
+    def self.create(hash, options = {})
+      options = { delete: true, check: true }.merge(options)
+      hash[:configuration] = {
+        preprocessing: {}, resolution: {}, restitution: {}
+      }.merge(hash[:configuration] || {})
+      Models.delete_all if options[:delete]
 
       vrp = super({})
       self.convert_shipments_to_services(hash)
       self.filter(hash) # TODO : add filters.rb here
-      # moved filter here to make sure we do have schedule_indices (not date) to do work_day check with lapses
-      vrp.check_consistency(hash)
+      # moved filter here to make sure we do have configuration.schedule.indices (not date) to do work_day check with lapses
+      vrp.check_consistency(hash) if options[:check]
+      self.convert_expected_string_to_symbol(hash)
       self.ensure_retrocompatibility(hash)
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
        :vehicles, :services, :relations, :subtours, :routes, :configuration].each{ |key|
@@ -198,6 +127,18 @@ module Models
     def unassigned_rests
       self.vehicles.flat_map{ |vehicle|
         vehicle.rests.map{ |rest| Models::Solution::Stop.new(rest) }
+      }
+    end
+
+    def self.convert_partition_method_into_technique(hash)
+      # method is an already reserved method name. It was generating conflicts during as_json conversion
+      return if hash[:configuration].nil? || hash[:configuration][:preprocessing].nil? ||
+                hash[:configuration][:preprocessing][:partitions].nil? ||
+                hash[:configuration][:preprocessing][:partitions].empty?
+
+      hash[:configuration][:preprocessing][:partitions].each{ |partition|
+        partition[:technique] = partition[:method] if partition[:method] && !partition[:technique]
+        partition.delete(:method)
       }
     end
 
@@ -407,6 +348,31 @@ module Models
       }
     end
 
+    def self.convert_expected_string_to_symbol(hash)
+      hash[:relations].each{ |relation|
+        relation[:type] = relation[:type]&.to_sym
+      }
+
+      hash[:services].each{ |service|
+        service[:skills] = service[:skills]&.map(&:to_sym)
+        service[:type] = service[:type]&.to_sym
+        if service[:activity] && service[:activity][:position]&.to_sym
+          service[:activity][:position] = service[:activity][:position]&.to_sym
+        end
+
+        service[:activities]&.each{ |activity|
+          activity[:position] = activity[:position]&.to_sym
+        }
+      }
+
+      hash[:vehicles].each{ |vehicle|
+        vehicle[:router_dimension] = vehicle[:router_dimension]&.to_sym
+        vehicle[:router_mode] = vehicle[:router_mode]&.to_sym
+        vehicle[:shift_preference] = vehicle[:shift_preference]&.to_sym
+        vehicle[:skills] = vehicle[:skills]&.map{ |sk_set| sk_set.map(&:to_sym) }
+      }
+    end
+
     def self.ensure_retrocompatibility(hash)
       self.convert_position_relations(hash)
       self.deduce_first_solution_strategy(hash)
@@ -415,6 +381,7 @@ module Models
       self.convert_route_indice_into_index(hash)
       self.convert_geometry_polylines_to_geometry(hash)
       self.convert_relation_lapse_into_lapses(hash)
+      self.convert_partition_method_into_technique(hash)
     end
 
     def self.filter(hash)
@@ -629,7 +596,7 @@ module Models
         route.delete(:date)
       }
 
-      # remove schedule_range_date
+      # remove schedule.range_date
       hash[:configuration][:schedule][:range_indices] = {
         start: start_index,
         end: end_index
@@ -638,68 +605,6 @@ module Models
       hash[:configuration][:schedule].delete(:range_date)
 
       hash
-    end
-
-    def configuration=(configuration)
-      self.config = configuration
-      self.preprocessing = configuration[:preprocessing] if configuration[:preprocessing]
-      self.resolution = configuration[:resolution] if configuration[:resolution]
-      self.schedule = configuration[:schedule] if configuration[:schedule]
-      self.restitution = configuration[:restitution] if configuration[:restitution]
-    end
-
-    def restitution=(restitution)
-      self.restitution_geometry = restitution[:geometry]
-      self.restitution_intermediate_solutions = restitution[:intermediate_solutions]
-      self.restitution_csv = restitution[:csv]
-      self.restitution_use_deprecated_csv_headers = restitution[:use_deprecated_csv_headers]
-      self.restitution_allow_empty_result = restitution[:allow_empty_result]
-    end
-
-    def resolution=(resolution)
-      self.resolution_duration = resolution[:duration]
-      self.resolution_total_duration = resolution[:duration]
-      self.resolution_iterations = resolution[:iterations]
-      self.resolution_iterations_without_improvment = resolution[:iterations_without_improvment]
-      self.resolution_stable_iterations = resolution[:stable_iterations]
-      self.resolution_stable_coefficient = resolution[:stable_coefficient]
-      self.resolution_minimum_duration = resolution[:minimum_duration]
-      self.resolution_init_duration = resolution[:init_duration]
-      self.resolution_time_out_multiplier = resolution[:time_out_multiplier]
-      self.resolution_vehicle_limit = resolution[:vehicle_limit]
-      self.resolution_solver = resolution[:solver]
-      self.resolution_same_point_day = resolution[:same_point_day]
-      self.resolution_minimize_days_worked = resolution[:minimize_days_worked]
-      self.resolution_allow_partial_assignment = resolution[:allow_partial_assignment]
-      self.resolution_evaluate_only = resolution[:evaluate_only]
-      self.resolution_split_number = resolution[:split_number]
-      self.resolution_total_split_number = resolution[:total_split_number]
-      self.resolution_several_solutions = resolution[:several_solutions]
-      self.resolution_variation_ratio = resolution[:variation_ratio]
-      self.resolution_batch_heuristic = resolution[:batch_heuristic]
-      self.resolution_repetition = resolution[:repetition]
-      self.resolution_dicho_algorithm_service_limit = resolution[:dicho_algorithm_service_limit]
-    end
-
-    def preprocessing=(preprocessing)
-      self.preprocessing_force_cluster = preprocessing[:force_cluster]
-      self.preprocessing_max_split_size = preprocessing[:max_split_size]
-      self.preprocessing_partition_method = preprocessing[:partition_method]
-      self.preprocessing_partition_metric = preprocessing[:partition_metric]
-      self.preprocessing_kmeans_centroids = preprocessing[:kmeans_centroids]
-      self.preprocessing_cluster_threshold = preprocessing[:cluster_threshold]
-      self.preprocessing_prefer_short_segment = preprocessing[:prefer_short_segment]
-      self.preprocessing_neighbourhood_size = preprocessing[:neighbourhood_size]
-      self.preprocessing_first_solution_strategy = preprocessing[:first_solution_strategy]
-      self.preprocessing_partitions = preprocessing[:partitions]
-      self.preprocessing_heuristic_result = {}
-    end
-
-    def schedule=(schedule)
-      self.schedule_range_indices = schedule[:range_indices]
-      self.schedule_start_date = schedule[:start_date]
-      self.schedule_unavailable_days = schedule[:unavailable_days]
-      self.schedule_months_indices = schedule[:months_indices]
     end
 
     def services_duration
@@ -711,8 +616,8 @@ module Models
     end
 
     def total_work_times
-      schedule_start = self.schedule_range_indices[:start]
-      schedule_end = self.schedule_range_indices[:end]
+      schedule_start = self.configuration.schedule.range_indices[:start]
+      schedule_end = self.configuration.schedule.range_indices[:end]
       work_times = self.vehicles.collect{ |vehicle|
         vehicle.total_work_time_in_range(schedule_start, schedule_end)
       }
@@ -768,7 +673,7 @@ module Models
 
             # TODO: Here we use flying_distance for approx_depot_time_correction;
             # however, this value is in terms of meters instead of seconds. Still since all dicho parameters
-            # (i.e.: resolution_dicho_exclusion_scaling_angle, resolution_dicho_exclusion_rate, etc.)
+            # (i.e.: resolution.dicho_exclusion_scaling_angle, resolution.dicho_exclusion_rate, etc.)
             # are calculated with this functionality, correcting this bug makes the calculated parameters perform
             # less effective. We need to calculate new parameters after correcting the bug.
 
@@ -783,10 +688,10 @@ module Models
 
         average_service_load = total_time_load / services.size.to_f
         average_number_of_services_per_vehicle = average_vehicles_work_time / average_service_load
-        exclusion_rate = resolution_dicho_exclusion_rate * average_number_of_services_per_vehicle
+        exclusion_rate = configuration.resolution.dicho_exclusion_rate * average_number_of_services_per_vehicle
          # Angle needs to be in between 0 and 45 - 0 means only uniform cost is used -
          # 45 means only variable cost is used
-        angle = resolution_dicho_exclusion_scaling_angle
+        angle = configuration.resolution.dicho_exclusion_scaling_angle
         tan_variable = Math.tan(angle * Math::PI / 180)
         tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
         coeff_variable_cost = tan_variable / (1 - tan_variable * tan_uniform)
@@ -811,11 +716,11 @@ module Models
     end
 
     def schedule?
-      !self.schedule_range_indices.nil?
+      self.configuration.schedule && !self.configuration.schedule.range_indices.nil?
     end
 
     def periodic_heuristic?
-      self.preprocessing_first_solution_strategy.to_a.include?('periodic')
+      self.configuration.preprocessing.first_solution_strategy.to_a.include?('periodic')
     end
   end
 end

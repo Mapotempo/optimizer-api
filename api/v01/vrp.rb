@@ -143,7 +143,7 @@ module Api
               elsif ret.is_a?(Array)
                 status 200
                 solutions = ret.vrp_result.each(&:deep_symbolize_keys!)
-                if vrp.restitution_csv
+                if vrp.configuration.restitution.csv
                   present(OutputHelper::Result.build_csv(solutions), type: CSV)
                 else
                   present({ solutions: solutions, job: { status: :completed }}, with: VrpResult)

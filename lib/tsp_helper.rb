@@ -46,7 +46,7 @@ module TSPHelper
       vehicles: [tsp_vehicle]
     }
 
-    Models::Vrp.create(problem, false)
+    Models::Vrp.create(problem, delete: false)
   end
 
   def self.convert_point(point, tsp_suffix)

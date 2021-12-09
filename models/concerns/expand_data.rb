@@ -29,7 +29,7 @@ module ExpandData
   end
 
   def add_sticky_vehicle_if_routes_and_partitions
-    return if self.preprocessing_partitions.empty?
+    return if self.configuration.preprocessing&.partitions&.empty?
 
     self.routes.each{ |route|
       route.mission_ids.each{ |id|
@@ -40,9 +40,9 @@ module ExpandData
   end
 
   def expand_unavailable_days
-    unavailable_days = self.schedule_unavailable_days.select{ |unavailable_index|
-      unavailable_index >= self.schedule_range_indices[:start] && unavailable_index <= self.schedule_range_indices[:end]
-    }
+    unavailable_days = self.configuration.schedule&.unavailable_days&.select{ |unavailable_index|
+      unavailable_index >= self.configuration.schedule.range_indices[:start] && unavailable_index <= self.configuration.schedule.range_indices[:end]
+    } || []
 
     self.vehicles.each{ |vehicle|
       vehicle.unavailable_days |= unavailable_days
@@ -55,7 +55,7 @@ module ExpandData
   def provide_original_info
     (self.services + self.vehicles).each{ |element|
       element.original_id ||= element.id
-      element.original_skills = element.skills.dup
+      element.original_skills ||= element.skills.dup
     }
   end
 

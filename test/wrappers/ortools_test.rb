@@ -2863,14 +2863,14 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
-    assert_equal 0, result[:cost_details][:lateness]
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
-           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
-    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
-           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
-    assert_equal 0, result[:unassigned].size
-    assert_equal 6, result[:routes][0][:activities].size
+    solution = ortools.solve(vrp, 'test')
+    assert_equal 0, solution.cost_info.lateness
+    assert solution.routes[0].stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           solution.routes[0].stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert solution.routes[0].stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           solution.routes[0].stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal 0, solution.unassigned.size
+    assert_equal 6, solution.routes[0].stops.size
   end
 
   def test_shipments_inroute_duration
@@ -4458,7 +4458,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }
     ) do
       best_heuristic = Interpreters::SeveralSolutions.find_best_heuristic({ service: :ortools, vrp: vrp })
-      refute_equal best_heuristic[:vrp].preprocessing_first_solution_strategy, 'supplied_initial_routes'
+      refute_equal best_heuristic[:vrp].configuration.preprocessing.first_solution_strategy, 'supplied_initial_routes'
       assert_equal %w[service_4 service_5 service_3 service_2], best_heuristic[:vrp].routes.first.mission_ids,
                    'Initial route does not match with expected returned route'
     end
@@ -5228,8 +5228,8 @@ class Wrappers::OrtoolsTest < Minitest::Test
         service_vrp = Interpreters::SeveralSolutions.find_best_heuristic({ service: :ortools, vrp: vrp })
         assert_equal vrp[:vehicles].size, service_vrp[:vrp].vehicles.collect(&:id).uniq.size, 'We expect same number of IDs as initial vehicles in problem'
         assert_equal vrp[:services].size, service_vrp[:vrp].services.collect(&:id).uniq.size, 'We expect same number of IDs as initial services in problem'
-        assert_equal 4, service_vrp[:vrp].preprocessing_heuristic_synthesis.size
-        assert_equal ['parallel_cheapest_insertion'], service_vrp[:vrp].preprocessing_first_solution_strategy
+        assert_equal 4, service_vrp[:vrp].configuration.preprocessing.heuristic_synthesis.size
+        assert_equal ['parallel_cheapest_insertion'], service_vrp[:vrp].configuration.preprocessing.first_solution_strategy
         assert_equal 1, service_vrp[:vrp].routes.size
         assert_equal 'vehicle_1', service_vrp[:vrp].routes.first.vehicle.id
         assert_equal ['service_5', 'service_3', 'service_1', 'service_2'], service_vrp[:vrp].routes.first.mission_ids

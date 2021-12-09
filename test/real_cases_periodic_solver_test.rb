@@ -23,11 +23,11 @@ class HeuristicTest < Minitest::Test
       vrps = TestHelper.load_vrps(self)
 
       vrps.each{ |vrp|
-        vrp.preprocessing_partitions = nil
+        vrp.configuration.preprocessing.partitions = nil
         solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil) # marshal dump needed, otherwise we create relations (min/maximum lapse)
         unassigned = solutions[0].unassigned.size
 
-        vrp.resolution_solver = true
+        vrp.configuration.resolution.solver = true
         solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
         assert unassigned >= solutions[0].unassigned.size, "Increased number of unassigned with ORtools : had #{unassigned}, has #{solutions[0].unassigned.size} now"
       }
@@ -35,8 +35,8 @@ class HeuristicTest < Minitest::Test
 
     def test_two_phases_clustering_sched_with_freq_and_same_point_day_5veh_with_solver
       vrp = TestHelper.load_vrp(self, fixture_file: 'two_phases_clustering_sched_with_freq_and_same_point_day_5veh')
-      vrp.resolution_solver = true
-      vrp.preprocessing_partitions.each{ |p| p.restarts = 1 }
+      vrp.configuration.resolution.solver = true
+      vrp.configuration.preprocessing.partitions.each{ |p| p.restarts = 1 }
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
 
       vrp.services.group_by{ |s| s.activity.point.id }.each{ |point_id, services_set|
@@ -59,8 +59,8 @@ class HeuristicTest < Minitest::Test
 
       unassigned_visits = vrps.each.with_index.inject(0){ |unassigned_nb, (vrp, vrp_i)|
         puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
-        vrp.preprocessing_partitions = nil
-        vrp.resolution_solver = true
+        vrp.configuration.preprocessing.partitions = nil
+        vrp.configuration.resolution.solver = true
         solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
         unassigned_nb + solutions[0].unassigned.size
       }
@@ -89,13 +89,13 @@ class HeuristicTest < Minitest::Test
 
     def test_without_same_point_day
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_solver = false
+      vrp.configuration.resolution.solver = false
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       unassigned = solutions[0].unassigned.size
       assert_equal 46, unassigned
 
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_solver = true
+      vrp.configuration.resolution.solver = true
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert unassigned >= solutions[0].unassigned.size
     end

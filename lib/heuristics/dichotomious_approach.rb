@@ -28,11 +28,11 @@ module Interpreters
         (
           # TODO: remove cost_fixed condition after exclusion cost calculation is corrected.
           service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } &&
-          service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit &&
-          (service_vrp[:vrp].resolution_vehicle_limit.nil? ||
-            service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_algorithm_vehicle_limit) &&
+          service_vrp[:vrp].vehicles.size > service_vrp[:vrp].configuration.resolution.dicho_algorithm_vehicle_limit &&
+          (service_vrp[:vrp].configuration.resolution.vehicle_limit.nil? ||
+            service_vrp[:vrp].configuration.resolution.vehicle_limit > service_vrp[:vrp].configuration.resolution.dicho_algorithm_vehicle_limit) &&
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r.mission_ids.size }.sum >
-            service_vrp[:vrp].resolution_dicho_algorithm_service_limit &&
+            service_vrp[:vrp].configuration.resolution.dicho_algorithm_service_limit &&
           !service_vrp[:vrp].schedule? &&
           service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon } &&
           service_vrp[:vrp].relations.empty?
@@ -49,8 +49,8 @@ module Interpreters
         vrp = service_vrp[:vrp]
         message = "dicho - level(#{service_vrp[:dicho_level]}) "\
                   "activities: #{vrp.services.size} "\
-                  "vehicles (limit): #{vrp.vehicles.size}(#{vrp.resolution_vehicle_limit})"\
-                  "duration [min, max]: [#{vrp.resolution_minimum_duration&.round},#{vrp.resolution_duration&.round}]"
+                  "vehicles (limit): #{vrp.vehicles.size}(#{vrp.configuration.resolution.vehicle_limit})"\
+                  "duration [min, max]: [#{vrp.configuration.resolution.minimum_duration&.round},#{vrp.configuration.resolution.duration&.round}]"
         log message, level: :info
 
         set_config(service_vrp)
@@ -61,7 +61,7 @@ module Interpreters
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exclusion_cost(service_vrp)
         # Do not solve if vrp has too many vehicles or services - init_duration is set in set_config()
-        elsif service_vrp[:vrp].resolution_init_duration.nil?
+        elsif service_vrp[:vrp].configuration.resolution.init_duration.nil?
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exclusion_cost(service_vrp)
           solution = OptimizerWrapper.solve(service_vrp, job, block)
@@ -72,8 +72,8 @@ module Interpreters
 
         if (solution.nil? || solution.unassigned.size >= 0.7 * service_vrp[:vrp].services.size) &&
            feasible_vrp(solution, service_vrp) &&
-           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vehicle_limit &&
-           service_vrp[:vrp].services.size > service_vrp[:vrp].resolution_dicho_division_service_limit
+           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit &&
+           service_vrp[:vrp].services.size > service_vrp[:vrp].configuration.resolution.dicho_division_service_limit
           sub_service_vrps = []
 
           3.times do # TODO: move this logic inside the split function
@@ -82,22 +82,22 @@ module Interpreters
           end
 
           # TODO: instead of an error, we can just continue the optimisation in the child process
-          # by modifying the resolution_dicho_division_X_limit's here so that the child runs the
+          # by modifying the configuration.resolution.dicho_division_X_limit's here so that the child runs the
           # optimisation instead of trying to split again
           raise 'dichotomious_heuristic cannot split the problem into two clusters' if sub_service_vrps.size != 2
 
           solutions = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
             unless index.zero?
-              sub_service_vrp[:vrp].resolution_split_number = sub_service_vrps[0][:vrp].resolution_split_number + 1
-              sub_service_vrp[:vrp].resolution_total_split_number =
-                sub_service_vrps[0][:vrp].resolution_total_split_number
+              sub_service_vrp[:vrp].configuration.resolution.split_number = sub_service_vrps[0][:vrp].configuration.resolution.split_number + 1
+              sub_service_vrp[:vrp].configuration.resolution.total_split_number =
+                sub_service_vrps[0][:vrp].configuration.resolution.total_split_number
             end
-            if sub_service_vrp[:vrp].resolution_duration
-              sub_service_vrp[:vrp].resolution_duration *=
+            if sub_service_vrp[:vrp].configuration.resolution.duration
+              sub_service_vrp[:vrp].configuration.resolution.duration *=
                 sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             end
-            if sub_service_vrp[:vrp].resolution_minimum_duration
-              sub_service_vrp[:vrp].resolution_minimum_duration *=
+            if sub_service_vrp[:vrp].configuration.resolution.minimum_duration
+              sub_service_vrp[:vrp].configuration.resolution.minimum_duration *=
                 sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             end
 
@@ -107,8 +107,8 @@ module Interpreters
 
             solution
           }
-          service_vrp[:vrp].resolution_split_number = sub_service_vrps[1][:vrp].resolution_split_number
-          service_vrp[:vrp].resolution_total_split_number = sub_service_vrps[1][:vrp].resolution_total_split_number
+          service_vrp[:vrp].configuration.resolution.split_number = sub_service_vrps[1][:vrp].configuration.resolution.split_number
+          service_vrp[:vrp].configuration.resolution.total_split_number = sub_service_vrps[1][:vrp].configuration.resolution.total_split_number
           solution = solutions.reduce(&:+)
           log "dicho - level(#{service_vrp[:dicho_level]}) before remove_bad_skills unassigned rate " \
               "#{solution.unassigned.size}/#{service_vrp[:vrp].services.size}: " \
@@ -138,7 +138,7 @@ module Interpreters
               "#{(solution.unassigned.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
         end
       else
-        service_vrp[:vrp].resolution_init_duration = nil
+        service_vrp[:vrp].configuration.resolution.init_duration = nil
       end
       solution
     end
@@ -163,8 +163,8 @@ module Interpreters
       }
 
       # Transfer unsued vehicle limit to the other side as well
-      sv_zero_unused_vehicle_limit = sv_zero.resolution_vehicle_limit - solution.count_used_routes
-      sv_one.resolution_vehicle_limit += sv_zero_unused_vehicle_limit
+      sv_zero_unused_vehicle_limit = sv_zero.configuration.resolution.vehicle_limit - solution.count_used_routes
+      sv_one.configuration.resolution.vehicle_limit += sv_zero_unused_vehicle_limit
     end
 
     def self.update_sv_one_matrix(sv_one, original_vrp, original_matrix_indices, vehicle, vehicle_points)
@@ -208,21 +208,21 @@ module Interpreters
 
     def self.dicho_level_coeff(service_vrp)
       balance = 0.66666
-      level_approx = Math.log(service_vrp[:vrp].resolution_dicho_division_vehicle_limit /
-                    (service_vrp[:vrp].resolution_vehicle_limit || service_vrp[:vrp].vehicles.size).to_f, balance)
-      service_vrp[:vrp].resolution_dicho_level_coeff = 2**(1 / (level_approx - service_vrp[:dicho_level]).to_f)
+      level_approx = Math.log(service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit /
+                    (service_vrp[:vrp].configuration.resolution.vehicle_limit || service_vrp[:vrp].vehicles.size).to_f, balance)
+      service_vrp[:vrp].configuration.resolution.dicho_level_coeff = 2**(1 / (level_approx - service_vrp[:dicho_level]).to_f)
     end
 
     def self.set_config(service_vrp)
-      # service_vrp[:vrp].resolution_batch_heuristic = true
-      service_vrp[:vrp].restitution_allow_empty_result = true
+      # service_vrp[:vrp].configuration.resolution.batch_heuristic = true
+      service_vrp[:vrp].configuration.restitution.allow_empty_result = true
       if service_vrp[:dicho_level]&.positive?
         # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
-        service_vrp[:vrp].resolution_duration =
-          service_vrp[:vrp].resolution_duration ? (service_vrp[:vrp].resolution_duration / 2.66).to_i : 80000
-        service_vrp[:vrp].resolution_minimum_duration =
-          service_vrp[:vrp].resolution_minimum_duration ?
-            (service_vrp[:vrp].resolution_minimum_duration / 2.66).to_i : 70000
+        service_vrp[:vrp].configuration.resolution.duration =
+          service_vrp[:vrp].configuration.resolution.duration ? (service_vrp[:vrp].configuration.resolution.duration / 2.66).to_i : 80000
+        service_vrp[:vrp].configuration.resolution.minimum_duration =
+          service_vrp[:vrp].configuration.resolution.minimum_duration ?
+            (service_vrp[:vrp].configuration.resolution.minimum_duration / 2.66).to_i : 70000
       end
 
       if service_vrp[:dicho_level]&.zero?
@@ -233,16 +233,16 @@ module Interpreters
         }
       end
 
-      service_vrp[:vrp].resolution_init_duration = 90000 if service_vrp[:vrp].resolution_duration > 90000
-      service_vrp[:vrp].resolution_vehicle_limit ||= service_vrp[:vrp][:vehicles].size
-      service_vrp[:vrp].resolution_init_duration =
-        if service_vrp[:vrp].vehicles.size > service_vrp[:vrp].resolution_dicho_division_vehicle_limit &&
-           service_vrp[:vrp].services.size > service_vrp[:vrp].resolution_dicho_division_service_limit &&
-           service_vrp[:vrp].resolution_vehicle_limit > service_vrp[:vrp].resolution_dicho_division_vehicle_limit
+      service_vrp[:vrp].configuration.resolution.init_duration = 90000 if service_vrp[:vrp].configuration.resolution.duration > 90000
+      service_vrp[:vrp].configuration.resolution.vehicle_limit ||= service_vrp[:vrp][:vehicles].size
+      service_vrp[:vrp].configuration.resolution.init_duration =
+        if service_vrp[:vrp].vehicles.size > service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit &&
+           service_vrp[:vrp].services.size > service_vrp[:vrp].configuration.resolution.dicho_division_service_limit &&
+           service_vrp[:vrp].configuration.resolution.vehicle_limit > service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit
           1000
         end
       # A bit slower than local_cheapest_insertion; however, returns better results on ortools-v7.
-      service_vrp[:vrp].preprocessing_first_solution_strategy = ['parallel_cheapest_insertion']
+      service_vrp[:vrp].configuration.preprocessing.first_solution_strategy = ['parallel_cheapest_insertion']
 
       service_vrp
     end
@@ -252,7 +252,7 @@ module Interpreters
 
       average_exclusion_cost = service_vrp[:vrp].services.sum(&:exclusion_cost) / service_vrp[:vrp].services.size
       service_vrp[:vrp].services.each{ |service|
-        service.exclusion_cost += average_exclusion_cost * (service_vrp[:vrp].resolution_dicho_level_coeff**service_vrp[:dicho_level] - 1)
+        service.exclusion_cost += average_exclusion_cost * (service_vrp[:vrp].configuration.resolution.dicho_level_coeff**service_vrp[:dicho_level] - 1)
       }
     end
 
@@ -297,12 +297,12 @@ module Interpreters
       log "try to insert #{solution.unassigned.size} unassigned from #{vrp.services.size} services"
       transfer_unused_time_limit = 0
       vrp.routes = build_initial_routes([solution])
-      vrp.resolution_init_duration = nil
+      vrp.configuration.resolution.init_duration = nil
       unassigned_service_ids = solution.unassigned.select{ |un| un.type == :service }.map(&:id)
       unassigned_services = vrp.services.select{ |s| unassigned_service_ids.include?(s.id) }
       unassigned_services_by_skills = unassigned_services.group_by(&:skills)
 
-      leftover_vehicle_limit = vrp.resolution_vehicle_limit - solution.routes.size
+      leftover_vehicle_limit = vrp.configuration.resolution.vehicle_limit - solution.routes.size
 
       # TODO: sort unassigned_services with no skill / sticky at the end
       unassigned_services_by_skills[[]] = [] if unassigned_services_by_skills.empty?
@@ -345,17 +345,17 @@ module Interpreters
         rate_vehicles = vehicles_indices.size / vehicles_with_skills.size.to_f
         rate_services = @unassigned_services.empty? ? 1 : services.size / @unassigned_services.size.to_f
 
-        sub_vrp_resolution_duration =
-          [(vrp.resolution_duration.to_f / 3.99 * rate_vehicles * rate_services + @transfer_unused_time_limit).to_i, 150].max
-        sub_vrp_resolution_minimum_duration =
-          [(vrp.resolution_minimum_duration.to_f / 3.99 * rate_vehicles * rate_services).to_i, 100].max
+        sub_vrp_configuration_resolution_duration =
+          [(vrp.configuration.resolution.duration.to_f / 3.99 * rate_vehicles * rate_services + @transfer_unused_time_limit).to_i, 150].max
+        sub_vrp_configuration_resolution_minimum_duration =
+          [(vrp.configuration.resolution.minimum_duration.to_f / 3.99 * rate_vehicles * rate_services).to_i, 100].max
 
         used_vehicle_count = vehicles_indices.size
 
-        if vrp.resolution_vehicle_limit
+        if vrp.configuration.resolution.vehicle_limit
           sub_vrp_vehicle_limit = @leftover_vehicle_limit + used_vehicle_count
           if sub_vrp_vehicle_limit&.zero? # The vehicle limit is hit cannot use more new vehicles...
-            @transfer_unused_time_limit = sub_vrp_resolution_duration
+            @transfer_unused_time_limit = sub_vrp_configuration_resolution_duration
             next
           end
         end
@@ -374,23 +374,23 @@ module Interpreters
           vehicle.cost_distance_multiplier = 0.05 if vehicle.cost_distance_multiplier.zero?
         }
 
-        sub_vrp.resolution_minimum_duration = sub_vrp_resolution_minimum_duration if sub_vrp.resolution_minimum_duration
-        sub_vrp.resolution_duration = sub_vrp_resolution_duration if sub_vrp.resolution_duration
-        sub_vrp.resolution_vehicle_limit = sub_vrp_vehicle_limit  if vrp.resolution_vehicle_limit
+        sub_vrp.configuration.resolution.minimum_duration = sub_vrp_configuration_resolution_minimum_duration if sub_vrp.configuration.resolution.minimum_duration
+        sub_vrp.configuration.resolution.duration = sub_vrp_configuration_resolution_duration if sub_vrp.configuration.resolution.duration
+        sub_vrp.configuration.resolution.vehicle_limit = sub_vrp_vehicle_limit  if vrp.configuration.resolution.vehicle_limit
 
-        sub_vrp.restitution_allow_empty_result = true
+        sub_vrp.configuration.restitution.allow_empty_result = true
         solution_loop = OptimizerWrapper.solve(sub_service_vrp, job)
 
         next unless solution_loop
 
         solution.elapsed += solution_loop.elapsed.to_f
-        @transfer_unused_time_limit = sub_vrp.resolution_duration - solution_loop.elapsed.to_f
+        @transfer_unused_time_limit = sub_vrp.configuration.resolution.duration - solution_loop.elapsed.to_f
 
         # TODO: Remove unnecessary if conditions and .nil? checks
         # Initial routes can be refused... check unassigned size before take into account solution
         next if remaining_service_ids.size < solution_loop.unassigned.size
 
-        if vrp.resolution_vehicle_limit # correct the lefover vehicle limit count
+        if vrp.configuration.resolution.vehicle_limit # correct the lefover vehicle limit count
           @leftover_vehicle_limit -=
             solution_loop.count_used_routes - used_vehicle_count
         end
@@ -414,12 +414,12 @@ module Interpreters
       log "try to insert #{solution.unassigned.size} unassigned from #{vrp.services.size} services"
       @transfer_unused_time_limit = 0
       vrp.routes = build_initial_routes([solution])
-      vrp.resolution_init_duration = nil
+      vrp.configuration.resolution.init_duration = nil
       unassigned_service_ids = solution.unassigned.map(&:service_id)
       @unassigned_services = vrp.services.select{ |s| unassigned_service_ids.include?(s.id) }
       unassigned_services_by_skills = @unassigned_services.group_by(&:skills)
 
-      @leftover_vehicle_limit = vrp.resolution_vehicle_limit - solution.routes.size
+      @leftover_vehicle_limit = vrp.configuration.resolution.vehicle_limit - solution.routes.size
 
       # TODO: sort unassigned_services with no skill / sticky at the end
       unassigned_services_by_skills[[]] = [] if unassigned_services_by_skills.empty?
@@ -496,8 +496,8 @@ module Interpreters
     def self.split_vehicle_limits(vrp, vehicles_by_cluster)
       vehicle_shares = vehicles_by_cluster.collect(&:size)
 
-      smaller_side = [1, (vehicle_shares.min.to_f / vehicle_shares.sum * vrp.resolution_vehicle_limit).round].max
-      bigger_side  = vrp.resolution_vehicle_limit - smaller_side
+      smaller_side = [1, (vehicle_shares.min.to_f / vehicle_shares.sum * vrp.configuration.resolution.vehicle_limit).round].max
+      bigger_side  = vrp.configuration.resolution.vehicle_limit - smaller_side
 
       (vehicle_shares[0] < vehicle_shares[1]) ? [smaller_side, bigger_side] : [bigger_side, smaller_side]
     end
@@ -505,7 +505,7 @@ module Interpreters
     def self.split(service_vrp, _job = nil)
       log "---> dicho::split - level(#{service_vrp[:dicho_level]})", level: :debug
       vrp = service_vrp[:vrp]
-      vrp.resolution_vehicle_limit ||= vrp.vehicles.size
+      vrp.configuration.resolution.vehicle_limit ||= vrp.vehicles.size
       services_by_cluster = kmeans(vrp, :duration).sort_by{ |ss| Helper.services_duration(ss) }
       split_service_vrps = []
       if services_by_cluster.size == 2
@@ -519,9 +519,9 @@ module Interpreters
                                                               vehicles_by_cluster[i])[:vrp]
 
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
-          sub_vrp.resolution_vehicle_limit = vehicle_limits_by_cluster[i]
-          sub_vrp.resolution_split_number += i
-          sub_vrp.resolution_total_split_number += 1
+          sub_vrp.configuration.resolution.vehicle_limit = vehicle_limits_by_cluster[i]
+          sub_vrp.configuration.resolution.split_number += i
+          sub_vrp.configuration.resolution.total_split_number += 1
 
           split_service_vrps << {
             service: service_vrp[:service],

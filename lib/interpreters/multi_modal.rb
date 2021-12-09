@@ -120,8 +120,8 @@ module Interpreters
             prefer_short_segment: true
           },
           resolution: {
-            duration: @original_vrp.resolution_duration ? @original_vrp.resolution_duration / problem_size * sub_vrp.services.size : nil,
-            minimum_duration: @original_vrp.resolution_minimum_duration ? @original_vrp.resolution_minimum_duration / problem_size * sub_vrp.services.size : (@original_vrp.resolution_initial_time_out ? @original_vrp.resolution_initial_time_out / problem_size * sub_vrp.services.size : nil)
+            duration: @original_vrp.configuration.resolution.duration && @original_vrp.configuration.resolution.duration / problem_size * sub_vrp.services.size,
+            minimum_duration: @original_vrp.configuration.resolution.minimum_duration && @original_vrp.configuration.resolution.minimum_duration / problem_size * sub_vrp.services.size
           }.delete_if{ |_k, v| v.nil? }
         }
 

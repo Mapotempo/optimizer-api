@@ -164,11 +164,13 @@ class RealCasesTest < Minitest::Test
       vrp.vehicles.each{ |v| v.timewindow.maximum_lateness = 5 * 60 * 60 }
 
       # or-tools performance
-      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
+      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},
+                                               TestHelper.create(vrp.as_json), nil)
       assert solutions[0]
       # Check stops
       assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.stops.count(&:service_id) })
-      services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
+      services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicle_ids }
+
       services_by_routes.each{ |k, v|
         assert_equal v.size, solutions[0].routes.find{ |r| r.vehicle.id == k[0] }.stops.count(&:service_id)
       }
@@ -189,7 +191,8 @@ class RealCasesTest < Minitest::Test
         v.cost_late_multiplier = 0
         v.timewindow&.end += 5 * 60 * 60
       }
-      solutions = OptimizerWrapper.wrapper_vrp('vroom', { services: { vrp: [:vroom] }}, vrp, nil)
+      solutions = OptimizerWrapper.wrapper_vrp('vroom', { services: { vrp: [:vroom] }},
+                                               TestHelper.create(vrp.as_json), nil)
       assert solutions[0]
       # Check stops
       assert_equal check_vrp_services_size,
@@ -342,7 +345,7 @@ class RealCasesTest < Minitest::Test
       vrp.vehicles.each{ |v| v.cost_late_multiplier = 0 }
       check_vrp_services_size = vrp.services.size
       # TODO: move to fixtures at the next update of the dump
-      vrp.preprocessing_prefer_short_segment = false
+      vrp.configuration.preprocessing.prefer_short_segment = false
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert solutions[0]
       # Check stops
@@ -473,9 +476,9 @@ class RealCasesTest < Minitest::Test
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_g1g2
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_minimum_duration = 8000
-      vrp.resolution_duration = 600000
-      vrp.restitution_intermediate_solutions = false
+      vrp.configuration.resolution.minimum_duration = 8000
+      vrp.configuration.resolution.duration = 600000
+      vrp.configuration.restitution.intermediate_solutions = false
 
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       total_return_distance = solutions[0].routes.sum{ |route| route.stops.last.info.travel_distance }
@@ -487,9 +490,9 @@ class RealCasesTest < Minitest::Test
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_hv11
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_minimum_duration = 40000
-      vrp.resolution_duration = 600000
-      vrp.restitution_intermediate_solutions = false
+      vrp.configuration.resolution.minimum_duration = 40000
+      vrp.configuration.resolution.duration = 600000
+      vrp.configuration.restitution.intermediate_solutions = false
 
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       total_return_distance = solutions[0].routes.sum{ |route| route.stops.last.info.travel_distance }
@@ -501,9 +504,9 @@ class RealCasesTest < Minitest::Test
     # North West of France - at the fastest with distance minimization
     def test_instance_fr_tv1
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_minimum_duration = 30000
-      vrp.resolution_duration = 600000
-      vrp.restitution_intermediate_solutions = false
+      vrp.configuration.resolution.minimum_duration = 30000
+      vrp.configuration.resolution.duration = 600000
+      vrp.configuration.restitution.intermediate_solutions = false
 
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert solutions[0]
@@ -514,9 +517,9 @@ class RealCasesTest < Minitest::Test
     # North West of France - at the fastest with distance minimization with vehicle returning at the depot
     def test_instance_fr_tv11
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_fr_tv1')
-      vrp.resolution_minimum_duration = 8000
-      vrp.resolution_duration = 600000
-      vrp.restitution_intermediate_solutions = false
+      vrp.configuration.resolution.minimum_duration = 8000
+      vrp.configuration.resolution.duration = 600000
+      vrp.configuration.restitution.intermediate_solutions = false
 
       vrp.vehicles.first.end_point = vrp.vehicles.first.start_point
       vrp.vehicles.first.end_point_id = vrp.vehicles.first.start_point_id

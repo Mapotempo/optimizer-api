@@ -138,7 +138,7 @@ module Wrappers
     end
 
     def assert_one_sticky_at_most(vrp)
-      vrp.services.none?{ |service| service.sticky_vehicles.size > 1 }
+      vrp.services.none?{ |service| service.sticky_vehicle_ids.size > 1 }
     end
 
     def assert_no_relations_except_simple_shipments(vrp)
@@ -195,7 +195,7 @@ module Wrappers
     end
 
     def assert_end_optimization(vrp)
-      vrp.resolution_duration || vrp.resolution_iterations_without_improvment
+      vrp.configuration.resolution.duration || vrp.configuration.resolution.iterations_without_improvment
     end
 
     def assert_no_distance_limitation(vrp)
@@ -214,13 +214,13 @@ module Wrappers
     end
 
     def assert_first_solution_strategy_is_possible(vrp)
-      vrp.preprocessing_first_solution_strategy.empty? || (!vrp.resolution_evaluate_only && !vrp.resolution_batch_heuristic)
+      vrp.configuration.preprocessing.first_solution_strategy.empty? || (!vrp.configuration.resolution.evaluate_only && !vrp.configuration.resolution.batch_heuristic)
     end
 
     def assert_first_solution_strategy_is_valid(vrp)
-      vrp.preprocessing_first_solution_strategy.empty? ||
-        (vrp.preprocessing_first_solution_strategy[0] != 'self_selection' && !vrp.periodic_heuristic? || vrp.preprocessing_first_solution_strategy.size == 1) &&
-          vrp.preprocessing_first_solution_strategy.all?{ |strategy| strategy == 'self_selection' || strategy == 'periodic' || OptimizerWrapper::HEURISTICS.include?(strategy) }
+      vrp.configuration.preprocessing.first_solution_strategy.empty? ||
+        (vrp.configuration.preprocessing.first_solution_strategy[0] != 'self_selection' && !vrp.periodic_heuristic? || vrp.configuration.preprocessing.first_solution_strategy.size == 1) &&
+          vrp.configuration.preprocessing.first_solution_strategy.all?{ |strategy| strategy == 'self_selection' || strategy == 'periodic' || OptimizerWrapper::HEURISTICS.include?(strategy) }
     end
 
     def assert_no_planning_heuristic(vrp)
@@ -228,11 +228,11 @@ module Wrappers
     end
 
     def assert_only_force_centroids_if_kmeans_method(vrp)
-      vrp.preprocessing_kmeans_centroids.nil? || vrp.preprocessing_partition_method == 'balanced_kmeans'
+      vrp.configuration.preprocessing.kmeans_centroids.nil? || vrp.configuration.preprocessing.partition_technique == 'balanced_kmeans'
     end
 
     def assert_no_evaluation(vrp)
-      !vrp.resolution_evaluate_only
+      !vrp.configuration.resolution.evaluate_only
     end
 
     def assert_only_one_visit(vrp)
@@ -240,11 +240,11 @@ module Wrappers
     end
 
     def assert_no_periodic_if_evaluation(vrp)
-      !vrp.periodic_heuristic? || !vrp.resolution_evaluate_only
+      !vrp.periodic_heuristic? || !vrp.configuration.resolution.evaluate_only
     end
 
     def assert_route_if_evaluation(vrp)
-      !vrp.resolution_evaluate_only || vrp.routes && !vrp.routes.empty?
+      !vrp.configuration.resolution.evaluate_only || vrp.routes && !vrp.routes.empty?
     end
 
     def assert_wrong_vehicle_shift_preference_with_heuristic(vrp)
@@ -284,62 +284,65 @@ module Wrappers
     end
 
     def assert_no_vehicle_limit_if_heuristic(vrp)
-      vrp.resolution_vehicle_limit.nil? || vrp.resolution_vehicle_limit >= vrp.vehicles.size || !vrp.periodic_heuristic?
+      vrp.configuration.resolution.vehicle_limit.nil? || vrp.configuration.resolution.vehicle_limit >= vrp.vehicles.size || !vrp.periodic_heuristic?
     end
 
     def assert_no_same_point_day_if_no_heuristic(vrp)
-      !vrp.resolution_same_point_day || vrp.periodic_heuristic?
+      !vrp.configuration.resolution.same_point_day || vrp.periodic_heuristic?
     end
 
     def assert_no_allow_partial_if_no_heuristic(vrp)
-      vrp.resolution_allow_partial_assignment || vrp.periodic_heuristic?
+      vrp.configuration.resolution.allow_partial_assignment || vrp.periodic_heuristic?
     end
 
     def assert_no_first_solution_strategy(vrp)
-      vrp.preprocessing_first_solution_strategy.empty? || vrp.preprocessing_first_solution_strategy == ['self_selection']
+      vrp.configuration.preprocessing.first_solution_strategy.empty? || vrp.configuration.preprocessing.first_solution_strategy == ['self_selection']
     end
 
     def assert_solver(vrp)
-      vrp.resolution_solver
+      vrp.configuration.resolution.solver
     end
 
     def assert_solver_if_not_periodic(vrp)
-      vrp.resolution_solver || vrp.preprocessing_first_solution_strategy && vrp.periodic_heuristic?
+      vrp.configuration.resolution.solver || vrp.configuration.preprocessing.first_solution_strategy && vrp.periodic_heuristic?
     end
 
     def assert_clustering_compatible_with_periodic_heuristic(vrp)
-      (!vrp.preprocessing_first_solution_strategy || !vrp.periodic_heuristic?) || !vrp.preprocessing_cluster_threshold && !vrp.preprocessing_max_split_size
+      (!vrp.configuration.preprocessing.first_solution_strategy || !vrp.periodic_heuristic?) || !vrp.configuration.preprocessing.cluster_threshold && !vrp.configuration.preprocessing.max_split_size
     end
 
     def assert_lat_lon_for_partition(vrp)
-      vrp.preprocessing_partition_method.nil? || vrp.points.all?{ |pt| pt.location && pt.location.lat && pt.location.lon }
+      vrp.configuration.preprocessing.partition_technique.nil? || vrp.points.all?{ |pt| pt.location && pt.location.lat && pt.location.lon }
     end
 
     def assert_vehicle_entity_only_before_work_day(vrp)
-      vehicle_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == :vehicle }
-      work_day_entity_index = vrp.preprocessing_partitions.find_index{ |partition| partition[:entity] == :work_day }
+      vehicle_entity_index = vrp.configuration.preprocessing.partitions.find_index{ |partition| partition.entity == :vehicle }
+      work_day_entity_index = vrp.configuration.preprocessing.partitions.find_index{ |partition| partition.entity == :work_day }
       vehicle_entity_index.nil? || work_day_entity_index.nil? || vehicle_entity_index < work_day_entity_index
     end
 
     def assert_deprecated_partitions(vrp)
-      !((vrp.preprocessing_partition_method || vrp.preprocessing_partition_metric) && !vrp.preprocessing_partitions.empty?)
+      !((vrp.configuration.preprocessing.partition_technique || vrp.configuration.preprocessing.partition_metric) && !vrp.configuration.preprocessing.partitions.empty?)
     end
 
     def assert_partitions_entity(vrp)
-      vrp.preprocessing_partitions.empty? || vrp.preprocessing_partitions.all?{ |partition| partition[:method] != 'balanced_kmeans' || partition[:entity] }
+      vrp.configuration.preprocessing.partitions.empty? ||
+        vrp.configuration.preprocessing.partitions.all?{ |partition|
+          partition.technique != 'balanced_kmeans' || partition.entity
+        }
     end
 
     def assert_no_partitions(vrp)
-      vrp.preprocessing_partitions.empty?
+      vrp.configuration.preprocessing.partitions.empty?
     end
 
     def assert_no_initial_centroids_with_partitions(vrp)
-      vrp.preprocessing_partitions.empty? || vrp.preprocessing_kmeans_centroids.nil?
+      vrp.configuration.preprocessing.partitions.empty? || vrp.configuration.preprocessing.kmeans_centroids.nil?
     end
 
     def assert_valid_partitions(vrp)
-      vrp.preprocessing_partitions.size < 3 &&
-        (vrp.preprocessing_partitions.collect{ |partition| partition[:entity] }.uniq.size == vrp.preprocessing_partitions.size)
+      vrp.configuration.preprocessing.partitions.size < 3 &&
+        (vrp.configuration.preprocessing.partitions.collect{ |partition| partition[:entity] }.uniq.size == vrp.configuration.preprocessing.partitions.size)
     end
 
     def assert_route_date_or_indice_if_periodic(vrp)
@@ -420,7 +423,7 @@ module Wrappers
 
     # TODO: Need a better way to represent solver preference
     def assert_small_minimum_duration(vrp)
-      vrp.resolution_minimum_duration.nil? || vrp.vehicles.empty? || vrp.resolution_minimum_duration / vrp.vehicles.size < 5000
+      vrp.configuration.resolution.minimum_duration.nil? || vrp.vehicles.empty? || vrp.configuration.resolution.minimum_duration / vrp.vehicles.size < 5000
     end
 
     def assert_no_cost_fixed(vrp)
@@ -444,8 +447,8 @@ module Wrappers
     end
 
     def compatible_day?(vrp, service, t_day, vehicle)
-      first_day = vrp.schedule_range_indices[:start]
-      last_day = vrp.schedule_range_indices[:end]
+      first_day = vrp.configuration.schedule.range_indices[:start]
+      last_day = vrp.configuration.schedule.range_indices[:end]
       (first_day..last_day).any?{ |day|
         s_ok = t_day == day || !service.unavailable_days.include?(day)
         v_ok = !vehicle.unavailable_days.include?(day)
@@ -463,7 +466,7 @@ module Wrappers
         vehicle_work_days = [0, 1, 2, 3, 4, 5] if vehicle_work_days.empty?
         vehicle_lateness = vehicle.cost_late_multiplier&.positive?
 
-        days = vrp.schedule? ? (vrp.schedule_range_indices[:start]..vrp.schedule_range_indices[:end]).collect{ |day| day } : [0]
+        days = vrp.schedule? ? (vrp.configuration.schedule.range_indices[:start]..vrp.configuration.schedule.range_indices[:end]).collect{ |day| day } : [0]
         days.any?{ |day|
           vehicle_work_days.include?(day % 7) && !vehicle.unavailable_days.include?(day) &&
             !service.unavailable_days.include?(day) &&
@@ -592,9 +595,9 @@ module Wrappers
     end
 
     def possible_days_are_consistent(vrp, service)
-      return false if service.first_possible_days.any?{ |d| d > vrp.schedule_range_indices[:end] }
+      return false if service.first_possible_days.any?{ |d| d > vrp.configuration.schedule.range_indices[:end] }
 
-      return false if service.last_possible_days.any?{ |d| d < vrp.schedule_range_indices[:start] }
+      return false if service.last_possible_days.any?{ |d| d < vrp.configuration.schedule.range_indices[:start] }
 
       consistency_for_each_visit =
         (0..service.visits_number - 1).none?{ |v_i|
@@ -612,7 +615,7 @@ module Wrappers
         this_visit_day = [service.first_possible_days[visit_index], current_day + (service.minimum_lapse || 1)].max
         if this_visit_day <= current_day ||
            (service.last_possible_days[visit_index] && this_visit_day > service.last_possible_days[visit_index]) ||
-           this_visit_day > vrp.schedule_range_indices[:end]
+           this_visit_day > vrp.configuration.schedule.range_indices[:end]
           consistency_in_between_visits = false
         else
           current_day = this_visit_day
@@ -749,7 +752,7 @@ module Wrappers
           vrp.vehicles.none?{ |vehicle|
             (service.activity ? [service.activity] : service.activities).any?{ |activity|
               (service.skills.empty? || vehicle.skills.any?{ |skill_set| (service.skills - skill_set).empty? }) &&
-                (service.sticky_vehicles.empty? || service.sticky_vehicles.include?(vehicle)) &&
+                (service.sticky_vehicle_ids.empty? || service.sticky_vehicle_ids.include?(vehicle.id)) &&
                 service_reachable_by_vehicle_within_timewindows(vrp, activity, vehicle)
             }
           }
@@ -1197,7 +1200,7 @@ module Wrappers
           # insert the pause without inducing unnecessary idle time
           max_service_duration = 0
           vrp.services.each{ |service|
-            next unless (service.sticky_vehicles.empty? || service.sticky_vehicles == vehicle) &&
+            next unless (service.sticky_vehicle_ids.empty? || service.sticky_vehicle_ids == vehicle) &&
                         (service.skills - vehicle.skills).empty?
 
             service_duration = service.activity&.setup_duration.to_i +

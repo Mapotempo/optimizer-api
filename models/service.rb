@@ -52,8 +52,8 @@ module Models
 
     # validates_inclusion_of :type, :in => %i(service pickup delivery)
 
-    field :skills, default: []
-    field :original_skills, default: []
+    field :skills
+    field :original_skills
 
     ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'
@@ -61,11 +61,12 @@ module Models
     has_many :sticky_vehicles, class_name: 'Models::Vehicle'
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation'
-  end
 
-  def self.create(hash)
-    hash[:skills]&.sort!
+    def self.create(hash)
+      hash[:skills] = [] if hash[:skills].to_a.empty?
+      hash[:skills].sort!
 
-    super(hash)
+      super(hash)
+    end
   end
 end

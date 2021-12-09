@@ -150,7 +150,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
     # partition[:entity] becomes a symbol
     vrp[:configuration][:preprocessing][:partitions]&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp[:configuration] && vrp[:configuration][:preprocessing]
-    vrp.preprocessing_partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp.is_a?(Models::Vrp)
+    vrp.configuration.preprocessing.partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp.is_a?(Models::Vrp)
 
     vrp[:relations]&.each{ |r|
       r[:type] = r[:type]&.to_sym
@@ -193,7 +193,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   end
 
   def self.create(problem)
-    Models::Vrp.create(coerce(Oj.load(Oj.dump(problem))))
+    Models::Vrp.create(coerce(Oj.load(Oj.dump(problem), symbol_keys: true)))
   end
 
   def self.matrices_required(vrps, filename)
@@ -287,8 +287,8 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   end
 
   def self.vehicle_and_days_partitions
-    [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle },
-     { method: 'balanced_kmeans', metric: 'duration', entity: :work_day }]
+    [{ technique: 'balanced_kmeans', metric: 'duration', entity: :vehicle },
+     { technique: 'balanced_kmeans', metric: 'duration', entity: :work_day }]
   end
 
   def self.vehicle_trips_relation(vehicles)

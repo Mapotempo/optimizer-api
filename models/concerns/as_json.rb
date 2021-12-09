@@ -15,12 +15,10 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'active_support/concern'
-
 module ContainedPointAsJson
   extend ActiveSupport::Concern
 
-  def as_json
+  def as_json(options = {})
     point = super
 
     self.attributes.each{ |key, value|
@@ -36,10 +34,12 @@ end
 module ActivityAsJson
   extend ActiveSupport::Concern
 
-  def as_json
+  def as_json(options = {})
     activity = super
     return activity unless self.is_a? Models::Activity
 
+    activity.delete('point')
+    activity.delete('id') unless self.class == Models::Rest
     activity.delete('timewindow_ids')
     activity
   end
@@ -48,10 +48,11 @@ end
 module ServiceAsJson
   extend ActiveSupport::Concern
 
-  def as_json
+  def as_json(options = {})
     service = super
     return service unless self.is_a? Models::Service
 
+    service.delete('relations')
     service.delete('sticky_vehicles')
     service.delete('activity_id')
     service.delete('quantity_ids')
@@ -59,10 +60,29 @@ module ServiceAsJson
   end
 end
 
+module RelationAsJson
+  extend ActiveSupport::Concern
+
+  def as_json(options = {})
+    return super unless self.is_a? Models::Relation
+
+    except = %i[linked_services linked_vehicles]
+    relation = Models::Relation.field_names.map{ |field_name|
+      next if except.include? field_name
+
+      [field_name, self.send(field_name).as_json]
+    }.compact.to_h
+
+    relation.delete(:id)
+
+    relation
+  end
+end
+
 module TimewindowAsJson
   extend ActiveSupport::Concern
 
-  def as_json
+  def as_json(options = {})
     timewindow = super
 
     self.attributes.each{ |key, value|
@@ -77,7 +97,7 @@ end
 module LoadAsJson
   extend ActiveSupport::Concern
 
-  def as_json
+  def as_json(options = {})
     load_hash = super
 
     self.attributes.each{ |key, value|
@@ -95,7 +115,7 @@ end
 module SolutionRouteAsJson
   extend ActiveSupport::Concern
 
-  def as_json
+  def as_json(options = {})
     solution_route = super
     self.attributes.each{ |key, value|
       next unless value.is_a? Models::Vehicle
@@ -110,11 +130,10 @@ end
 module SolutionStopAsJson
   extend ActiveSupport::Concern
 
-  def as_json
+  def as_json(options = {})
     stop = super
     return stop unless self.is_a? Models::Solution::Stop
 
-    puts stop.inspect
     stop.delete('id') if self.type == :depot
     stop.delete('activity_id')
     stop
@@ -124,10 +143,11 @@ end
 module PointAsJson
   extend ActiveSupport::Concern
 
-  def as_json
+  def as_json(options = {})
     stop = super
     return stop unless self.is_a? Models::Point
 
+    stop['location']&.delete('id')
     stop.delete('location_id')
     stop
   end
@@ -136,10 +156,10 @@ end
 module VehicleAsJson
   extend ActiveSupport::Concern
 
-  def as_json
+  def as_json(options = {})
     return super unless self.is_a? Models::Vehicle
 
-    except = %i[start_point end_point]
+    except = %i[start_point end_point rests]
     vehicle = Models::Vehicle.field_names.map{ |field_name|
       next if except.include? field_name
 
@@ -148,6 +168,7 @@ module VehicleAsJson
 
     vehicle.delete(:timewindow_id)
 
+    vehicle[:rest_ids] = self.rests.map(&:id)
     vehicle[:id] = self.id
     vehicle
   end
@@ -156,20 +177,27 @@ end
 module VrpAsJson
   extend ActiveSupport::Concern
 
+  def empty_json
+    vrp = {
+      'name' => self.name,
+      'configuration' => self.configuration.as_json,
+      'points' => [], 'services' => [], 'vehicles' => []
+    }
+
+    delete_end_with_nested_key!(vrp['configuration'], 'id')
+    delete_end_with_nested_key!(vrp['configuration'], '_id')
+    delete_end_with_nested_key!(vrp['configuration'], '_ids')
+    vrp.to_json
+  end
+
   def as_json(options = {})
     return super unless self.is_a? Models::Vrp
 
-    vrp = {}
+    vrp = super
 
-    if options[:config_only]
-      vrp = { 'configuration' => self.config.as_json }
-    else
-      vrp = super
-      vrp['configuration'] = vrp['config']
-      vrp.delete('config')
-    end
-
+    delete_end_with_nested_key!(vrp['configuration'], 'id')
     delete_end_with_nested_key!(vrp['configuration'], '_id')
+    delete_end_with_nested_key!(vrp['configuration'], '_ids')
     vrp
   end
 

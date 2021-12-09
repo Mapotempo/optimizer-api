@@ -237,7 +237,7 @@ class SplitClusteringTest < Minitest::Test
         v[:sequence_timewindows] = []
       }
       vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
+        technique: 'balanced_kmeans',
         metric: 'duration',
         entity: :vehicle
       }]
@@ -284,7 +284,7 @@ class SplitClusteringTest < Minitest::Test
       assert_equal 8, generated_services_vrps.size
 
       vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
+        technique: 'balanced_kmeans',
         metric: :visits,
         entity: :work_day
       }]
@@ -298,7 +298,7 @@ class SplitClusteringTest < Minitest::Test
     def test_unavailable_days_taken_into_account_work_day
       vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
+        technique: 'balanced_kmeans',
         metric: 'duration',
         entity: :work_day
       }]
@@ -306,7 +306,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [1, 2]
+      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [1, 2]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -320,7 +320,7 @@ class SplitClusteringTest < Minitest::Test
 
       (vrp[:services] + vrp[:vehicles]).each{ |v| v.delete(:skills) }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [9, 10]
+      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [9, 10]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -340,7 +340,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [0, 2]
+      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [0, 2]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -356,7 +356,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp].services.each{ |s| s.skills = [] }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [9, 10]
+      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [9, 10]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -407,14 +407,14 @@ class SplitClusteringTest < Minitest::Test
     def test_good_vehicle_assignment
       vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
+        technique: 'balanced_kmeans',
         metric: 'duration',
         entity: :work_day
       }]
       vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
       vrp[:vehicles].first[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [1, 2]
+      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [1, 2]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -429,7 +429,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [9, 10]
+      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [9, 10]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -442,14 +442,14 @@ class SplitClusteringTest < Minitest::Test
     def test_good_vehicle_assignment_skills
       vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = [{
-        method: 'balanced_kmeans',
+        technique: 'balanced_kmeans',
         metric: 'duration',
         entity: :work_day
       }]
       vrp[:services].first[:skills] = [:skill]
       vrp[:vehicles][0][:skills] = [[:skill]]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [1, 2]
+      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [1, 2]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -529,8 +529,8 @@ class SplitClusteringTest < Minitest::Test
     def test_avoid_capacities_overlap
       vrp = TestHelper.load_vrp(self, fixture_file: 'results_regularity')
       vrp.vehicles.first.capacities.delete_if{ |cap| cap[:unit_id] == 'l' }
-      vrp.schedule_range_indices = { start: 0, end: 13 }
-      vrp.vehicles = Interpreters::SplitClustering.list_vehicles(vrp.schedule_range_indices, vrp.vehicles, :work_day)
+      vrp.configuration.schedule.range_indices = { start: 0, end: 13 }
+      vrp.vehicles = Interpreters::SplitClustering.list_vehicles(vrp.configuration.schedule.range_indices, vrp.vehicles, :work_day)
 
       service_vrp = { vrp: vrp, service: :demo }
       services_vrps =
@@ -554,7 +554,7 @@ class SplitClusteringTest < Minitest::Test
       vrp = VRP.lat_lon_two_vehicles
       vrp[:configuration][:preprocessing] = {
         partitions: [{
-          method: 'balanced_kmeans',
+          technique: 'balanced_kmeans',
           metric: 'duration',
           entity: :vehicle
         }]
@@ -562,7 +562,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services].first[:skills] = ['skill']
       vrp[:vehicles][0][:skills] = [['skill'], ['other_skill']]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:preprocessing_kmeans_centroids] = [1, 2]
+      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [1, 2]
 
       assert_raises OptimizerWrapper::UnsupportedProblemError do
         Interpreters::SplitClustering.generate_split_vrps(service_vrp)
@@ -620,9 +620,8 @@ class SplitClusteringTest < Minitest::Test
 
     def test_max_split_functionality
       vrp = TestHelper.load_vrp(self)
-      vrp.resolution_duration = 12000
-      vrp.preprocessing_first_solution_strategy = ['local_cheapest_insertion']
-      vrp.config.preprocessing.first_solution_strategy = vrp.preprocessing_first_solution_strategy
+      vrp.configuration.resolution.duration = 12000
+      vrp.configuration.preprocessing.first_solution_strategy = ['local_cheapest_insertion']
 
       Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
         Interpreters::SplitClustering.stub(:remove_poor_routes, ->(_vrp, _result){ return nil }) do
@@ -947,17 +946,17 @@ class SplitClusteringTest < Minitest::Test
 
     def test_periodic_partitions_without_recurrence
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
-      vrp.preprocessing_first_solution_strategy = nil
+      vrp.configuration.preprocessing.first_solution_strategy = nil
 
-      vrp.preprocessing_partitions = [
+      vrp.configuration.preprocessing.partitions = [
         {
-          method: 'balanced_kmeans',
+          technique: 'balanced_kmeans',
           metric: 'duration',
           entity: 'work_day'
         }
       ]
 
-      vrp.resolution_solver = true
+      vrp.configuration.resolution.solver = true
 
       vrp.services.each{ |service|
         service.visits_number = 1
@@ -965,7 +964,7 @@ class SplitClusteringTest < Minitest::Test
         service.maximum_lapse = nil
       }
 
-      vrp.schedule_range_indices = {
+      vrp.configuration.schedule.range_indices = {
         start: 0,
         end: 6
       }
@@ -980,7 +979,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services].find{ |s| s[:id] == 'service_5' }[:sticky_vehicle_ids] = ['vehicle_0']
       vrp[:services].find{ |s| s[:id] == 'service_12' }[:sticky_vehicle_ids] = ['vehicle_1']
       vrp[:configuration][:preprocessing] = {
-        partitions: [{ method: 'balanced_kmeans', metric: 'duration', entity: :vehicle }]
+        partitions: [{ technique: 'balanced_kmeans', metric: 'duration', entity: :vehicle }]
       }
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 2, (solutions[0].routes.find{ |r|

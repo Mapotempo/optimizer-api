@@ -58,9 +58,9 @@ module OptimizerWrapper
           }
         },
         config: {
-          max_split_size: services_vrps.first[:vrp].config&.preprocessing&.max_split_size,
-          partitions: services_vrps.first[:vrp].config&.preprocessing&.partitions&.size,
-          schedule: !services_vrps.first[:vrp].config&.schedule&.range_indices.nil?,
+          max_split_size: services_vrps.first[:vrp].configuration&.preprocessing&.max_split_size,
+          partitions: services_vrps.first[:vrp].configuration&.preprocessing&.partitions&.size,
+          schedule: !services_vrps.first[:vrp].configuration&.schedule&.range_indices.nil?,
         }
       )
       self.options['services_vrps'] = nil # The worker is about to launch the optimization, we can delete the vrp from the job
@@ -71,8 +71,8 @@ module OptimizerWrapper
       value['options']['services_vrps'] = nil
       OptimizerWrapper::REDIS.set Resque::Plugins::Status::Hash.status_key(self.uuid), Resque::Plugins::Status::Hash.encode(value) # Expire is defined resque config
 
-      ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].restitution_csv }
-      ask_restitution_geojson = services_vrps.flat_map{ |s_v| s_v[:vrp].restitution_geometry }.uniq
+      ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].configuration.restitution.csv }
+      ask_restitution_geojson = services_vrps.flat_map{ |s_v| s_v[:vrp].configuration.restitution.geometry }.uniq
       solution = OptimizerWrapper.define_main_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
         if [wrapper, avancement, total, message, cost, time, solution].compact.empty? # if all nil
           tick # call tick in case job is killed

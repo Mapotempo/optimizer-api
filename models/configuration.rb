@@ -25,10 +25,18 @@ module Models
     belongs_to :schedule, class_name: 'Models::Schedule'
   end
 
+  class Partition < Base
+    field :technique
+    field :metric
+    field :entity
+    field :threshold
+    field :restarts
+  end
+
   class Preprocessing < Base
     field :force_cluster, default: false
     field :max_split_size, default: nil
-    field :partition_method, default: nil
+    field :partition_technique, default: nil
     field :partition_metric, default: nil
     field :kmeans_centroids, default: nil
     field :cluster_threshold, default: nil
@@ -73,6 +81,12 @@ module Models
     field :variation_ratio, default: nil
     field :batch_heuristic, default: false
     field :repetition, default: nil
+
+    def self.create(hash)
+      hash[:total_duration] = hash[:duration]
+
+      super(hash)
+    end
   end
 
   class Restitution < Base
@@ -84,7 +98,7 @@ module Models
   end
 
   class Schedule < Base
-    field :range_indices, default: nil # extends schedule_range_date
+    field :range_indices, default: nil # extends configuration.schedule.range_date
     field :start_date, default: nil
     field :unavailable_days, default: Set[] # extends unavailable_date
     field :months_indices, default: []

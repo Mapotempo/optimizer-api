@@ -30,12 +30,12 @@ module Wrappers
       return if vrp.services.empty?
 
       # global data
-      @schedule_end = vrp.schedule_range_indices[:end]
-      @allow_partial_assignment = vrp.resolution_allow_partial_assignment
-      @same_point_day = vrp.resolution_same_point_day
+      @schedule_end = vrp.configuration.schedule.range_indices[:end]
+      @allow_partial_assignment = vrp.configuration.resolution.allow_partial_assignment
+      @same_point_day = vrp.configuration.resolution.same_point_day
       @relaxed_same_point_day = false
       @duration_in_tw = false # TODO: create parameter for this
-      @spread_among_days = !vrp.resolution_minimize_days_worked
+      @spread_among_days = !vrp.configuration.resolution.minimize_days_worked
 
       # heuristic data
       @services_data = {}
@@ -80,7 +80,7 @@ module Wrappers
     def compute_initial_solution(vrp, &block)
       if vrp.services.empty?
         # TODO : create and use result structure instead of using wrapper function
-        vrp.preprocessing_heuristic_result = vrp.empty_solution(:heuristic)
+        vrp.configuration.preprocessing.heuristic_result = vrp.empty_solution(:heuristic)
         return []
       end
 
@@ -106,7 +106,7 @@ module Wrappers
       save_status
 
       # Reorder routes with solver and try to add more visits
-      if vrp.resolution_solver && !@candidate_services_ids.empty?
+      if vrp.configuration.resolution.solver && !@candidate_services_ids.empty?
         block&.call(nil, nil, nil, 'periodic heuristic - re-ordering routes', nil, nil, nil)
         reorder_stops(vrp)
         @output_tool&.add_comment('FILL_AFTER_REORDERING')
@@ -1223,7 +1223,7 @@ module Wrappers
                                       unassigned: unassigned,
                                       elapsed: (Time.now - @starting_time) * 1000) # ms
       solution.parse(vrp)
-      vrp.preprocessing_heuristic_result = solution
+      vrp.configuration.preprocessing.heuristic_result = solution
       vrp_routes
     end
 
@@ -1315,23 +1315,23 @@ module Wrappers
       route_vrp.vehicles = [vehicle]
 
       # configuration
-      route_vrp.schedule_range_indices = nil
-      route_vrp.schedule_start_date = nil
+      route_vrp.configuration.schedule.range_indices = nil
+      route_vrp.configuration.schedule.start_date = nil
 
-      route_vrp.resolution_minimum_duration = 100
-      route_vrp.resolution_time_out_multiplier = 5
-      route_vrp.resolution_solver = true
-      route_vrp.restitution_intermediate_solutions = false
+      route_vrp.configuration.resolution.minimum_duration = 100
+      route_vrp.configuration.resolution.time_out_multiplier = 5
+      route_vrp.configuration.resolution.solver = true
+      route_vrp.configuration.restitution.intermediate_solutions = false
 
-      route_vrp.preprocessing_first_solution_strategy = nil
+      route_vrp.configuration.preprocessing.first_solution_strategy = nil
       # NOT READY YET :
-      # route_vrp.preprocessing_cluster_threshold = 0
-      # route_vrp.preprocessing_force_cluster = true
-      route_vrp.preprocessing_partitions = []
-      route_vrp.restitution_csv = false
+      # route_vrp.configuration.preprocessing.cluster_threshold = 0
+      # route_vrp.configuration.preprocessing.force_cluster = true
+      route_vrp.configuration.preprocessing.partitions = []
+      route_vrp.configuration.restitution.csv = false
 
       # TODO : write conf by hand to avoid mistakes
-      # will need load ? use route_vrp[:configuration] ... or route_vrp.preprocessing_first_sol
+      # will need load ? use route_vrp[:configuration] ... or route_vrp.configuration.preprocessing.first_sol
 
       route_vrp
     end
