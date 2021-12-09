@@ -1,0 +1,6 @@
+# $1 : nombre de jours à retirer du jour en cours
+# $2 : serveur : beta ou prod
+# $3 : le channel slack
+# $4 : le chemin vers les logs api (access et passenger)
+# $5 : le chemin vers les logs resques
+0 8 * * * root /usr/local/sbin/message-optim-stat.sh 1 beta CC47KJR5X /var/log/docker/docker/optimizer_api.log.1.gz "/var/log/docker/docker/optimizer_resque-*.log.1.gz" >/dev/null 2>/dev/null
