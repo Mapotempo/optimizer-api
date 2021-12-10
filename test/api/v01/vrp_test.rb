@@ -286,6 +286,8 @@ class Api::V01::VrpTest < Minitest::Test
   end
 
   def test_unfounded_avancement_message_change
+    todays = [Date.today]
+    times = [Time.now]
     lines_with_avancement = ''
     Dir.mktmpdir('temp_', 'test/') { |tmpdir|
       begin
@@ -314,26 +316,34 @@ class Api::V01::VrpTest < Minitest::Test
         output&.unlink
       end
     }
+    todays << Date.today
+    times << Time.now
 
     assert_msg = "\nThe structure of avancement message has changed! If the modification is on purpose " \
                  "fix this test \n(#{self.class.name}::#{self.name}) to represent the actual functionality."
     # Currently the expected output is in the following form
-    # [date time] jobid - INFO: avancement: repetition (1..2)/2 - clustering phase (y: 1..2)/2 - step (1..y)/(y)
-    # [date time] jobid - INFO: avancement: repetition (1..2)/2 - process (1..9)/10 - solving periodic heuristic
+    # [date time_with_ms_and_zone] jobid - INFO: avancement: repetition (1..2)/2 - clustering phase (y: 1..2)/2 - step (1..y)/(y)
+    # [date time_with_ms_and_zone] jobid - INFO: avancement: repetition (1..2)/2 - process (1..9)/10 - solving periodic heuristic
 
     lines_with_avancement.each{ |line|
-      date_time_jobid = '\[(?<date>[0-9-]*) (?<hour>[0-9:. +]*)\] (?<job_id>[0-9a-z]*)'
+      date_time_jobid_pattern = '\[(?<date>[0-9-]*) (?<time_with_ms_and_zone>[0-9:. +]*)\] (?<job_id>[0-9a-z]*)'
       # There needs to be avancement and repetition
-      %r{#{date_time_jobid} - INFO: avancement: repetition [1-2]/2 - (?<rest>.*)\n} =~ line
+      %r{#{date_time_jobid_pattern} - INFO: avancement: repetition [1-2]/2 - (?<remaining_log>.*)\n} =~ line
 
       refute_nil Regexp.last_match, assert_msg
-      refute_nil Regexp.last_match(:date)&.to_date, assert_msg
-      refute_nil Regexp.last_match(:hour)&.to_time, assert_msg
+      matched_date = Regexp.last_match(:date)&.to_date
+      refute_nil matched_date, assert_msg
+      assert_includes todays, matched_date, assert_msg
 
-      rest = Regexp.last_match(:rest)
+      matched_time = Regexp.last_match(:time_with_ms_and_zone)&.to_time
+      refute_nil matched_time, assert_msg
+      assert_operator matched_time, :>=, times.first, assert_msg
+      assert_operator matched_time, :<=, times.last, assert_msg
 
-      # The rest needs to be either clustering or heuristic solution
-      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ rest || %r{process [1-9]/8 - periodic heuristic } =~ rest
+      remaining_log = Regexp.last_match(:remaining_log)
+
+      # The remaining_log needs to be either clustering or heuristic solution
+      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ remaining_log || %r{process [1-9]/8 - periodic heuristic } =~ remaining_log
 
       refute_nil Regexp.last_match, assert_msg
     }
