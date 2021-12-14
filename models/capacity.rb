@@ -19,8 +19,6 @@ require './models/base'
 
 module Models
   class Capacity < Base
-    include LoadAsJson
-
     field :limit
     field :initial
     field :overload_multiplier
@@ -31,6 +29,6 @@ module Models
     # validates_numericality_of :initial
     # validates_numericality_of :overload_multiplier, allow_nil: true
 
-    belongs_to :unit, class_name: 'Models::Unit'
+    belongs_to :unit, class_name: 'Models::Unit', as_json: :id
   end
 end

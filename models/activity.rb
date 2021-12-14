@@ -19,10 +19,6 @@ require './models/base'
 
 module Models
   class Activity < Base
-    include ActivityAsJson
-    include ContainedPointAsJson
-    include TimewindowAsJson
-
     field :duration, default: 0
     field :setup_duration, default: 0
     field :additional_value, default: 0
@@ -35,7 +31,7 @@ module Models
     # validates_numericality_of :setup_duration
     # validates_numericality_of :late_multiplier, allow_nil: true
 
-    belongs_to :point, class_name: 'Models::Point'
+    belongs_to :point, class_name: 'Models::Point', as_json: :id
     has_many :timewindows, class_name: 'Models::Timewindow'
     # include ValidateTimewindows # FIXME: <- This is commented out because of the above reason.
                                   # Commenting out would make the ActivityTest::test_timewindows pass; however,

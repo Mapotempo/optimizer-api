@@ -19,8 +19,7 @@ require './models/base'
 
 module Models
   class Service < Base
-    include ServiceAsJson
-
+    field :id
     field :original_id, default: nil
 
     field :priority, default: 4
@@ -58,9 +57,9 @@ module Models
     ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'
     has_many :activities, class_name: 'Models::Activity'
-    has_many :sticky_vehicles, class_name: 'Models::Vehicle'
+    has_many :sticky_vehicles, class_name: 'Models::Vehicle', as_json: :ids
     has_many :quantities, class_name: 'Models::Quantity'
-    has_many :relations, class_name: 'Models::Relation'
+    has_many :relations, class_name: 'Models::Relation', as_json: :none
 
     def self.create(hash)
       hash[:skills] = [] if hash[:skills].to_a.empty?

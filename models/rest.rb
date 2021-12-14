@@ -19,6 +19,7 @@ require './models/base'
 
 module Models
   class Rest < Activity
+    field :id
     field :duration, default: 0
     field :late_multiplier, default: 0
     field :exclusion_cost, default: nil

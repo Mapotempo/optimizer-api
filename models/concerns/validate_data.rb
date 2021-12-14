@@ -94,7 +94,7 @@ module ValidateData
     else
       max_matrix_index = @hash[:points].max{ |p| p[:matrix_index] || -1 }[:matrix_index] || -1
       matrix_not_big_enough = @hash[:matrices].any?{ |matrix_group|
-        Models::Matrix.field_names.any?{ |dimension|
+        Models::Matrix.dimensions.any?{ |dimension|
           matrix_group[dimension] &&
             (matrix_group[dimension].size <= max_matrix_index ||
               matrix_group[dimension].any?{ |col| col.size <= max_matrix_index })

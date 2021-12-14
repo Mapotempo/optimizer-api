@@ -20,8 +20,6 @@ require './models/base'
 module Models
   class Solution < Base
     class Route < Base
-      include SolutionRouteAsJson
-
       field :geometry
 
       has_many :stops, class_name: 'Models::Solution::Stop'
@@ -29,7 +27,7 @@ module Models
 
       belongs_to :cost_info, class_name: 'Models::Solution::CostInfo'
       belongs_to :info, class_name: 'Models::Solution::Route::Info'
-      belongs_to :vehicle, class_name: 'Models::Vehicle'
+      belongs_to :vehicle, class_name: 'Models::Vehicle', as_json: :id
 
       def initialize(options = {})
         options = { info: {}, cost_info: {} }.merge(options)

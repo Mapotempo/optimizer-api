@@ -19,8 +19,6 @@ require './models/base'
 
 module Models
   class Quantity < Base
-    include LoadAsJson
-
     field :fill, default: false
     field :empty, default: false
     field :value, default: 0
@@ -31,6 +29,6 @@ module Models
     # validates_numericality_of :value
     # validates_numericality_of :setup_value
 
-    belongs_to :unit, class_name: 'Models::Unit'
+    belongs_to :unit, class_name: 'Models::Unit', as_json: :id
   end
 end

@@ -21,6 +21,7 @@ module Models
   class Solution < Base
     class Stop < Base
       class Info < Base
+        field :id, as_json: :none
         field :day_week_num
         field :day_week
 

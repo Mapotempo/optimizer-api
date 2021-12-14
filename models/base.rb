@@ -31,8 +31,6 @@ module Models
 
     include ActiveHash::Associations
 
-    include IndependentAsJson
-
     def initialize(hash)
       super(hash.each_with_object({}){ |(k, v), memo|
         memo[k.to_sym] = v
@@ -52,8 +50,34 @@ module Models
       }
     end
 
+    class << self
+      def json_fields
+        @json_fields ||= []
+      end
+    end
+
+    def as_json(options = {})
+      hash = {}
+      self.class.json_fields.each{ |field_name|
+        hash[field_name] = self.send(field_name).as_json if self.respond_to?(field_name)
+      }
+      hash
+    end
+
+    def self.field(name, options = {})
+      case options[:as_json]
+      when nil
+        json_fields << name.to_s
+      when :none
+        json_fields
+      else
+        raise 'Unknown :as_json option'
+      end
+
+      super(name, options)
+    end
+
     def self.has_many(name, options = {})
-      super
       field_names << name
 
       # respect English spelling rules: vehicles -> vehicle_ids | capacities -> capacity_ids
@@ -63,6 +87,17 @@ module Models
         else
           "#{name[0..-4]}y_ids".to_sym
         end
+
+      case options[:as_json]
+      when :ids
+        json_fields << ids_function_name.to_s
+      when :none
+        json_fields
+      when nil
+        json_fields << name.to_s
+      else
+        raise 'Unknown :as_json option'
+      end
 
       redefine_method(name) do
         self[name] ||= []
@@ -96,10 +131,20 @@ module Models
     end
 
     def self.belongs_to(name, options = {})
-      super
       field_names << name
 
       id_function_name = "#{name}_id".to_sym
+
+      case options[:as_json]
+      when :id
+        json_fields << id_function_name.to_s
+      when :none
+        json_fields
+      when nil
+        json_fields << name.to_s
+      else
+        raise 'Unknown :as_json option'
+      end
 
       redefine_method(name) do
         self[name]

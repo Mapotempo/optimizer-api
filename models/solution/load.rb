@@ -20,7 +20,6 @@ require './models/base'
 module Models
   class Solution < Base
     class Load < Base
-      include LoadAsJson
       field :current, default: 0
 
       belongs_to :quantity, class_name: 'Models::Quantity'

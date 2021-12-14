@@ -19,6 +19,7 @@ require './models/base'
 
 module Models
   class Unit < Base
+    field :id
     field :label
     field :counting, default: false
 

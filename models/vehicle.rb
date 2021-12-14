@@ -19,10 +19,7 @@ require './models/base'
 
 module Models
   class Vehicle < Base
-    include ContainedPointAsJson
-    include TimewindowAsJson
-    include VehicleAsJson
-
+    field :id
     field :original_id, default: nil
     field :cost_fixed, default: 0
     field :cost_distance_multiplier, default: 0
@@ -100,12 +97,12 @@ module Models
 
     has_many :sequence_timewindows, class_name: 'Models::Timewindow'
 
-    belongs_to :start_point, class_name: 'Models::Point'
-    belongs_to :end_point, class_name: 'Models::Point'
+    belongs_to :start_point, class_name: 'Models::Point', as_json: :id
+    belongs_to :end_point, class_name: 'Models::Point', as_json: :id
     belongs_to :timewindow, class_name: 'Models::Timewindow'
     has_many :capacities, class_name: 'Models::Capacity'
     # include ValidateTimewindows # <- This doesn't work
-    has_many :rests, class_name: 'Models::Rest'
+    has_many :rests, class_name: 'Models::Rest', as_json: :ids
 
     def vrp_result(_options = {})
       {
