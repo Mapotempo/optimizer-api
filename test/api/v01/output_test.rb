@@ -54,6 +54,36 @@ class Api::V01::OutputTest < Minitest::Test
     # tmpdir and generated files are already deleted
   end
 
+  def test_basic_output
+    vrp = VRP.lat_lon
+    vrp[:matrices].first[:distance] = vrp[:matrices].first[:time]
+    response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body, symbolize_names: true)
+
+    solution = result[:solutions][0]
+    solution[:cost_details].each{ |_key, value|
+      assert value
+    }
+    detail_keys = %i[lat lon setup_duration duration quantities timewindows]
+    increasing_activity_keys = %i[begin_time end_time departure_time current_distance]
+    activity_keys = %i[point_id waiting_time travel_time travel_distance type]
+    solution[:routes].each{ |route|
+      increasing_activity_keys.each{ |key|
+        previous_value = -1
+        route[:activities].each.with_index{ |activity, index|
+          assert_operator activity[key], :>=, previous_value, "#{key} at index #{index} should increase along the route"
+          previous_value = activity[key]
+        }
+      }
+
+      route[:activities].each{ |activity|
+        activity_keys.each{ |key| assert activity[key] }
+
+        detail_keys.each{ |key| assert activity[:detail][key] }
+      }
+    }
+  end
+
   def test_day_week_num_and_other_periodic_fields
     vrp = VRP.periodic
     vrp[:services].first[:visits_number] = 2

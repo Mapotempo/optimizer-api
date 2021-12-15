@@ -20,19 +20,17 @@ require './models/base'
 module Models
   class Solution < Base
     class Load < Base
-      field :current, default: 0
+      field :current, default: 0, vrp_result: :hide
 
-      belongs_to :quantity, class_name: 'Models::Quantity'
+      belongs_to :quantity, class_name: 'Models::Quantity', vrp_result: :hide
 
       def vrp_result(options = {})
         hash = super(options)
-        hash.delete('quantity')
-        hash.delete('current')
         hash['unit'] = quantity.unit_id
         hash['label'] = quantity.unit.label
-        hash['value'] = quantity.value
-        hash['setup_value'] = quantity.setup_value
-        hash['current_load'] = current
+        hash['value'] = quantity.value&.round(3)
+        hash['setup_value'] = quantity.setup_value if quantity.unit.counting
+        hash['current_load'] = current&.round(3)
         hash
       end
     end

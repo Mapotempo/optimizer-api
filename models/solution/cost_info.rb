@@ -27,6 +27,12 @@ module Models
       field :lateness, default: 0
       field :overload, default: 0
 
+      def vrp_result(options = {})
+        hash = super(options)
+        hash['total'] = total
+        hash
+      end
+
       def total
         fixed + time + distance + value + lateness + overload
       end

@@ -22,8 +22,8 @@ module Models
     field :duration, default: 0
     field :setup_duration, default: 0
     field :additional_value, default: 0
-    field :late_multiplier, default: nil
-    field :position, default: :neutral
+    field :late_multiplier, default: nil, vrp_result: :hide
+    field :position, default: :neutral, vrp_result: :hide
 
     # FIXME: ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
@@ -31,7 +31,7 @@ module Models
     # validates_numericality_of :setup_duration
     # validates_numericality_of :late_multiplier, allow_nil: true
 
-    belongs_to :point, class_name: 'Models::Point', as_json: :id
+    belongs_to :point, class_name: 'Models::Point', as_json: :id, vrp_result: :hide
     has_many :timewindows, class_name: 'Models::Timewindow'
     # include ValidateTimewindows # FIXME: <- This is commented out because of the above reason.
                                   # Commenting out would make the ActivityTest::test_timewindows pass; however,
@@ -41,9 +41,6 @@ module Models
 
     def vrp_result(options = {})
       hash = super(options)
-      hash.delete('late_multiplier')
-      hash.delete('position')
-      hash.delete('point')
       if self.point # Rest inherits from activity
         hash['lat'] = point.location&.lat
         hash['lon'] = point.location&.lon

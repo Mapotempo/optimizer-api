@@ -1462,7 +1462,7 @@ module Wrappers
 
           total_travel_time_correction = 0
           route.stops.each{ |stop|
-            next if stop.service_id.nil? || stop.info.travel_time.to_i.zero? || services_grouped_by_point_id[stop.activity.point].nil?
+            next if stop.service_id.nil? || stop.info.travel_time.to_i.zero? || services_grouped_by_point_id[stop.activity.point.id].nil?
 
             setup_duration = stop.activity[:simplified_setup_duration].to_i
 

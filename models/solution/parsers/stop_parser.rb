@@ -33,8 +33,8 @@ module Parsers
       {
         id: service.original_id,
         service_id: options[:service_id] || service.id,
-        pickup_shipment_id: service.type == :pickup && (service.original_id || service.id),
-        delivery_shipment_id: service.type == :delivery && (service.original_id || service.id),
+        pickup_shipment_id: service.type == :pickup ? (service.original_id || service.id) : nil,
+        delivery_shipment_id: service.type == :delivery ? (service.original_id || service.id) : nil,
         type: service.type,
         alternative: options[:index],
         loads: build_loads(service, options),

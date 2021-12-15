@@ -27,7 +27,7 @@ module Models
 
       belongs_to :cost_info, class_name: 'Models::Solution::CostInfo'
       belongs_to :info, class_name: 'Models::Solution::Route::Info'
-      belongs_to :vehicle, class_name: 'Models::Vehicle', as_json: :id
+      belongs_to :vehicle, class_name: 'Models::Vehicle', as_json: :id, vrp_result: :hide
 
       def initialize(options = {})
         options = { info: {}, cost_info: {} }.merge(options)
@@ -36,7 +36,6 @@ module Models
 
       def vrp_result(options = {})
         hash = super(options)
-        hash.delete('vehicle')
         hash['activities'] = hash.delete('stops')
         hash['cost_details'] = hash.delete('cost_info')
         hash['detail'] = hash.delete('info')

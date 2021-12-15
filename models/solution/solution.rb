@@ -31,7 +31,7 @@ module Models
     has_many :unassigned, class_name: 'Models::Solution::Stop'
 
     belongs_to :cost_info, class_name: 'Models::Solution::CostInfo'
-    belongs_to :info, class_name: 'Models::Solution::Info'
+    belongs_to :info, class_name: 'Models::Solution::Info', vrp_result: :hide
     belongs_to :configuration, class_name: 'Models::Solution::Configuration'
 
     def initialize(options = {})
@@ -43,7 +43,6 @@ module Models
       hash = super(options)
       hash['cost'] = cost_info.total
       hash['cost_details'] = hash.delete('cost_info')
-      hash.delete('info')
       hash.merge!(info.vrp_result(options))
       edit_route_days(hash)
       hash

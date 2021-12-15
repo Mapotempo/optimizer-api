@@ -21,8 +21,8 @@ module Models
   class Rest < Activity
     field :id
     field :duration, default: 0
-    field :late_multiplier, default: 0
-    field :exclusion_cost, default: nil
+    field :late_multiplier, default: 0, vrp_result: :hide
+    field :exclusion_cost, default: nil, vrp_result: :hide
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
@@ -32,12 +32,5 @@ module Models
 
     has_many :timewindows, class_name: 'Models::Timewindow'
     # include ValidateTimewindows
-
-    def vrp_result(options = {})
-      hash = super(options)
-      hash.delete('late_multiplier')
-      hash.delete('exclusion_cost')
-      hash
-    end
   end
 end

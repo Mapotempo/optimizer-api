@@ -32,13 +32,13 @@ module Models
       field :pickup_shipment_id
       field :delivery_shipment_id
       field :rest_id
-      field :skills, default: []
-      field :original_skills, default: []
+      field :skills, default: [], vrp_result: :hide
+      field :original_skills, default: [], vrp_result: :hide
       field :visit_index
 
       has_many :loads, class_name: 'Models::Solution::Load'
       belongs_to :activity, class_name: 'Models::Activity'
-      belongs_to :info, class_name: 'Models::Solution::Stop::Info'
+      belongs_to :info, class_name: 'Models::Solution::Stop::Info', vrp_result: :hide
 
       def initialize(object, options = {})
         options = { info: {} }.merge(options)
@@ -63,10 +63,8 @@ module Models
       def vrp_result(options = {})
         hash = super(options)
         hash['original_service_id'] = id
-        hash.delete('skills')
-        hash.delete('original_skills')
         hash.merge!(info.vrp_result(options))
-        hash.delete('info')
+        hash['point_id'] = self.activity.point_id
         hash['detail'] = hash.delete('activity')
         hash['detail']['skills'] = build_skills
         hash['detail']['internal_skills'] = self.skills
