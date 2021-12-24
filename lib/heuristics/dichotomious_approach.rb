@@ -139,7 +139,7 @@ module Interpreters
 
         sv_one.vehicles << vehicle
         sv_zero.vehicles -= [vehicle]
-        vehicle_points = sv_zero.points.select{ |p| p.id == vehicle.start_point_id || p.id == vehicle.end_point_id }
+        vehicle_points = [vehicle.start_point, vehicle.end_point].compact.uniq
 
         update_sv_one_matrix(sv_one, original_vrp, original_matrix_indices, vehicle, vehicle_points)
       }
