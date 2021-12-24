@@ -8,7 +8,7 @@ ARG VROOM_VERSION
 FROM vroomvrp/vroom-docker:${VROOM_VERSION:-v1.8.0} as vroom
 
 # Rake
-FROM ${REGISTRY:-registry.mapotempo.com/}mapotempo-${BRANCH:-ce}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.9.0}
+FROM ${REGISTRY:-registry.mapotempo.com/}mapotempo-${BRANCH:-ce}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.10.0}
 ARG BUNDLE_WITHOUT
 
 ENV LANG C.UTF-8

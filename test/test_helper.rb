@@ -46,6 +46,7 @@ Minitest::Retry.use!(
     DichotomiousTest#test_dichotomious_approach
     RealCasesTest#test_ortools_open_timewindows
     SplitClusteringTest#test_avoid_capacities_overlap
+    SplitClusteringTest#test_cluster_one_phase_vehicle
     SplitClusteringTest#test_instance_same_point_day
     SplitClusteringTest#test_no_doubles_3000
     WrapperTest#test_detecting_unfeasible_services_can_not_take_too_long
@@ -201,7 +202,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
             WebMock.enable_net_connect!
             matrices =
-              vrp.router.send(:__minitest_stub__matrix, url, mode, dimensions, row, column, options) # call original method
+              vrp.router.send(:__minitest_any_instance_stub__matrix, url, mode, dimensions, row, column, options) # call original method
             WebMock.disable_net_connect!
             write_in_dump <<
               { url: url, mode: mode, dimensions: dimensions, row: row, column: column, options: options, matrices: matrices }
