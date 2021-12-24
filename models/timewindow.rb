@@ -17,6 +17,8 @@
 #
 require './models/base'
 
+DEFAULT_MAX_LATENESS_RATIO = ENV['OPTIM_DEFAULT_MAX_LATENESS_RATIO'] ? ENV['OPTIM_DEFAULT_MAX_LATENESS_RATIO'].to_f : 1
+
 module Models
   class Timewindow < Base
     field :start, default: 0
@@ -31,8 +33,10 @@ module Models
     # validates_numericality_of :day_index, allow_nil: true
 
     def self.create(hash)
-      # By default 25% of the timewindow (if there is no end, it is 0)
-      hash[:maximum_lateness] ||= hash[:end] ? (0.25 * (hash[:end] - hash[:start].to_i)).round : 0
+      # If the maximum_lateness of the timewindow is not defined, by default, it is 100% of the timewindow or
+      # if ENV['OPTIM_DEFAULT_MAX_LATENESS_RATIO'] is defined, this value takes the precedence in the calculation
+      # (if there is no end to the timewindow, the maximum lateness is 0 since tardiness is not possible in any case)
+      hash[:maximum_lateness] ||= hash[:end] ? (DEFAULT_MAX_LATENESS_RATIO.to_f * (hash[:end] - hash[:start].to_i)).round : 0
 
       super(hash)
     end
