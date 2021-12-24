@@ -296,7 +296,7 @@ module OptimizerWrapper
     compatibility_table = mission_skills.map.with_index{ |_skills, _index| Array.new(vehicle_skills.size) { false } }
     mission_skills.each.with_index{ |m_skills, m_index|
       vehicle_skills.each.with_index{ |v_skills, v_index|
-        compatibility_table[m_index][v_index] = true if (v_skills & m_skills) == m_skills
+        compatibility_table[m_index][v_index] = true if (m_skills - v_skills).empty?
       }
     }
 
@@ -345,12 +345,12 @@ module OptimizerWrapper
     }
   end
 
-  def self.build_independent_vrps(vrp, skill_sets, skill_vehicle_ids, skill_service_ids)
+  def self.build_independent_vrps(vrp, skill_sets, vehicle_indices_by_skills, skill_service_ids)
     unused_vehicle_indices = (0..vrp.vehicles.size - 1).to_a
     independent_vrps = skill_sets.collect{ |skills_set|
       # Compatible problem ids are retrieved
       vehicle_indices = skills_set.flat_map{ |skills|
-        skill_vehicle_ids.select{ |k, _v| (k & skills) == skills }.flat_map{ |_k, v| v }
+        vehicle_indices_by_skills.select{ |k, _v| (skills - k).empty? }.flat_map{ |_k, v| v }
       }.uniq
       vehicle_indices.each{ |index| unused_vehicle_indices.delete(index) }
       service_ids = skills_set.flat_map{ |skills| skill_service_ids[skills] }
@@ -406,17 +406,22 @@ module OptimizerWrapper
     grouped_services.each{ |skills, missions| skill_service_ids[skills] += missions.map(&:id) }
 
     # Generate Vehicles data
-    ### Be careful in case the alternative skills are supported again !
+    if vrp.vehicles.any?{ |v| v.skills.size > 1 } # alternative skills
+      log 'split_independent_vrp does not support alternative set of vehicle skills', level: :warn
+      # Be careful in case the alternative skills are supported again !
+      # The vehicle.skills.flatten down below won't work
+      return [vrp]
+    end
     grouped_vehicles = vrp.vehicles.group_by{ |vehicle| vehicle.skills.flatten }
     vehicle_skills = grouped_vehicles.keys.uniq
-    skill_vehicle_ids = Hash.new{ [] }
+    vehicle_indices_by_skills = Hash.new{ [] }
     grouped_vehicles.each{ |skills, vehicles|
-      skill_vehicle_ids[skills] += vehicles.map{ |vehicle| vrp.vehicles.find_index(vehicle) }
+      vehicle_indices_by_skills[skills] += vehicles.map{ |vehicle| vrp.vehicles.find_index(vehicle) }
     }
 
-    independant_skill_sets = compute_independent_skills_sets(vrp, mission_skills, vehicle_skills)
+    independent_skill_sets = compute_independent_skills_sets(vrp, mission_skills, vehicle_skills)
 
-    build_independent_vrps(vrp, independant_skill_sets, skill_vehicle_ids, skill_service_ids)
+    build_independent_vrps(vrp, independent_skill_sets, vehicle_indices_by_skills, skill_service_ids)
   end
 
   def self.join_independent_vrps(services_vrps, callback)

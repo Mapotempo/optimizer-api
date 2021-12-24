@@ -367,7 +367,7 @@ module Interpreters
         next if vehicle_services.size < 5
 
         vehicle_service_coordinates = vehicle_services.collect{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }
-        extreme_points = Helper.approximate_quadrilateral_polygon(vehicle_service_coordinates)
+        extreme_points = Helper.approximate_quadrilateral_polygon(vehicle_service_coordinates).uniq
         linked_ids = ["0_representative_vrp_s_#{vehicle_id}"]
         extreme_points.each_with_index{ |lat_lon, index|
           points << { id: "#{index + 1}_representative_vrp_p_#{vehicle_id}", location: { lat: lat_lon[0], lon: lat_lon[1] }}
@@ -649,10 +649,25 @@ module Interpreters
         sub_vrp.relations.delete_if{ |r| r.type == :same_vehicle }
         sub_vrp.services.each{ |s| s.relations.delete_if{ |r| r.type == :same_vehicle } }
       end
+      available_vehicle_ids = sub_vrp.vehicles.map(&:id)
+
+      split_respects_relations = sub_vrp.relations.all?{ |r|
+        non_matching_linked_ids = r.linked_ids - partial_service_ids
+        non_matching_linked_vehicle_ids = r.linked_vehicle_ids - available_vehicle_ids
+
+        (non_matching_linked_ids.empty? || non_matching_linked_ids.size == r.linked_ids.size) &&
+          (non_matching_linked_vehicle_ids.empty? || non_matching_linked_vehicle_ids.size == r.linked_vehicle_ids.size)
+      }
+      unless split_respects_relations
+        err_msg = 'Split does not respect relations. Some relations will be silently ignored.'
+        log err_msg, level: :warn
+        raise err_msg if ENV['APP_ENV'] != 'production'
+      end
+
       sub_vrp.relations.select!{ |r|
-        # Split respects relations, it is enough to check only the first linked id --  [0..0].any? is to handle empties
-        r.linked_ids[0..0].any? { |sid| sub_vrp.services.any? { |s| s.id == sid } } &&
-          r.linked_vehicle_ids[0..0].any? { |vid| sub_vrp.vehicles.any? { |v| v.id == vid } }
+        # Split should respect relations, it is enough to check only the first linked id --  [0..0].all? is to handle empties
+        r.linked_ids[0..0].all?{ |sid| partial_service_ids.include?(sid) } &&
+          r.linked_vehicle_ids[0..0].all?{ |vid| available_vehicle_ids.include?(vid) }
       }
       points_ids = sub_vrp.services.map{ |s| s.activity.point.id }.compact |
                    sub_vrp.vehicles.flat_map{ |vehicle| [vehicle.start_point_id, vehicle.end_point_id] }.compact

@@ -2883,31 +2883,90 @@ class WrapperTest < Minitest::Test
                  "all should be infeasible due to distance constraint"
   end
 
-  def test_number_of_service_vrps_generated_in_split_independent
+  def test_split_independent_vrp_does_not_reset_relations
+    problem = VRP.independent_skills
+    # The following pairs of services (those in the same relation) would stay on the same vehicle
+    # after the split_independent_vrp even without the relations (they are forced by skills).
+    # Here we test only if the relations passed correctly to sub-problems after split_independent_vrp.
+    # split_independent_vrp does not take into account relations during split.
+    # If the services are not feasible in the first place
+    # -- i.e., both services of the same relation cannot be served on the same vehicle --
+    # then split cannot do anything but split these services into different sub-problems.
+    problem[:relations] = [
+      { type: :shipment, linked_ids: ['service_2', 'service_4'] },
+      { type: :same_route, linked_ids: ['service_3', 'service_5'] },
+      { type: :sequence, linked_ids: ['service_1', 'service_6'] },
+    ]
+
+    vrp = TestHelper.create(problem)
+    vrp.matrices = nil
+    split_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 3, split_vrps.size, 'split_independent_vrp function does not generate expected number of split_vrps'
+    expected_split = [
+      [['vehicle_0'], ['service_2', 'service_4']],
+      [['vehicle_1'], ['service_3', 'service_5']],
+      [['vehicle_2'], ['service_1', 'service_6']],
+    ]
+    assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
+    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
+    assert_equal 0, (split_vrps.count{ |s| s.resolution_duration.zero? })
+
+    expected_relations = problem[:relations].map{ |r| r[:linked_ids] }.sort
+    actual_relation = split_vrps.map{ |svrp| svrp.relations.flat_map(&:linked_ids) }.sort
+    assert_equal expected_relations, actual_relation, 'split_independent_vrp should keep relations'
+  end
+
+  def test_split_independent_vrp_generates_correct_split_vrps
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
-    services_vrps = OptimizerWrapper.split_independent_vrp(vrp)
-    assert_equal 5, services_vrps.size, 'split_independent_vrp function does not generate expected number of services_vrps'
-    assert_equal vrp.resolution_duration, services_vrps.sum(&:resolution_duration)
+    split_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 3, split_vrps.size, 'split_independent_vrp function does not generate expected number of split_vrps'
+    expected_split = [
+      [['vehicle_0'], ['service_2', 'service_4']],
+      [['vehicle_1'], ['service_3', 'service_5']],
+      [['vehicle_2'], ['service_1', 'service_6']],
+    ]
+    assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
+    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
+    assert_equal 0, (split_vrps.count{ |s| s.resolution_duration.zero? })
 
     # add services that can not be served by any vehicle (different configurations)
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
     vrp.services << Models::Service.create(id: 'fake_service_1', skills: ['fake_skill1'], activity: { point: vrp.points.first })
     vrp.services << Models::Service.create(id: 'fake_service_2', skills: ['fake_skill1'], activity: { point: vrp.points.first })
-    services_vrps = OptimizerWrapper.split_independent_vrp(vrp)
-    assert_equal 6, services_vrps.size, 'split_independent_vrp function does not generate expected number of services_vrps'
-    assert_equal vrp.resolution_duration, services_vrps.sum(&:resolution_duration)
-    assert_equal 3, (services_vrps.count{ |s| s.resolution_duration.zero? })
+    split_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 4, split_vrps.size, 'split_independent_vrp function does not generate expected number of split_vrps'
+    expected_split.unshift [[], ['fake_service_1', 'fake_service_2']]
+    assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
+    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
+    assert_equal 1, (split_vrps.count{ |s| s.resolution_duration.zero? })
 
     vrp = TestHelper.create(VRP.independent_skills)
     vrp.matrices = nil
     vrp.services << Models::Service.create(id: 'fake_service_1', skills: ['fake_skill1'], activity: { point: vrp.points.first })
     vrp.services << Models::Service.create(id: 'fake_service_3', skills: ['fake_skill2'], activity: { point: vrp.points.first })
-    services_vrps = OptimizerWrapper.split_independent_vrp(vrp)
-    assert_equal 7, services_vrps.size, 'split_independent_vrp function does not generate expected number of services_vrps'
-    assert_equal vrp.resolution_duration, services_vrps.sum(&:resolution_duration)
-    assert_equal 4, (services_vrps.count{ |s| s.resolution_duration.zero? })
+    split_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 5, split_vrps.size, 'split_independent_vrp function does not generate expected number of split_vrps'
+    expected_split.shift
+    expected_split.unshift [[], ['fake_service_3']]
+    expected_split.unshift [[], ['fake_service_1']]
+    assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
+    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
+    assert_equal 2, (split_vrps.count{ |s| s.resolution_duration.zero? })
+
+    vrp = TestHelper.create(VRP.independent_skills)
+    vrp.matrices = nil
+    vrp.services[1].skills = [:D]
+    split_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    assert_equal 2, split_vrps.size, 'split_independent_vrp function does not generate expected number of split_vrps'
+    expected_split = [
+      [['vehicle_0', 'vehicle_1'], ['service_2', 'service_3', 'service_4', 'service_5']],
+      [['vehicle_2'], ['service_1', 'service_6']],
+    ]
+    assert_equal expected_split, split_vrps.map{ |sv| [sv.vehicles.map(&:id).sort, sv.services.map(&:id)] }.sort
+    assert_in_delta split_vrps.sum(&:resolution_duration), vrp.resolution_duration, split_vrps.size
+    assert_equal 0, (split_vrps.count{ |s| s.resolution_duration.zero? })
   end
 
   def test_split_independent_with_trip_relation
@@ -2929,18 +2988,14 @@ class WrapperTest < Minitest::Test
     problem = VRP.independent_skills
 
     problem[:vehicles][1][:end_point_id] = problem[:vehicles].first[:start_point_id]
-    problem[:relations] = [{
-      type: :vehicle_trips,
-      linked_vehicle_ids: ['vehicle_1', 'vehicle_2']
-    }]
+    problem[:relations] = [{ type: :vehicle_trips, linked_vehicle_ids: ['vehicle_1', 'vehicle_2'] }]
     vrp = TestHelper.create(problem)
 
     independent_vrps = OptimizerWrapper.split_independent_vrp(vrp)
-    expected_skills_sets = [[[[:D, :S2]], [[:S3, :S4]]], [], [[[:D, :S1]]]]
-    assert(independent_vrps.all?{ |independent_vrp|
-      expected_skills_sets.include?(independent_vrp.vehicles.map(&:skills))
-    })
-    assert_equal 4, independent_vrps.size,
+    expected_skills_sets = [[[[:D, :S1]]], [[[:D, :S2]], [[:S3, :S4]]]]
+    assert_equal expected_skills_sets, independent_vrps.map{ |i| i.vehicles.map(&:skills).sort }.sort
+
+    assert_equal 2, independent_vrps.size,
                  'split_independent_vrp function does not generate expected number of independent_vrps'
   end
 

@@ -239,7 +239,7 @@ module Models
       vrp.add_relation_references
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.expand_unavailable_days
-      vrp.provide_original_info
+      vrp.provide_original_info # TODO: this should be done on hash in order to be sure to have the original information
       vrp.sticky_as_skills # TODO: this should be done on hash in order to completely remove sticky_vehicles from service model
     end
 
