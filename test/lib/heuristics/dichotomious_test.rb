@@ -172,10 +172,20 @@ class DichotomiousTest < Minitest::Test
     end
 
     def test_no_dichotomious_when_no_location
-      vrp = TestHelper.load_vrp(self)
+      problem = VRP.basic
+      problem[:vehicles] << problem[:vehicles].first.merge({ id: 'another_vehicle' })
+      problem[:configuration][:resolution][:dicho_algorithm_service_limit] = 0
+      vrp = TestHelper.create(problem)
       service_vrp = { vrp: vrp, service: :demo }
 
-      refute Interpreters::Dichotomious.dichotomious_candidate?(service_vrp)
+      vrp.resolution_dicho_algorithm_vehicle_limit = 0
+
+      refute Interpreters::Dichotomious.dichotomious_candidate?(service_vrp), 'no dicho if no location'
+
+      location = Models::Location.new(lat: 0, lon: 0)
+      vrp.points.map!{ |point| point.tap{ |p| p.location = location } }
+
+      assert Interpreters::Dichotomious.dichotomious_candidate?(service_vrp), 'dicho if all has location'
     end
 
     def test_split_matrix

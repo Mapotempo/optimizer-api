@@ -235,7 +235,7 @@ module Models
 
     def test_incorrect_matrix_indices
       problem = VRP.basic
-      problem[:points] << { id: 'point_4', matrix_index: 4 }
+      problem[:points].last[:matrix_index] = 4
 
       assert_raises OptimizerWrapper::DiscordantProblemError do
         TestHelper.create(problem)
