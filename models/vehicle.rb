@@ -111,6 +111,8 @@ module Models
 
       hash[:skills] = [[]] if hash[:skills].to_a.empty? # If vehicle has no skills, it has the empty skillset
 
+      hash[:skills].each(&:sort!) # The order of skills of a skillset should not matter
+
       super(hash)
     end
 

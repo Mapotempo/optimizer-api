@@ -1079,14 +1079,14 @@ module Wrappers
                                            shallow_copy: [:unit, :point])
             sequence_relation_ids << new_service.id
 
-            if index > 0
+            if index < shipment_relations.size - 1
               # all timing will be handled by the first service (of the sequence relation)
               # correct the TW.end for the succeeding services (so that they can start)
               activity = new_service.activity
               activity.timewindows.each{ |tw| tw.end += activity.duration if tw&.end }
               activity.additional_value = 0
+              activity.setup_duration += activity.duration
               activity.duration = 0
-              activity.setup_duration = 0
 
               # inserting the remaining parts of a multipart service should be of highest priority
               new_service.priority = 0 # 0 is the highest priority
@@ -1112,7 +1112,9 @@ module Wrappers
             expanded_services << new_service
           }
 
-          sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids)
+          # For some reason, or-tools performance is better when the sequence relation is defined in the inverse order.
+          # Note that, activity.duration's are set to zero except the last duplicated service (so we model exactly same constraint). 
+          sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids.reverse)
         }
 
         vrp[:simplified_complex_shipments] = {
@@ -1180,6 +1182,9 @@ module Wrappers
               }
 
               next unless insert_location # expanded activity(ies) of service is found in this route
+
+              # stop.. something went wrong if duplicated services are planned on different vehicles
+              raise 'Simplification cannot patch the result if duplicated services are planned on different vehicles' unless deleted_exp_ser_count == planned_exp_ser_count
 
               merged_activity = first_exp_ser_activity.merge(last_exp_ser_activity) { |key, first, last|
                 if key == :service_id
@@ -1438,7 +1443,7 @@ module Wrappers
         # simplifies the constraint
         return nil if vrp.vehicles.group_by(&:matrix_id).any?{ |_m_id, v_group|
                         v_group.group_by{ |v| [v.coef_setup || 1, v.additional_setup.to_i] }.size > 1
-                      }
+                      } || vrp.services.any?{ |s| s.activity.nil? }
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
         vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
@@ -1469,7 +1474,7 @@ module Wrappers
           }
         }
 
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
@@ -1481,14 +1486,14 @@ module Wrappers
         }
       when :rewind
         # take it back in case in dicho and there will be re-optimization
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
 
         vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
-          setup_duration = service_group.first[:simplified_setup_duration].to_i
+          setup_duration = service_group.first.activity[:simplified_setup_duration].to_i
 
           next if setup_duration.zero?
 
@@ -1503,8 +1508,8 @@ module Wrappers
           }
 
           service_group.each{ |service|
-            service.setup_duration = service[:simplified_setup_duration]
-            service[:simplified_setup_duration] = nil
+            service.activity.setup_duration = service.activity[:simplified_setup_duration]
+            service.activity[:simplified_setup_duration] = nil
           }
         }
 
@@ -1518,12 +1523,12 @@ module Wrappers
         # patches the result
         # the travel_times need to be decreased and setup_duration need to be increased by
         # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and travel_time > 0
-        return nil unless vrp.services.any?{ |s| s[:simplified_setup_duration] }
+        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
         vehicles_grouped_by_vehicle_id = vrp.vehicles.group_by(&:id)
-        services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point }
+        services_grouped_by_point_id = vrp.services.group_by{ |s| s.activity.point_id }
 
         overall_total_travel_time_correction = 0
         result[:routes].each{ |route|
@@ -1533,9 +1538,9 @@ module Wrappers
 
           total_travel_time_correction = 0
           route[:activities].each{ |activity|
-            next if activity[:travel_time].to_i.zero?
+            next if activity[:service_id].nil? || activity[:travel_time].to_i.zero?
 
-            setup_duration = services_grouped_by_point_id[activity[:point_id]].first[:simplified_setup_duration].to_i
+            setup_duration = services_grouped_by_point_id[activity[:point_id]].first.activity[:simplified_setup_duration].to_i
 
             next if setup_duration.zero?
 
@@ -1552,7 +1557,7 @@ module Wrappers
         result[:total_travel_time] -= overall_total_travel_time_correction.round
 
         result[:unassigned].each{ |activity|
-          setup_duration = services_grouped_by_point_id[activity[:point_id]].first[:simplified_setup_duration].to_i
+          setup_duration = services_grouped_by_point_id[activity[:point_id]].first.activity[:simplified_setup_duration].to_i
 
           activity[:detail][:setup_duration] = setup_duration
         }

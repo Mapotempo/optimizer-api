@@ -159,6 +159,7 @@ module Api
                                              end.to_time.to_i }
           rack_response(format_message(response, nil), 429, headers)
         else
+          Raven.capture_exception(e)
           rack_response(format_message(response, e.backtrace), 500)
         end
       end

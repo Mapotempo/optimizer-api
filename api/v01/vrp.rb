@@ -104,9 +104,18 @@ module Api
             api_key = params[:api_key]
             profile = APIBase.profile(api_key)
             checksum = Digest::MD5.hexdigest Marshal.dump(params)
+
+            Raven.tags_context(vrp_checksum: checksum)
+            key_print = params[:api_key].rpartition('-')[0]
+            key_print = params[:api_key][0..3] if key_print.empty?
+            Raven.tags_context(key_print: key_print)
+            Raven.user_context(api_key: params[:api_key]) # Filtered in sentry if user_context
+
             d_params = declared(params, include_missing: false)
             vrp_params = d_params[:points] ? d_params : d_params[:vrp]
             APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), d_params.to_json) if OptimizerWrapper.config[:dump][:vrp]
+
+            Raven.extra_context(vrp_name: vrp_params[:name])
 
             params_limit = profile[:params_limit].merge(OptimizerWrapper.access[api_key][:params_limit] || {})
             params_limit.each{ |key, value|

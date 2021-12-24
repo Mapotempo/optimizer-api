@@ -30,6 +30,8 @@ use Rack::Cors do
   end
 end
 
+use Raven::Rack
+
 use Rack::Locale
 
 #\ -p 1791

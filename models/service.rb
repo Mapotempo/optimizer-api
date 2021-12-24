@@ -59,4 +59,10 @@ module Models
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation'
   end
+
+  def self.create(hash)
+    hash[:skills]&.sort!
+
+    super(hash)
+  end
 end

@@ -62,7 +62,7 @@ module Helper
         [
           key[0..-4].to_sym, "#{key[0..-6]}ies".to_sym, "#{key[0..-5]}s".to_sym, key
         ].find{ |k| original.class.method_defined?(k) }
-      }.uniq - [:id] # cannot duplicate the object with the same id
+      }.compact.uniq - [:id] # cannot duplicate the object with the same id
 
       # To reuse the same sub-members, the key needs to be given in the shallow_copy
       # (which forces the duplication to use the original key object)
