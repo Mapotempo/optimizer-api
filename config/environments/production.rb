@@ -15,10 +15,6 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'active_support'
-require 'active_support/core_ext'
-require 'redis'
-require 'tmpdir'
 
 require './wrappers/demo'
 require './wrappers/vroom'

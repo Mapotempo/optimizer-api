@@ -15,8 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'json'
-require 'rest_client'
+
 # RestClient.log = $stdout
 
 class RouterError < StandardError; end
@@ -48,7 +47,7 @@ module Routers
           resource = RestClient::Resource.new(url + "/routes.#{format}", timeout: nil)
           request = resource.post(params(mode, dimension, options).merge({
             locs: slice_segments.collect{ |segment| segment.join(',') }.join('|')
-          })) { |response, request, result, &block|
+          })) { |response, _request, result, &_block|
             case response.code
             when 200
               response
@@ -67,7 +66,7 @@ module Routers
               slice_segments.each_with_index{ |s, i|
                 data = datas['features'][i]
                 if data
-                  key_segment = ['c', url, mode, dimension, Digest::MD5.hexdigest(Marshal.dump([s, options.to_a.sort_by{ |i| i[0].to_s }]))]
+                  key_segment = ['c', url, mode, dimension, Digest::MD5.hexdigest(Marshal.dump([s, options.to_a.sort_by{ |ii| ii[0].to_s }]))]
                   @cache_request.write(key_segment, data.to_json)
                   results[s] = data
                 end
@@ -115,7 +114,7 @@ module Routers
         request = resource.post(params(mode, dimensions.join('_'), options).merge({
           src: row.flatten.join(','),
           dst: row != column ? column.flatten.join(',') : nil,
-        }.compact)) { |response, request, result, &block|
+        }.compact)) { |response, _request, result, &_block|
           case response.code
           when 200
             response
@@ -154,7 +153,7 @@ module Routers
         request = resource.post(params(mode, dimension, options).merge({
           loc: [lat, lng].join(','),
           size: size,
-        })) { |response, request, result, &block|
+        })) { |response, _request, result, &_block|
           case response.code
           when 200
             response

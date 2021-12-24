@@ -58,9 +58,10 @@ module Wrappers
       @unlocked = {}
       @same_located = {}
 
-      if OptimizerWrapper.config[:debug][:output_periodic]
-        @output_tool = OutputHelper::PeriodicHeuristic.new(vrp.name, @candidate_vehicles, job, @schedule_end)
-      end
+      @output_tool =
+        if OptimizerWrapper.config[:debug][:output_periodic]
+          OutputHelper::PeriodicHeuristic.new(vrp.name, @candidate_vehicles, job, @schedule_end)
+        end
 
       generate_route_structure(vrp)
       collect_services_data(vrp)
@@ -675,7 +676,7 @@ module Wrappers
       original_next_activity = route_data[:stops][position][:activity] if route_data[:stops][position]
       nb_activities_index = route_data[:stops][position] ? @services_data[route_data[:stops][position][:id]][:nb_activities] - 1 : 0
 
-      shift, activity, time_back_to_depot, tw_accepted = (0..nb_activities_index).collect{ |activity|
+      shift, activity_out, time_back_to_depot, tw_accepted = (0..nb_activities_index).collect{ |activity|
         if route_data[:stops][position]
           route_data[:stops][position][:activity] = activity
           route_data[:stops][position][:point_id] = @services_data[route_data[:stops][position][:id]][:points_ids][activity]
@@ -709,7 +710,7 @@ module Wrappers
       route_data[:stops][position][:activity] = original_next_activity if route_data[:stops][position]
       route_data[:stops][position][:point_id] = @services_data[route_data[:stops][position][:id]][:points_ids][original_next_activity] if route_data[:stops][position]
 
-      [activity, tw_accepted, shift, time_back_to_depot]
+      [activity_out, tw_accepted, shift, time_back_to_depot]
     end
 
     def ensure_routes_will_not_be_rejected(vehicle_id, impacted_days)

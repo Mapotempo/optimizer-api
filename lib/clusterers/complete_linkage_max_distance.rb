@@ -16,8 +16,6 @@
 # <http://www.gnu.org/licenses/agpl.html>
 #
 
-require 'ai4r'
-
 module Ai4r
   module Clusterers
     class CompleteLinkageMaxDistance < CompleteLinkage

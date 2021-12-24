@@ -15,12 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require 'grape'
-require 'grape-swagger'
-require 'grape-entity'
-require 'grape_logging'
 
-require './optimizer_wrapper'
 require './api/v01/api'
 
 module Api

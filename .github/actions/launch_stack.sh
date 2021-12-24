@@ -4,7 +4,7 @@
 docker swarm init
 mkdir -p ./redis
 mkdir -p ./redis-count
-docker stack deploy -c ./docker/docker-compose.yml "${PROJECT}"
+REGISTRY=registry.test.com docker stack deploy -c ./docker/docker-compose.yml "${PROJECT}"
 
 # Wait until all services are up
 max_time=60 # Time in secondes

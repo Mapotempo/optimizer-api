@@ -15,22 +15,23 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-Bundler.require
-require 'rack/cors'
-require 'rack/contrib/locale'
-require 'rack/contrib/try_static'
-require 'action_dispatch'
+
+require './environment'
 
 use Rack::Cors do
   allow do
     origins '*'
-    resource '*', headers: :any, methods: :any
+    resource '*',
+      headers: :any,
+      methods: :any,
+      expose: ['Cache-Control', 'Content-Encoding', 'Content-Type'],
+      max_age: 1728000,
+      credentials: false
   end
 end
 
 use Rack::Locale
 
-require './environment'
 #\ -p 1791
 run Api::Root
 

@@ -1,42 +1,62 @@
 version: '3.7'
+
+# keep command outside anchor because of performance problems
+x-default-redis: &default-redis
+  image: redis:${REDIS_VERSION:-6.2.5-alpine}
+  deploy:
+    restart_policy:
+      condition: any
+  volumes:
+    - ${APP_HOME:-..}/redis:/data
+
+x-default-environment: &default-environment
+  PASSENGER_APP_ENV: test
+  REDIS_COUNT_HOST: redis-count
+  REDIS_HOST: redis-cache
+  REDIS_RESQUE_HOST: redis
+
+x-environment-resque: &environment-resque
+  <<: *default-environment
+  APP_ENV: test
+  ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
+  ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
+
+x-default-service: &default-service
+  image: ${REGISTRY:-registry.mapotempo.com}/mapotempo-${EDT:-ce}/optimizer-api:${OPTIMIZER_VERSION:-latest}
+  environment:
+    <<: *default-environment
+  networks:
+    - redis_cache
+    - redis_count
+    - resque
+
 services:
   redis:
-    image: redis:${REDIS_VERSION:-6.2.5-alpine}
+    <<: *default-redis
     hostname: redis
-    volumes:
-      - ${APP_HOME:-..}/redis:/data
     command: redis-server --appendonly yes
     networks:
       - resque
 
   redis-cache:
-    image: redis:${REDIS_VERSION:-6.2.5-alpine}
+    <<: *default-redis
     hostname: redis-cache
-    volumes:
-      - ${APP_HOME:-..}/redis:/data
     command: redis-server --save ""
     networks:
       - redis_cache
 
   redis-count:
-    image: redis:${REDIS_VERSION:-6.2.5-alpine}
+    <<: *default-redis
     volumes:
       - ${APP_HOME:-..}/redis-count:/data
     hostname: redis-count
     command: redis-server --appendonly yes
-    deploy:
-      restart_policy:
-        condition: any
     networks:
       - redis_count
 
   api:
-    image: registry.test.com/mapotempo/optimizer-api:latest
-    environment:
-      PASSENGER_APP_ENV: test
-      REDIS_COUNT_HOST: redis-count
-      REDIS_HOST: redis-cache
-      REDIS_RESQUE_HOST: redis
+    <<: *default-service
+    hostname: api
     networks:
       - base
       - redis_cache
@@ -44,17 +64,11 @@ services:
       - resque
 
   resque-default:
-    image: registry.test.com/mapotempo/optimizer-api:latest
-    working_dir: /srv/app
+    <<: *default-service
     environment:
-      APP_ENV: test
+      <<: *environment-resque
       COUNT: 5
       QUEUES: DEFAULT
-      REDIS_COUNT_HOST: redis-count
-      REDIS_HOST: redis-cache
-      REDIS_RESQUE_HOST: redis
-      ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
-      ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
     command: bundle exec rake resque:workers
     networks:
       - redis_cache

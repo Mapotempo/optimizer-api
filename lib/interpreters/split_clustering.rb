@@ -15,13 +15,8 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 
-require 'ai4r'
-include Ai4r::Data
-include Ai4r::Clusterers
-
-require 'balanced_vrp_clustering'
-
 require './lib/clusterers/average_tree_linkage.rb'
+require './lib/clusterers/complete_linkage_max_distance.rb'
 require './lib/helper.rb'
 require './lib/interpreters/periodic_visits.rb'
 
@@ -705,7 +700,7 @@ module Interpreters
         # TODO: move the creation of data_set to the gem side GEM should create it if necessary
         options[:seed] = rand(1234567890) # gem does not initialise the seed randomly
         log "BalancedVRPClustering is launched with seed #{options[:seed]}"
-        c.build(DataSet.new(data_items: Marshal.load(Marshal.dump(data_items))),
+        c.build(Ai4r::Data::DataSet.new(data_items: Marshal.load(Marshal.dump(data_items))),
                 options[:cut_symbol],
                 Oj.load(Oj.dump(related_item_indices)),
                 ratio,
@@ -852,9 +847,9 @@ module Interpreters
 
         data_items, cumulated_metrics, grouped_objects = collect_data_items_metrics(vrp, cumulated_metrics)
 
-        c = AverageTreeLinkage.new
+        c = Ai4r::Clusterers::AverageTreeLinkage.new
         start_timer = Time.now
-        clusterer = c.build(DataSet.new(data_items: data_items))
+        clusterer = c.build(Ai4r::Data::DataSet.new(data_items: data_items))
         end_timer = Time.now
 
         metric_limit = cumulated_metrics[options[:cut_symbol]] / nb_clusters
@@ -1212,7 +1207,7 @@ module Interpreters
 
         max_distance = 50 # meters
 
-        c = CompleteLinkageMaxDistance.new
+        c = Ai4r::Clusterers::CompleteLinkageMaxDistance.new
 
         c.distance_function = lambda do |data_item_a, data_item_b|
           # If there is no vehicle that can serve both points at the same time, make sure they are not merged
@@ -1237,7 +1232,7 @@ module Interpreters
         end
 
         # Cluster points closer than max_distance to eachother
-        clusterer = c.build(DataSet.new(data_items: items), max_distance)
+        clusterer = c.build(Ai4r::Data::DataSet.new(data_items: items), max_distance)
 
         # Correct items and grouped_objects
         clusterer.clusters.each{ |cluster|

@@ -2839,6 +2839,31 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 6, result[:routes][0][:activities].size
   end
 
+  def test_shipments_with_multiple_timewindows_and_lateness
+    # OR-Tools will generate separate nodes for disjoint timewindows with lateness
+    ortools = OptimizerWrapper.config[:services][:ortools]
+    problem = VRP.pud
+    keys = [:pickup, :delivery]
+    problem[:shipments].each{ |shipment|
+      keys.each{ |key|
+        shipment[key][:timewindows] = [
+          { start: 0, end: 14, maximum_lateness: 15 },
+          { start: 17, end: 29, maximum_lateness: 15}
+        ]
+        shipment[key][:late_multiplier] = 0.3
+      }
+    }
+    vrp = TestHelper.create(problem)
+    result = ortools.solve(vrp, 'test')
+    assert_equal 0, result[:cost_details][:lateness]
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_0' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_0' }
+    assert result[:routes][0][:activities].index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
+           result[:routes][0][:activities].index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
+    assert_equal 0, result[:unassigned].size
+    assert_equal 6, result[:routes][0][:activities].size
+  end
+
   def test_shipments_inroute_duration
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = VRP.pud
@@ -4557,71 +4582,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
     result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert result
     assert result.has_key?(:cost)
-  end
-
-  def test_assemble_heuristic
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1],
-          [1, 0, 1],
-          [1, 1, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        cost_late_multiplier: 0,
-        shift_preference: 'force_start'
-      }, {
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        cost_late_multiplier: 0,
-        shift_preference: 'force_start'
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1',
-          late_multiplier: 0,
-          timewindows: [{
-            start: 0,
-            end: 2
-          }]
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2',
-          late_multiplier: 0
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 20,
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    service_vrp = {
-      service: ortools,
-      vrp: vrp
-    }
-    assert Interpreters::Assemble.assemble_candidate([service_vrp])
   end
 
   def test_insert_with_order

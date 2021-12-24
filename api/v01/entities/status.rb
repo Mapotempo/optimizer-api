@@ -15,6 +15,7 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
+
 module Api
   module V01
     class Status < Grape::Entity

@@ -72,7 +72,7 @@ module Cleanse
 
   def self.cleanse_empties_fills(vrp, result)
     result[:routes].each{ |route|
-      vehicle = vrp.vehicles.find{ |vehicle| vehicle.id == route[:vehicle_id] }
+      vehicle = vrp.vehicles.find{ |v| v.id == route[:vehicle_id] }
       capacities_units = vehicle.capacities.collect{ |capacity| capacity.unit_id if capacity.limit }.compact
       previous = nil
       previous_point = nil
