@@ -211,5 +211,43 @@ class DichotomiousTest < Minitest::Test
     def test_rest_cannot_appear_as_a_mission_in_the_initial_route
       assert_empty Interpreters::Dichotomious.send(:build_initial_routes, {}, [{ routes: [activities: [{ rest_id: 'id' }]] }])
     end
+
+    def test_dichotomious_approach_transfer_unused_vehicles_transfers_points_correctly
+      vrp = VRP.lat_lon
+      vrp[:configuration][:resolution][:duration] = 6
+      vrp[:vehicles].first[:duration] = 1 # no need to plan the services
+      vrp[:vehicles] << vrp[:vehicles].first.dup
+      vrp[:vehicles].last[:id] = 'v_1'
+
+      Interpreters::Dichotomious.stub(:dichotomious_candidate?, lambda{ |service_vrp|
+        # modify limits so that the vrp will be dicho_split one and only one time
+        service_vrp[:vrp].resolution_dicho_division_service_limit = 5
+        service_vrp[:vrp].resolution_dicho_division_vehicle_limit = 1
+        true
+      }) do
+        Interpreters::Dichotomious.stub(:transfer_unused_vehicles, lambda{ |service_vrp, result, sub_service_vrps|
+          sub_service_vrps[0][:vrp].vehicles << Helper.deep_copy(
+            sub_service_vrps[0][:vrp].vehicles.last,
+            override: { id: 'extra_unused_vehicle' },
+            shallow_copy: [:start_point] # regenerate end_point to check
+          )
+          service_vrp[:vrp].points << sub_service_vrps[0][:vrp].vehicles.last.end_point
+          sub_service_vrps[0][:vrp].points << sub_service_vrps[0][:vrp].vehicles.last.end_point
+
+          Interpreters::Dichotomious.send(:__minitest_stub__transfer_unused_vehicles, service_vrp, result, sub_service_vrps)
+
+          sv_one = sub_service_vrps[1][:vrp]
+          transferred_vehicle = sv_one.vehicles.last
+          assert_equal 'extra_unused_vehicle', transferred_vehicle.id, 'transfer_unused_vehicles should have transfer the extra vehicle'
+
+          point_ids = sv_one.points.map(&:id)
+          assert_equal point_ids.size, point_ids.uniq.size, 'There are duplicate points after transfer_unused_vehicles'
+          assert sv_one.points.any?{ |p| p.object_id == transferred_vehicle.start_point.object_id }, "transferred vehicle's start_point doesn't exist in points"
+          assert sv_one.points.any?{ |p| p.object_id == transferred_vehicle.end_point.object_id }, "transferred vehicle's end_point doesn't exist in points"
+        }) do
+          OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+        end
+      end
+    end
   end
 end

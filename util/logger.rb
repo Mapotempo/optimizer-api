@@ -38,7 +38,7 @@ class OptimizerLogger
   @@logger.level = @@level_map[@@level]
 
   @@logger.formatter = proc do |severity, datetime, progname, msg|
-    datetime = OptimizerLogger.with_datetime ? "[#{datetime}]" : nil
+    datetime = OptimizerLogger.with_datetime ? "[#{datetime.strftime("%Y-%m-%d %H:%M:%S.%L %z")}]" : nil
     job_id = OptimizerWrapper::Job.current_job_id ? "#{OptimizerWrapper::Job.current_job_id} -" : nil
     progname = progname&.empty? ? nil : "- #{progname}"
 
@@ -127,6 +127,7 @@ module OptimizerLoggerMethods
 
   def log(msg, options = {})
     OptimizerLogger.log(msg, options)
+    Raven.capture_message(msg, level: options[:level]) if options[:level] == :warn
   end
 end
 
