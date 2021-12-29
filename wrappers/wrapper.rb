@@ -1038,7 +1038,10 @@ module Wrappers
         # the original service id with the new expanded service ids in the routes (and rewind it afterwards)
         # but if the complex relations are already in feasible initial routes then it might not worth it.
         # So we can wait for a real use case arrives and we have an instance to test.
-        return nil if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.include?(s.id) }}
+        if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.include?(s.id) }}
+          vrp.services += services_in_multi_shipment_relations
+          return nil
+        end
 
         simplification_active = true
 
@@ -1113,7 +1116,8 @@ module Wrappers
           }
 
           # For some reason, or-tools performance is better when the sequence relation is defined in the inverse order.
-          # Note that, activity.duration's are set to zero except the last duplicated service (so we model exactly same constraint). 
+          # Note that, activity.duration's are set to zero except the last duplicated service
+          # (so we model exactly the same constraint).
           sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids.reverse)
         }
 
