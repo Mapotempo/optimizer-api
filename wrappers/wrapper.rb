@@ -907,9 +907,31 @@ module Wrappers
     end
 
     def simplify_constraints(vrp)
+      vrp_subfields_to_check = %i[points relations rests routes services units vehicles].freeze
+
       simplifications.each{ |simplification|
+        expected_vrp_subfield_counts = vrp_subfields_to_check.map{ |subfield| [subfield, vrp.send(subfield).size] }.to_h
+
         simplification_activated = self.send(simplification, vrp, nil, mode: :simplify)
-        log "#{simplification} simplification is activated" if simplification_activated
+
+        if simplification_activated
+          log "#{simplification} simplification is activated"
+        else
+          actual_vrp_subfield_counts = vrp_subfields_to_check.map{ |subfield| [subfield, vrp.send(subfield).size] }.to_h
+
+          next unless expected_vrp_subfield_counts != actual_vrp_subfield_counts
+
+          tags = {
+            simplification: simplification,
+            expected_counts: expected_vrp_subfield_counts,
+            actual_counts: actual_vrp_subfield_counts,
+          }
+
+          log_msg = 'Lost objects in a non-active simplification routine'
+
+          log log_msg, tags.merge(level: :warn)
+          raise log_msg if ENV['APP_ENV'] != 'production'
+        end
       }
 
       vrp
