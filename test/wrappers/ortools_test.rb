@@ -3908,52 +3908,27 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_alternative_service
-    ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1000],
-          [1, 0, 1000],
-          [1000, 1000, 0],
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
+    problem = VRP.basic
+    problem[:matrices][0][:time] = [
+      [0, 1, 1000],
+      [1, 0, 1000],
+      [1000, 1000, 0],
+    ]
+    problem[:points] = problem[:points][0..-2]
+    problem[:vehicles][0][:cost_time_multiplier] = 1
+    problem[:vehicles][0][:end_point_id] = 'point_0' # start/end = point_0
+    problem[:services] = [{
+      id: 'service_1',
+      activities: [{
+        point_id: 'point_1'
       }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        cost_time_multiplier: 1,
-        matrix_id: 'matrix_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0'
-      }],
-      services: [{
-        id: 'service_1',
-        activities: [{
-          point_id: 'point_1'
-        }, {
-          point_id: 'point_2'
-        }]
-      }],
-      configuration: {
-        resolution: {
-          duration: 20,
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
-    vrp = TestHelper.create(problem)
-    result = ortools.solve(vrp, 'test')
+        point_id: 'point_2'
+      }]
+    }]
+    problem[:configuration][:resolution][:duration] = 20
+
+    result = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+
     assert result
     assert_equal [], result[:unassigned]
     assert_equal 0, result[:routes][0][:activities][1][:alternative]
