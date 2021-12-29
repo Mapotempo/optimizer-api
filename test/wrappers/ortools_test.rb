@@ -3941,8 +3941,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
           point_id: 'point_1'
         }, {
           point_id: 'point_2'
-        }],
-        skills: ['skill1']
+        }]
       }],
       configuration: {
         resolution: {
