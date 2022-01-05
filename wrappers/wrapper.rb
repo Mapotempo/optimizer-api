@@ -422,6 +422,9 @@ module Wrappers
     end
 
     def assert_no_complex_setup_durations(vrp)
+      # TODO: This return should be changed once the activity model turned into activites
+      return false if vrp.services.any?{ |s| s.activities.any? }
+
       vrp.services.all?{ |s| s.activity.setup_duration.to_i == 0 } || # either there is no setup duration
       ( # or it can be simplified by augmenting the time matrix
         vrp.services.group_by{ |s| s.activity.point }.all?{ |_point, service_group|
