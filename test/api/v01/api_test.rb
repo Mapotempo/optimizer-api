@@ -82,6 +82,16 @@ class Api::V01::ApiTest < Minitest::Test
     }.values
   end
 
+  def test_use_quota_nil
+    clear_optim_redis_count
+
+    # assert override 10 by nil (unlimited)
+    11.times do
+      post '/0.1/vrp/submit', { api_key: 'quota_nil', vrp: VRP.basic }.to_json, 'CONTENT_TYPE' => 'application/json'
+      assert last_response.ok?, last_response.body
+    end
+  end
+
   def test_use_specific_router_api_key
     s = stub_request(:post, %r{/0.1/matrix.json})
         .with(body: hash_including(api_key: 'other_key', mode: 'pedestrian', dimension: 'distance_time'))

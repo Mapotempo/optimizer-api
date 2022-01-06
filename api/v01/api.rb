@@ -91,7 +91,7 @@ module Api
 
             quota.slice(:daily, :monthly, :yearly).each do |k, v|
               count = redis_count.get(count_base_key(op, k)).to_i
-              raise QuotaExceeded.new("Too many #{k} requests", limit: v, remaining: v - count, reset: k) if count + request_size > v
+              raise QuotaExceeded.new("Too many #{k} requests", limit: v, remaining: v - count, reset: k) if v && count + request_size > v
             end
           end
         end
