@@ -77,7 +77,9 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     # TODO: Either find a way to call grape validators automatically or add necessary grape coerces here
     [:duration, :setup_duration].each { |symbol|
       vrp[:services]&.each{ |service|
-        service[:type] = nil
+        raise if service[:type]
+
+        service.delete(:type)
         service[:activity][symbol] = ScheduleType.type_cast(service[:activity][symbol] || 0) if service[:activity]
         service[:activities]&.each{ |activity| activity[symbol] = ScheduleType.type_cast(activity[symbol] || 0) if activity }
       }

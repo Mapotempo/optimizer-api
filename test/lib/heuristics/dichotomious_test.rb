@@ -82,7 +82,7 @@ class DichotomiousTest < Minitest::Test
 
       limit_vrp[:services] = []
       limits[:service].times{ |i|
-        limit_vrp[:services] << { id: "s#{i + 1}", type: 'service', activity: { point_id: 'p1' }}
+        limit_vrp[:services] << { id: "s#{i + 1}", activity: { point_id: 'p1' }}
       }
 
       limit_vrp[:vehicles] = []
@@ -99,11 +99,11 @@ class DichotomiousTest < Minitest::Test
 
       vrp = limit_vrp.dup
       vrp[:services] = limit_vrp[:services].dup
-      vrp[:services] << { id: "s#{limits[:service] + 1}", type: 'service', activity: { point_id: 'p1' }}
+      vrp[:services] << { id: "s#{limits[:service] + 1}", activity: { point_id: 'p1' }}
       refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
-      vrp[:services] << { id: "s#{limits[:service] + 1}", type: 'service', activity: { point_id: 'p1' }}
+      vrp[:services] << { id: "s#{limits[:service] + 1}", activity: { point_id: 'p1' }}
       vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
       assert Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
     end

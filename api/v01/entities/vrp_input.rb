@@ -357,7 +357,6 @@ module VrpMissions
                       coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/).map!(&:strip).map!(&:to_sym) : val&.map(&:to_sym) },
                       desc: 'Particular abilities required by a vehicle to perform this service. Not available with periodic heuristic.')
 
-    optional(:type, type: Symbol, desc: '`service`, `pickup` or `delivery`. Only service type is available with periodic heuristic.')
     optional(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
       use :vrp_request_activity
     end

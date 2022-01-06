@@ -2115,7 +2115,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_0',
-        type: :service,
         activity: {
           point_id: 'point_1',
           duration: 3,
@@ -2123,7 +2122,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_1',
-        type: :service,
         activity: {
           point_id: 'point_2',
           duration: 5,
@@ -2131,7 +2129,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_2',
-        type: :service,
         activity: {
           point_id: 'point_3',
           duration: 5,
@@ -2195,7 +2192,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_0',
-        type: :service,
         activity: {
           point_id: 'point_1',
           duration: 0,
@@ -2206,7 +2202,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_1',
-        type: :service,
         activity: {
           point_id: 'point_2',
           duration: 0,
@@ -2217,7 +2212,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_2',
-        type: :service,
         activity: {
           point_id: 'point_3',
           duration: 0,
@@ -2288,7 +2282,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_0',
-        type: :service,
         activity: {
           point_id: 'point_1',
           duration: 0,
@@ -2299,7 +2292,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_1',
-        type: :service,
         activity: {
           point_id: 'point_2',
           duration: 0,
@@ -2310,7 +2302,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_2',
-        type: :service,
         activity: {
           point_id: 'point_3',
           duration: 0,
@@ -2378,7 +2369,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_0',
-        type: :service,
         activity: {
           point_id: 'point_1',
           duration: 0,
@@ -2389,7 +2379,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_1',
-        type: :service,
         activity: {
           point_id: 'point_2',
           duration: 0,
@@ -2400,7 +2389,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_2',
-        type: :service,
         activity: {
           point_id: 'point_3',
           duration: 0,
@@ -2468,7 +2456,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
         id: 'service_0',
-        type: :service,
         activity: {
           point_id: 'point_1',
           duration: 0,
@@ -2479,7 +2466,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_1',
-        type: :service,
         activity: {
           point_id: 'point_2',
           duration: 0,
@@ -2490,7 +2476,6 @@ class Wrappers::OrtoolsTest < Minitest::Test
         }
       }, {
         id: 'service_2',
-        type: :service,
         activity: {
           point_id: 'point_3',
           duration: 0,
@@ -3259,21 +3244,18 @@ class Wrappers::OrtoolsTest < Minitest::Test
       }],
       services: [{
           id: 'service_0',
-          type: :service,
           activity: {
             duration: 100.0,
             point_id: 'point_0'
           }
       }, {
           id: 'service_1',
-          type: :service,
           activity: {
               duration: 100.0,
               point_id: 'point_1'
           }
       }, {
           id: 'service_2',
-          type: :service,
           activity: {
               duration: 100.0,
               point_id: 'point_2'

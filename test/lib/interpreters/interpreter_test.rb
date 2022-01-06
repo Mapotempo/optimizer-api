@@ -304,7 +304,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 2,
         minimum_lapse: 14,
-        type: 'service',
         activity: {
           duration: 5400.0,
           point_id: 'point_1',
@@ -319,7 +318,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 2,
         minimum_lapse: 10,
-        type: 'service',
         activity: {
           duration: 5400.0,
           point_id: 'point_2',
@@ -334,7 +332,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 1,
         minimum_lapse: 18,
-        type: 'service',
         activity: {
           duration: 2700.0,
           point_id: 'point_3',
@@ -351,7 +348,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 1,
         minimum_lapse: 23,
-        type: 'service',
         activity: {
           duration: 1200.0,
           point_id: 'point_4',
@@ -373,7 +369,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 1,
         minimum_lapse: 23,
-        type: 'service',
         activity: {
           duration: 1800.0,
           point_id: 'point5',
@@ -468,7 +463,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 3,
         minimum_lapse: 10,
-        type: 'service',
         activity: {
           duration: 100.0,
           point_id: 'point_1'
@@ -583,7 +577,6 @@ class InterpreterTest < Minitest::Test
         visits_number: 2,
         minimum_lapse: 15,
         maximum_lapse: 32,
-        type: 'service',
         activity: {
           duration: 5400.0,
           point_id: 'point_0',
@@ -599,7 +592,6 @@ class InterpreterTest < Minitest::Test
         visits_number: 2,
         minimum_lapse: 11,
         maximum_lapse: 22,
-        type: 'service',
         activity: {
           duration: 5400.0,
           point_id: 'point_1',

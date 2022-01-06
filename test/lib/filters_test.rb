@@ -141,7 +141,6 @@ class FiltersTest < Minitest::Test
       services: [
         {
           id: 'service_0',
-          type: 'service',
           activity: {
             point_id: 'point_0'
           },
