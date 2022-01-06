@@ -292,28 +292,16 @@ module Interpreters
       log '<--- remove_bad_skills', level: :debug
     end
 
-    def self.insert_unassigned_by_skills(service_vrp, services, skills, solution, job = nil)
+    def self.insert_unassigned_by_skills(service_vrp, unassigned_services, unassigned_with_skills,
+                                         skills, solution, transfer_unused_time_limit)
       vrp = service_vrp[:vrp]
-      log "try to insert #{solution.unassigned.size} unassigned from #{vrp.services.size} services"
-      transfer_unused_time_limit = 0
+      log "try to insert #{unassigned_with_skills.size} unassigned from #{vrp.services.size} services"
       vrp.routes = build_initial_routes([solution])
       vrp.configuration.resolution.init_duration = nil
-      unassigned_service_ids = solution.unassigned.select{ |un| un.type == :service }.map(&:id)
-      unassigned_services = vrp.services.select{ |s| unassigned_service_ids.include?(s.id) }
-      unassigned_services_by_skills = unassigned_services.group_by(&:skills)
-
-      leftover_vehicle_limit = vrp.configuration.resolution.vehicle_limit - solution.routes.size
-
-      # TODO: sort unassigned_services with no skill / sticky at the end
-      unassigned_services_by_skills[[]] = [] if unassigned_services_by_skills.empty?
-
-      sticky_vehicle_ids = @unassigned_services.flat_map(&:sticky_vehicles).compact.map(&:id)
 
       vehicles_with_skills = vrp.vehicles.map.with_index{ |vehicle, v_index|
         r_index = solution.routes.index{ |route| route.vehicle.id == vehicle.id }
-        compatible = if sticky_vehicle_ids.any?
-                       sticky_vehicle_ids.include?(vehicle.id)
-                     elsif skills.any?
+        compatible = if skills.any?
                        vehicle.skills.any?{ |or_skills| (skills & or_skills).size == skills.size }
                      else
                        true
@@ -339,14 +327,14 @@ module Interpreters
       vehicle_count = (skills.empty? && !vrp.routes.empty?) ? [vrp.routes.size, 6].min : 3
       impacted_routes = []
       vehicles_with_skills.each_slice(vehicle_count) do |vehicles_indices|
-        remaining_service_ids = solution.unassigned.map(&:service_id) & services.map(&:id)
+        remaining_service_ids = solution.unassigned.map(&:service_id) & unassigned_with_skills.map(&:id)
         next if remaining_service_ids.empty?
 
         rate_vehicles = vehicles_indices.size / vehicles_with_skills.size.to_f
-        rate_services = @unassigned_services.empty? ? 1 : services.size / @unassigned_services.size.to_f
+        rate_services = unassigned_services.empty? ? 1 : unassigned_with_skills.size / unassigned_services.size.to_f
 
         sub_vrp_configuration_resolution_duration =
-          [(vrp.configuration.resolution.duration.to_f / 3.99 * rate_vehicles * rate_services + @transfer_unused_time_limit).to_i, 150].max
+          [(vrp.configuration.resolution.duration.to_f / 3.99 * rate_vehicles * rate_services + transfer_unused_time_limit).to_i, 150].max
         sub_vrp_configuration_resolution_minimum_duration =
           [(vrp.configuration.resolution.minimum_duration.to_f / 3.99 * rate_vehicles * rate_services).to_i, 100].max
 
@@ -355,7 +343,7 @@ module Interpreters
         if vrp.configuration.resolution.vehicle_limit
           sub_vrp_vehicle_limit = @leftover_vehicle_limit + used_vehicle_count
           if sub_vrp_vehicle_limit&.zero? # The vehicle limit is hit cannot use more new vehicles...
-            @transfer_unused_time_limit = sub_vrp_configuration_resolution_duration
+            transfer_unused_time_limit = sub_vrp_configuration_resolution_duration
             next
           end
         end
@@ -379,12 +367,12 @@ module Interpreters
         sub_vrp.configuration.resolution.vehicle_limit = sub_vrp_vehicle_limit  if vrp.configuration.resolution.vehicle_limit
 
         sub_vrp.configuration.restitution.allow_empty_result = true
-        solution_loop = OptimizerWrapper.solve(sub_service_vrp, job)
+        solution_loop = OptimizerWrapper.solve(sub_service_vrp)
 
         next unless solution_loop
 
         solution.elapsed += solution_loop.elapsed.to_f
-        @transfer_unused_time_limit = sub_vrp.configuration.resolution.duration - solution_loop.elapsed.to_f
+        transfer_unused_time_limit = sub_vrp.configuration.resolution.duration - solution_loop.elapsed.to_f
 
         # TODO: Remove unnecessary if conditions and .nil? checks
         # Initial routes can be refused... check unassigned size before take into account solution
@@ -412,22 +400,23 @@ module Interpreters
 
       vrp = service_vrp[:vrp]
       log "try to insert #{solution.unassigned.size} unassigned from #{vrp.services.size} services"
-      @transfer_unused_time_limit = 0
+      transfer_unused_time_limit = 0
       vrp.routes = build_initial_routes([solution])
       vrp.configuration.resolution.init_duration = nil
-      unassigned_service_ids = solution.unassigned.map(&:service_id)
-      @unassigned_services = vrp.services.select{ |s| unassigned_service_ids.include?(s.id) }
-      unassigned_services_by_skills = @unassigned_services.group_by(&:skills)
+      unassigned_service_ids = solution.unassigned.map(&:service_id).compact
+      unassigned_services = vrp.services.select{ |s| unassigned_service_ids.include?(s.id) }
+      unassigned_services_by_skills = unassigned_services.group_by(&:skills)
 
       @leftover_vehicle_limit = vrp.configuration.resolution.vehicle_limit - solution.routes.size
 
       # TODO: sort unassigned_services with no skill / sticky at the end
       unassigned_services_by_skills[[]] = [] if unassigned_services_by_skills.empty?
 
-      unassigned_services_by_skills.each{ |skills, services|
+      unassigned_services_by_skills.each{ |skills, un_w_services|
         next if solution.unassigned.empty?
 
-        insert_unassigned_by_skills(service_vrp, services, skills, solution)
+        insert_unassigned_by_skills(service_vrp, unassigned_services, un_w_services,
+                                    skills, solution, transfer_unused_time_limit)
       }
       solution
     ensure
