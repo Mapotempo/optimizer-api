@@ -96,7 +96,7 @@ GEM
     geojson2image (0.2.2)
       chunky_png (~> 1.3)
       oj (~> 3.6)
-    google-protobuf (3.19.1)
+    google-protobuf (3.19.2)
     grape (1.6.0)
       activesupport
       builder
