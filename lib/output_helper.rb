@@ -336,14 +336,8 @@ module OutputHelper
       return unless has_vehicle_partition || has_work_day_partition
 
       partitions = {}
-      if has_vehicle_partition
-        partitions[:vehicle] = draw_cluster(elements, :vehicle)
-      end
-
-      return partitions unless has_work_day_partition
-
-      partitions[:work_day] = draw_cluster(elements, :work_day)
-
+      partitions[:vehicle] = draw_cluster(elements, :vehicle) if has_vehicle_partition
+      partitions[:work_day] = draw_cluster(elements, :work_day) if has_work_day_partition
       partitions
     end
 
@@ -354,14 +348,27 @@ module OutputHelper
         [element[:detail][:internal_skills].find{ |sk| sk.to_s.start_with?('work_day_partition_') },
          element[:detail][:skills].find{ |sk| sk.start_with?('cluster ') }]
       }.collect.with_index{ |data, cluster_index|
-        cluster_skill, partition_items = data
-        collect_basic_hulls(partition_items.collect{ |item| item[:detail] }, entity, cluster_index, cluster_skill)
+        cluster_name, partition_items = data
+        skills_properties = compute_skills_properties(data)
+        collect_basic_hulls(partition_items.collect{ |item| item[:detail] }, entity, cluster_index, cluster_name, skills_properties)
       }
 
       {
         type: 'FeatureCollection',
         features: polygons.compact
       }
+    end
+
+    def self.compute_skills_properties(data)
+      items = data.last
+      skills = items.flat_map{ |item| item[:detail][:internal_skills] }.uniq
+      vehicle_skills = skills.select{ |sk| sk.to_s.start_with?('vehicle_partition_') }
+      work_day_skills = skills.select{ |sk| sk.to_s.start_with?('work_day_partition_') }
+
+      sk_properties = {}
+      sk_properties[:vehicle] = vehicle_skills.first.to_s.gsub('vehicle_partition_', '') if vehicle_skills.size == 1
+      sk_properties[:work_day] = work_day_skills.first.to_s.gsub('work_day_partition_', '') if work_day_skills.size == 1
+      sk_properties
     end
 
     def self.compute_color(elements, entity, index)
@@ -376,7 +383,7 @@ module OutputHelper
       end
     end
 
-    def self.collect_basic_hulls(elements, entity, cluster_index, cluster_skill)
+    def self.collect_basic_hulls(elements, entity, cluster_index, cluster_name, skills_properties)
       vector = elements.map{ |detail|
         [detail[:lon], detail[:lat]]
       }.uniq
@@ -390,15 +397,14 @@ module OutputHelper
         }
       }
       duration = elements.sum{ |e| e[:duration] + e[:setup_duration] }
-
       {
         type: 'Feature',
         properties: {
           color: compute_color(elements, entity, cluster_index),
-          name: cluster_skill.join('_'),
+          name: cluster_name.join('_'),
         }.merge(
           Hash[quantities.collect{ |qty| [qty[:unit_id].to_sym, qty[:value]] }]
-        ).merge(Hash[:duration, duration]),
+        ).merge(Hash[:duration, duration]).merge(skills_properties),
         geometry: {
           type: 'Polygon',
           coordinates: [hull + [hull.first]]
@@ -432,14 +438,14 @@ module OutputHelper
         r[:activities].each{ |a|
           next unless ['service', 'pickup', 'delivery'].include?(a[:type])
 
+          skills_properties = compute_skills_properties([nil, [a]])
           points << {
             type: 'Feature',
             properties: {
               color: color,
               name: a[:service_id] || a[:pickup_id] || a[:shipment_id],
-              vehicle: r[:original_vehicle_id],
               day: r[:day]
-            },
+            }.merge(skills_properties),
             geometry: {
               type: 'Point',
               coordinates: [a[:detail][:lon], a[:detail][:lat]]
