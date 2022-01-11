@@ -31,7 +31,7 @@ gem 'resque-status', '>0.4'
 gem 'rest-client'
 
 gem 'ai4r'
-gem 'balanced_vrp_clustering', github: 'senhalil/balanced_vrp_clustering', branch: 'dev'
+gem 'balanced_vrp_clustering', github: 'mapotempo/balanced_vrp_clustering', branch: 'dev'
 gem 'sim_annealing'
 
 gem 'polylines'
