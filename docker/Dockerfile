@@ -48,6 +48,7 @@ LABEL maintainer="Mapotempo <tech@mapotempo.com>"
 ENV REDIS_HOST redis-cache
 ENV LANG C.UTF-8
 
+USER root
 COPY --from=vroom /usr/local/bin /srv/vroom/bin
 
 USER root
