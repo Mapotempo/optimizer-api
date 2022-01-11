@@ -96,6 +96,14 @@ module OptimizerWrapper
         params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT
       },
+      quotas: {
+        queue: 'DEFAULT',
+        services: {
+          vrp: [:ortools]
+        },
+        params_limit: PARAMS_LIMIT,
+        quotas: [{ daily: 10 }], # Only taken into account if REDIS_COUNT
+      }
     },
     solve: {
       synchronously: ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] ? ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] == 'true' : true,
