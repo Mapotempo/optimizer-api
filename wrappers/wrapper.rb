@@ -907,9 +907,31 @@ module Wrappers
     end
 
     def simplify_constraints(vrp)
+      vrp_subfields_to_check = %i[points relations rests routes services units vehicles].freeze
+
       simplifications.each{ |simplification|
+        expected_vrp_subfield_counts = vrp_subfields_to_check.map{ |subfield| [subfield, vrp.send(subfield).size] }.to_h
+
         simplification_activated = self.send(simplification, vrp, nil, mode: :simplify)
-        log "#{simplification} simplification is activated" if simplification_activated
+
+        if simplification_activated
+          log "#{simplification} simplification is activated"
+        else
+          actual_vrp_subfield_counts = vrp_subfields_to_check.map{ |subfield| [subfield, vrp.send(subfield).size] }.to_h
+
+          next unless expected_vrp_subfield_counts != actual_vrp_subfield_counts
+
+          tags = {
+            simplification: simplification,
+            expected_counts: expected_vrp_subfield_counts,
+            actual_counts: actual_vrp_subfield_counts,
+          }
+
+          log_msg = 'Lost objects in a non-active simplification routine'
+
+          log log_msg, tags.merge(level: :warn)
+          raise log_msg if ENV['APP_ENV'] != 'production'
+        end
       }
 
       vrp
@@ -1038,7 +1060,10 @@ module Wrappers
         # the original service id with the new expanded service ids in the routes (and rewind it afterwards)
         # but if the complex relations are already in feasible initial routes then it might not worth it.
         # So we can wait for a real use case arrives and we have an instance to test.
-        return nil if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.include?(s.id) }}
+        if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.include?(s.id) }}
+          vrp.services += services_in_multi_shipment_relations
+          return nil
+        end
 
         simplification_active = true
 
@@ -1113,7 +1138,8 @@ module Wrappers
           }
 
           # For some reason, or-tools performance is better when the sequence relation is defined in the inverse order.
-          # Note that, activity.duration's are set to zero except the last duplicated service (so we model exactly same constraint). 
+          # Note that, activity.duration's are set to zero except the last duplicated service
+          # (so we model exactly the same constraint).
           sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids.reverse)
         }
 
