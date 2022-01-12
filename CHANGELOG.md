@@ -1,8 +1,45 @@
 # Changelog
 
-## [v1.8.0-dev] - Unreleased
+## [v1.8.2-dev] - Unrealeased
 
 ### Added
+
+- Timewindow violation ("lateness") can now be limited using the `maximum_lateness` field of timewindows. By default, `maximum_lateness` is set to be 100% of the timewindow -- i.e., `end` - `start`. The default value can be overridden via the environment variable `OPTIM_DEFAULT_MAX_LATENESS_RATIO`. [#303](https://github.com/Mapotempo/optimizer-api/pull/303)
+
+### Changed
+
+- Alternative activites are now available using shipment relations [#302](https://github.com/Mapotempo/optimizer-api/pull/302)
+
+### Removed
+
+- Unused assemble heuristic [#314](https://github.com/Mapotempo/optimizer-api/pull/314)
+
+### Fixed
+
+- Polylines geometries were disabled. They can now be returned if the `OPTIM_GENERATE_GEOJSON_POLYLINES` environment variable is present. [#297](https://github.com/Mapotempo/optimizer-api/pull/297)
+- Correctly handles shipments with empty quantities with VROOM [#300](https://github.com/Mapotempo/optimizer-api/pull/300)
+- In some cases dicho was unable to find the correct matrices for the sub-problems [#299](https://github.com/Mapotempo/optimizer-api/pull/299)
+
+## [v1.8.1] - 2021-12-08
+
+### Added
+
+- Each api key may now have its own router api key [#287](https://github.com/Mapotempo/optimizer-api/pull/287)
+
+### Changed
+
+- Avoid unnecessary repetition if solution contains no unassigned mission [#296](https://github.com/Mapotempo/optimizer-api/pull/296)
+
+### Fixed
+
+- The complex shipments now correctly handles vrp with routes [#294](https://github.com/Mapotempo/optimizer-api/pull/294)
+- In some cases, the partitioning phase was trying to cluster empty vrps [#296](https://github.com/Mapotempo/optimizer-api/pull/296)
+- Correctly handles timewindows out of range for periodic problems
+
+## [v1.8.0] - 2021-09-29
+
+### Added
+
 - Support skills in periodic heuristic (`first_solution_strategy='periodic'`) [#194](https://github.com/Mapotempo/optimizer-api/pull/194)
 - Implementation of `vehicle_trips` relation: the routes can be successive or with a minimum duration `lapse` in between [#123](https://github.com/Mapotempo/optimizer-api/pull/123)
 - CSV headers adapts to the language provided through HTTP_ACCEPT_LANGUAGE header to facilitate import in Mapotempo-Web [#196](https://github.com/Mapotempo/optimizer-api/pull/196)
