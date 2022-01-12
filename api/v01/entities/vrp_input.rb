@@ -485,10 +485,11 @@ module VrpShared
                     (monday = 0, ..., sunday = 6)')
     optional(:maximum_lateness,
              type: Integer, values: ->(v) { !v.negative? }, allow_blank: true, # nil is auto
-             desc: 'The maximum allowed timewindow violation in seconds. It is taken into account only for the
+             desc: "The maximum allowed timewindow violation in seconds. It is taken into account only for the
                     activities with a positive late_multiplier and the vehicles with a positive cost_late_multiplier.
-                    By default, it is equal to the %25 of the timewindow -- i.e., round(0.25 * (end - start)).
-                    Not taken into account within periodic heuristic.')
+                    By default, it is equal to the #{DEFAULT_MAX_LATENESS_RATIO * 100}% of the timewindow -- i.e.,
+                    round(#{DEFAULT_MAX_LATENESS_RATIO} * (end - start)). Not taken into account within periodic
+                    heuristic.")
     at_least_one_of :start, :end, :day_index
   end
 
