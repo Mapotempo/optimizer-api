@@ -18,6 +18,16 @@
 
 module Interpreters
   class SeveralSolutions
+    def self.duplicate_service_vrp(service_vrp, vrp_hash = nil)
+      service_vrp.map{ |key, value|
+        if key == :vrp
+          vrp_hash ||= JSON.parse(value.to_json, symbolize_names: true)
+          value = Models::Vrp.create(vrp_hash)
+        end
+        [key, value]
+      }.to_h
+    end
+
     def self.check_triangle_inequality(matrix)
       (0..matrix.size - 1).each{ |i|
         (0..matrix.size - 1).each{ |j|
@@ -112,17 +122,17 @@ module Interpreters
     def self.expand_repetitions(service_vrp)
       return [service_vrp] if service_vrp[:vrp].configuration.resolution.repetition.nil? ||
                               service_vrp[:vrp].configuration.resolution.repetition <= 1
-
-      repeated_service_vrp = [service_vrp]
+      repeated_service_vrps = [service_vrp]
+      vrp_hash = JSON.parse(service_vrp[:vrp].to_json, symbolize_names: true)
 
       (service_vrp[:vrp].configuration.resolution.repetition - 1).times{
-        sub_vrp = Marshal.load(Marshal.dump(service_vrp))
-        sub_vrp[:vrp].configuration.resolution.repetition = 1
-        sub_vrp[:vrp].configuration.preprocessing.partitions.each{ |partition| partition[:restarts] = [partition[:restarts], 5].compact.min } # change restarts ?
-        repeated_service_vrp << sub_vrp
+        sub_service_vrp = duplicate_service_vrp(service_vrp, vrp_hash)
+        sub_service_vrp[:vrp].configuration.resolution.repetition = 1
+        sub_service_vrp[:vrp].configuration.preprocessing.partitions.each{ |partition| partition[:restarts] = [partition[:restarts], 5].compact.min } # change restarts ?
+        repeated_service_vrps << sub_service_vrp
       }
 
-      repeated_service_vrp
+      repeated_service_vrps
     end
 
     def self.custom_heuristics(service, vrp, block = nil)
@@ -141,9 +151,10 @@ module Interpreters
     end
 
     def self.batch_heuristic(service_vrps, custom_heuristics = nil)
+      vrp_hash = JSON.parse(service_vrp[:vrp].to_json, symbolize_names: true)
       (custom_heuristics || OptimizerWrapper::HEURISTICS).collect{ |heuristic|
         service_vrps.collect{ |service_vrp|
-          edit_service_vrp(Marshal.load(Marshal.dump(service_vrp)), heuristic)
+          edit_service_vrp(duplicate_service_vrp(service_vrp, vrp_hash), heuristic)
         }
       }
     end
@@ -153,7 +164,7 @@ module Interpreters
 
       (service_vrps.first[:vrp].configuration.resolution.several_solutions - 1).times{ |i|
         several_service_vrps << service_vrps.map{ |service_vrp|
-          variate_service_vrp(Marshal.load(Marshal.dump(service_vrp)), i)
+          variate_service_vrp(duplicate_service_vrp(service_vrp), i)
         }
       }
 
@@ -173,8 +184,9 @@ module Interpreters
         custom_heuristics << 'supplied_initial_routes' if vrp.routes.any?
 
         times = []
+        vrp_hash = JSON.parse(service_vrp[:vrp].to_json, symbolize_names: true)
         first_results = custom_heuristics.collect{ |heuristic|
-          s_vrp = Marshal.load(Marshal.dump(service_vrp))
+          s_vrp = duplicate_service_vrp(service_vrp, vrp_hash)
           if heuristic == 'supplied_initial_routes'
             s_vrp[:vrp].configuration.preprocessing.first_solution_strategy = [verified('global_cheapest_arc')] # fastest for fallback
           else

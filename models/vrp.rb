@@ -517,8 +517,8 @@ module Models
     def self.deduce_possible_days(hash, element, start_index)
       convert_possible_dates_into_indices(element, hash, start_index)
 
-      element[:first_possible_days] = element[:first_possible_day_indices].to_a.slice(0..(element[:visits_number] || 1) - 1)
-      element[:last_possible_days] = element[:last_possible_day_indices].to_a.slice(0..(element[:visits_number] || 1) - 1)
+      element[:first_possible_days] ||= element[:first_possible_day_indices].to_a.slice(0..(element[:visits_number] || 1) - 1)
+      element[:last_possible_days] ||= element[:last_possible_day_indices].to_a.slice(0..(element[:visits_number] || 1) - 1)
 
       %i[first_possible_day_indices first_possible_dates last_possible_day_indices last_possible_dates].each{ |k|
         element.delete(k)

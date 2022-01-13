@@ -61,7 +61,7 @@ module Models
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation', as_json: :none
 
-    def self.create(hash)
+    def self.create(hash, _options = {})
       hash[:skills] = [] if hash[:skills].to_a.empty?
       hash[:skills].sort!
 

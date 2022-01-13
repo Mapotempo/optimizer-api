@@ -74,6 +74,17 @@ module Models
       as_json
     end
 
+    def duplicate_safe(options = {})
+      object_hash = JSON.parse(self.to_json, symbolize_names: true)
+
+      options.each{ |key, value|
+        next unless object_hash.key?(key)
+
+        object_hash[key] = value
+      }
+      self.class.create(object_hash, options)
+    end
+
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|

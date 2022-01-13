@@ -80,7 +80,7 @@ module Models
     field :batch_heuristic, default: false
     field :repetition, default: nil
 
-    def self.create(hash)
+    def self.create(hash, _options = {})
       hash[:total_duration] = hash[:duration]
 
       super(hash)
