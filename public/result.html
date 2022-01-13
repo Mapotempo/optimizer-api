@@ -10,15 +10,19 @@
           crossorigin=""/>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="css/style.css">
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
             integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
             crossorigin=""></script>
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
     <script src="js/jquery-1.12.3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
     <script src="js/leaflet-addons.js"></script>
-    <script src="js/result.js"></script>
+    <script src="js/result.js?v=20220113"></script>
 </head>
 <body data-page="result">
 <div id="map-container">
@@ -34,6 +38,7 @@
             <button id="get-job">Visualiser les résultats du job</button>
         </div>
         <div id="checkbox-container"></div>
+        <div id="select-container"></div>
         <div class="block">
             <button id="back">Retourner à l'index</button>
         </div>
