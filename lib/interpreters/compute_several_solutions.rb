@@ -178,7 +178,7 @@ module Interpreters
 
         custom_heuristics << 'supplied_initial_routes' if vrp.routes.any?
 
-        times = []
+        elapsed_times = []
         vrp_hash = JSON.parse(service_vrp[:vrp].to_json, symbolize_names: true)
         first_results = custom_heuristics.collect{ |heuristic|
           s_vrp = duplicate_service_vrp(service_vrp, vrp_hash)
@@ -193,7 +193,7 @@ module Interpreters
           s_vrp[:vrp].configuration.resolution.minimum_duration = nil
           s_vrp[:vrp].configuration.resolution.duration = [time_for_each_heuristic, 300000].min # no more than 5 min for single heur
           heuristic_solution = OptimizerWrapper.config[:services][s_vrp[:service]].solve(s_vrp[:vrp], nil)
-          times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
+          elapsed_times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
           heuristic_solution
         }
 
@@ -204,10 +204,10 @@ module Interpreters
           synthesis << {
             heuristic: custom_heuristics[i],
             # If the cost is 0 we might want to set it to Float::MAX because 0 cost is not possible.
-            quality: solution.nil? ? [Float::MAX] : [solution.unassigned_stops&.size.to_i, solution.cost.to_i, times[i]],
+            quality: solution.nil? ? [Float::MAX] : [solution.unassigned_stops&.size.to_i, solution.cost.to_i, elapsed_times[i]],
             used: false,
             cost: solution ? solution.cost : nil,
-            time_spent: times[i],
+            time_spent: elapsed_times[i],
             solution: solution
           }
         }

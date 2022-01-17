@@ -4380,7 +4380,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert solutions[0]
     assert_equal 3, solutions[0].heuristic_synthesis.size
-    assert solutions[0].heuristic_synthesis.min_by{ |heuristic| heuristic[:cost] || Helper.fixnum_max }[:used]
+    assert solutions[0].heuristic_synthesis.min_by{ |heuristic| heuristic[:quality] }[:used]
     assert solutions[0].cost
   end
 
@@ -4390,7 +4390,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert solutions[0]
     assert_equal 3, solutions[0].heuristic_synthesis.size
-    assert solutions[0].heuristic_synthesis.min_by{ |heuristic| heuristic[:cost] || Helper.fixnum_max }[:used]
+    assert solutions[0].heuristic_synthesis.min_by{ |heuristic| heuristic[:quality] }[:used]
   end
 
   def test_self_selection_first_solution_strategy_with_routes
@@ -4411,31 +4411,30 @@ class Wrappers::OrtoolsTest < Minitest::Test
         # force to prefer solution provided by routes :
         if call_to_solve <= list.size
 
-          Models::Solution.new(cost: 2**32.0,
-                                         solvers: [:ortools],
-                                         routes: [
-                                           Models::Solution::Route.new(
-                                             vehicle: vrp_in.vehicles[0],
-                                           ),
-                                           Models::Solution::Route.new(
-                                             vehicle: vrp_in.vehicles[1]
-                                           )
-                                        ])
+          Models::Solution.new(solvers: [:ortools],
+                               routes: [
+                                 Models::Solution::Route.new(
+                                   vehicle: vrp_in.vehicles[0],
+                                 ),
+                                 Models::Solution::Route.new(
+                                   vehicle: vrp_in.vehicles[1]
+                                 )
+                               ],
+                               unassigned_stops: vrp.services.map{ |s| Models::Solution::Stop.new(s) })
         else
-          Models::Solution.new(cost: 10.0,
-                                         solvers: [:ortools],
-                                         routes: [
-                                           Models::Solution::Route.new(
-                                             vehicle: vrp_in.vehicles[0],
-                                             stops: [Models::Solution::StopDepot.new(vrp_in.vehicles.first.start_point)] +
-                                               vrp_in.routes.first.mission_ids.map{ |id|
-                                                 Models::Solution::Stop.new(vrp_in.services.find{ |s| s.id == id })
-                                               } + [Models::Solution::StopDepot.new(vrp_in.vehicles.first.end_point)]
-                                           ),
-                                           Models::Solution::Route.new(
-                                             vehicle: vrp_in.vehicles[1]
-                                           )
-                                        ])
+          Models::Solution.new(solvers: [:ortools],
+                               routes: [
+                                 Models::Solution::Route.new(
+                                   vehicle: vrp_in.vehicles[0],
+                                   stops: [Models::Solution::StopDepot.new(vrp_in.vehicles.first.start_point)] +
+                                     vrp_in.routes.first.mission_ids.map{ |id|
+                                       Models::Solution::Stop.new(vrp_in.services.find{ |s| s.id == id })
+                                     } + [Models::Solution::StopDepot.new(vrp_in.vehicles.first.end_point)]
+                                 ),
+                                 Models::Solution::Route.new(
+                                   vehicle: vrp_in.vehicles[1]
+                                 )
+                               ])
         end
       }
     ) do
@@ -5168,38 +5167,37 @@ class Wrappers::OrtoolsTest < Minitest::Test
       :solve, lambda{ |_vrp_in, _job|
         heuristic_counter += 1
         if heuristic_counter == 1
-          Models::Solution.new(cost: 27648.0,
-                                         solvers: [:ortools],
-                                         elapsed: 0.94,
-                                         routes: [
-                                           Models::Solution::Route.new(vehicle: vrp.vehicles[0]),
-                                           Models::Solution::Route.new(vehicle: vrp.vehicles[1]),
-                                           Models::Solution::Route.new(vehicle: vrp.vehicles[2])
-                                        ])
+          Models::Solution.new(solvers: [:ortools],
+                               elapsed: 0.94,
+                               routes: [
+                                 Models::Solution::Route.new(vehicle: vrp.vehicles[0]),
+                                 Models::Solution::Route.new(vehicle: vrp.vehicles[1]),
+                                 Models::Solution::Route.new(vehicle: vrp.vehicles[2])
+                               ],
+                               unassigned_stops: vrp.services.map{ |s| Models::Solution::Stop.new(s) })
         else
-          Models::Solution.new(cost: 14.0,
-                                         solvers: [:ortools],
-                                         elapsed: 0.94,
-                                         routes: [
-                                           Models::Solution::Route.new(
-                                             vehicle: vrp.vehicles[0],
-                                             stops: [Models::Solution::StopDepot.new(vrp.vehicles[0].start_point)]
-                                           ),
-                                           Models::Solution::Route.new(
-                                             vehicle: vrp.vehicles[1],
-                                             stops: [
-                                               Models::Solution::StopDepot.new(vrp.vehicles[1].start_point),
-                                               Models::Solution::Stop.new(vrp.services[4]),
-                                               Models::Solution::Stop.new(vrp.services[2]),
-                                               Models::Solution::Stop.new(vrp.services[0]),
-                                               Models::Solution::Stop.new(vrp.services[1])
-                                             ]
-                                           ),
-                                           Models::Solution::Route.new(
-                                             vehicle: vrp.vehicles[2],
-                                             stops: [Models::Solution::StopDepot.new(vrp.vehicles[2].start_point)]
-                                           )
-                                        ])
+          Models::Solution.new(solvers: [:ortools],
+                               elapsed: 0.94,
+                               routes: [
+                                 Models::Solution::Route.new(
+                                   vehicle: vrp.vehicles[0],
+                                   stops: [Models::Solution::StopDepot.new(vrp.vehicles[0].start_point)]
+                                 ),
+                                 Models::Solution::Route.new(
+                                   vehicle: vrp.vehicles[1],
+                                   stops: [
+                                     Models::Solution::StopDepot.new(vrp.vehicles[1].start_point),
+                                     Models::Solution::Stop.new(vrp.services[4]),
+                                     Models::Solution::Stop.new(vrp.services[2]),
+                                     Models::Solution::Stop.new(vrp.services[0]),
+                                     Models::Solution::Stop.new(vrp.services[1])
+                                   ]
+                                 ),
+                                 Models::Solution::Route.new(
+                                   vehicle: vrp.vehicles[2],
+                                   stops: [Models::Solution::StopDepot.new(vrp.vehicles[2].start_point)]
+                                 )
+                               ])
         end
       }
     ) do
