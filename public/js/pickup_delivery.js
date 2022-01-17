@@ -10,11 +10,7 @@ $(document).ready(function() {
 
   jobsManager.ajaxGetJobs(true);
 
-  $('head title').html(i18n.title);
-  for (var id in i18n.form) {
-    $('#' + id).html(i18n.form[id]);
-  }
-  $('#optim-list-legend').html(i18n.currentJobs);
+  $('#optim-list-legend').html(i18next.t('current_jobs'));
 
   $('#file-customers-help .column-name').append('<td class="required">' + mapping.reference + '</td>');
   $('#file-customers-help .column-value').append('<td class="required">ref</td>');
@@ -111,7 +107,7 @@ $(document).ready(function() {
       return t[0] * 3600 + t[1] * 60 + Number(t[2]);
     }
     else if (value)
-      throw i18n.invalidDuration(value);
+      throw i18next.t('invalid_duration', { duration: value });
   };
   customers = [];
 
@@ -126,8 +122,7 @@ $(document).ready(function() {
         },
         resolution: {
           duration: duration($('#optim-duration').val()) * 1000 || undefined,
-          iterations: parseInt($('#optim-iterations').val()) || undefined,
-          iterations_without_improvment: parseInt($('#optim-iterations-without-improvment').val()) || undefined
+          minimum_duration: duration($('#optim-minimum-duration').val() * 1000) || undefined
         }
       }};
 
@@ -144,18 +139,18 @@ $(document).ready(function() {
       var points = [];
       data.customers.forEach(function(customer) {
         if (!customer[mapping.reference || 'reference'])
-          throw i18n.missingColumn(mapping.reference || 'reference');
+          throw i18next.t('missing_column', { columnName: mapping.reference || 'reference' });
         else if (!customer[mapping.pickup_lat || 'pickup_lat'] && !customer[mapping.pickup_lon || 'pickup_lon'] && !customer[mapping.delivery_lat || 'delivery_lat'] && !customer[mapping.delivery_lon || 'delivery_lon'])
-          throw i18n.missingColumn('pickup/delivery coordinates');
+          throw i18next.t('missing_column', { columnName: 'pickup/delivery coordinates' });
         else if (!customer[mapping.pickup_lat || 'pickup_lat'] ^ !customer[mapping.pickup_lon || 'pickup_lon'])
-          throw i18n.missingColumn('pickup coordinates');
+          throw i18next.t('missing_column', { columnName: 'pickup coordinates' });
         else if (!customer[mapping.delivery_lat || 'delivery_lat'] ^ !customer[mapping.delivery_lon || 'delivery_lon'])
-          throw i18n.missingColumn('delivery coordinates');
+          throw i18next.t('missing_column', { columnName: 'delivery coordinates' });
 
         if (customers.indexOf(customer[mapping.reference || 'reference']) === -1)
           customers.push(customer[mapping.reference || 'reference']);
         else
-          throw i18n.sameReference(customer[mapping.reference || 'reference']);
+          throw i18next.t('same_reference', { reference: customer[mapping.reference || 'reference'] });
 
         if (customer[mapping.pickup_lat || 'pickup_lat'] && customer[mapping.pickup_lon || 'pickup_lon']) {
           var refPickup = customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.');
@@ -368,7 +363,7 @@ $(document).ready(function() {
       data: JSON.stringify({ vrp: vrp }),
     }).done(function (result) {
       if (debug) console.log("Calling optimization... ", result);
-      $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
+      $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18next.t('kill_optim') + '</button>');
       timer = displayTimer();
       $('#optim-kill').click(function (e) {
         jobsManager.delete($('#optim-job-uid').val())
@@ -398,13 +393,13 @@ $(document).ready(function() {
 
         $('#avancement').html(job.job.avancement);
         if (job.job.status == 'queued') {
-          if ($('#optim-status').html() != i18n.optimizeQueued) $('#optim-status').html(i18n.optimizeQueued);
+          if ($('#optim-status').html() != i18next.t('optimize_queued')) $('#optim-status').html(i18next.t('optimize_queued'));
         }
         else if (job.job.status == 'working') {
-          if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
+          if ($('#optim-status').html() != i18next.t('optimize_loading')) $('#optim-status').html(i18next.t('optimize_loading'));
           if (job.solutions && job.solutions[0]) {
             if (!lastSolution)
-              $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
+              $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18next.t('display_solution') + '</a>');
             lastSolution = job.solutions[0];
             $('#display-solution').click(function (e) {
               displayPDSolution(job);
@@ -426,17 +421,36 @@ $(document).ready(function() {
         }
         else if (job.job.status == 'failed' || job.job.status == 'killed') {
           if (debug) console.log('Job failed/killed: ' + JSON.stringify(job));
-          alert(i18n.failureCallOptim(job.job.avancement));
+          alert(i18next.t('failure_call_optim', { error: job.job.avancement}));
           initForm();
           clearInterval(timer);
         }
       })
     }).fail(function (xhr, status, message) {
-      alert(i18n.failureCallOptim(status + " " + message + " " + xhr.responseText));
+      alert(i18next.t('failure_call_optim', { error: status + " " + message + " " + xhr.responseText}));
       initForm();
       clearInterval(timer);
     })
   };
+
+  const fieldsName = {
+    reference: 'référence',
+    route: 'tournée',
+    vehicle: 'véhicule',
+    stop_type: 'type arrêt',
+    name: 'nom',
+    street: 'voie',
+    postalcode: 'code postal',
+    city: 'ville',
+    lat: 'lat',
+    lng: 'lng',
+    take_over: 'durée visite',
+    quantity1_1: 'quantité 1_1',
+    quantity1_2: 'quantité 1_2',
+    open: 'horaire début',
+    close: 'horaire fin',
+    tags: 'libellés'
+  }
 
   var createCSV = function(solution) {
     var stops = [];
@@ -673,22 +687,22 @@ $(document).ready(function() {
     });
     return Papa.unparse({
       fields: [
-        i18n.reference,
-        i18n.route,
-        i18n.vehicle,
-        i18n.stop_type,
-        i18n.name,
-        i18n.street,
-        i18n.postalcode,
-        i18n.city,
-        i18n.lat,
-        i18n.lng,
-        i18n.take_over,
-        i18n.quantity1_1,
-        i18n.quantity1_2,
-        i18n.open,
-        i18n.close,
-        i18n.tags,
+        fieldsName.reference,
+        fieldsName.route,
+        fieldsName.vehicle,
+        fieldsName.stop_type,
+        fieldsName.name,
+        fieldsName.street,
+        fieldsName.postalcode,
+        fieldsName.city,
+        fieldsName.lat,
+        fieldsName.lng,
+        fieldsName.take_over,
+        fieldsName.quantity1_1,
+        fieldsName.quantity1_2,
+        fieldsName.open,
+        fieldsName.close,
+        fieldsName.tags,
       ],
       data: stops
     });
@@ -700,8 +714,8 @@ $(document).ready(function() {
     // if (result) {
     var csv = createCSV(solution);
     var jsonData = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(solution));
-    $('#optim-infos').append(' - <a download="result_' + result.job.id + '.json" href="' + jsonData + '">' + i18n.downloadJSON + '</a>');
-    $('#optim-infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18n.downloadCSV + '</a>');
+    $('#optim-infos').append(' - <a download="result_' + result.job.id + '.json" href="' + jsonData + '">' + i18next.t('download_json') + '</a>');
+    $('#optim-infos').append(' - <a href="data:text/csv,' + encodeURIComponent(csv) + '">' + i18next.t('download_csv') + '</a>');
     $('#result').html(csv);
     // }
     clearInterval(timer);
@@ -717,7 +731,7 @@ $(document).ready(function() {
     skipEmptyLines: true,
     error: function(err, file, inputElem, reason)
     {
-      alert(i18n.errorFile(i18n[inputElem.id.replace('file-', '')]) + reason);
+      alert(i18next.t('error_file', { filename: i18next.t(inputElem.id.replace('file-', '')) }) + reason)
       initForm();
       clearInterval(timer);
       $('#send-files').attr('disabled', false);
@@ -755,7 +769,7 @@ $(document).ready(function() {
     var filesVehicles = $('#file-vehicles')[0].files;
     if (filesCustomers.length == 1 && filesVehicles.length == 1) {
       $('#send-files').attr('disabled', true);
-      $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="avancement"></span> - <span id="timer"></span>');
+      $('#optim-infos').html('<span id="optim-status">' + i18next.t('optimize_loading') + '</span> <span id="avancement"></span> - <span id="timer"></span>');
       $('#infos').html('');
       $('#result').html('');
       $('#result-graph').hide();
@@ -769,7 +783,7 @@ $(document).ready(function() {
       });
     }
     else {
-      alert(i18n.missingFile);
+      alert(i18next.t('missing_file'));
     }
     e.preventDefault();
     return false;

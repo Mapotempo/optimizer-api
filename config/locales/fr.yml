@@ -51,3 +51,49 @@ fr:
       visit_index: indice de la visite
       wait_time: attente
     tags: libellés
+  views:
+    shared:
+      send: Envoyer
+      csv_vehicles_label: 'Votre fichier vehicules csv :'
+      file_customer_label: 'Votre fichier clients csv :'
+    result:
+      title: Visualisation des résultats
+      show_result: Visualiser les résultats du job
+      back: Retourner à l'index
+    scheduling:
+      status_label: 'Status de votre optimisation :'
+      csv_points_label: 'Fichier Points (CSV) :'
+      csv_units_label: 'Fichier Units (CSV) :'
+      csv_capacities_label: 'Fichier Capacities (CSV) :'
+      csv_quantities_label: 'Fichier Quantities (CSV) :'
+      csv_timewindows_label: 'Fichier Timewindows (CSV) :'
+      csv_services_label: 'Fichier Services (CSV) :'
+      csv_shipments_label: 'Fichier Shipments (CSV) :'
+      json_config_label: 'Fichier de configuration (JSON) :'
+      waiting_submit: 'En attente de l''envoi du problème'
+    pickup_delivery:
+      optim_options_legend: 'Options de l''optimisation :'
+      optim_duration_label: 'Durée maximale :'
+      optim_minimum_duration_label: 'Durée minimale :'
+      optim_solver_parameter_label: 'Méthode de résolution :'
+      documentation:
+        select_customer_file: Sélectionnez votre fichier clients
+        select_vehicle_file: Sélectionnez votre fichier véhicules
+        params_optim: 'Paramétrez votre optimisation :'
+        params_optim_a: '(a) (facultatif) La durée minimale (en secondes) de votre optimisation (en supposant une instance réalisable).'
+        params_optim_b: '(b) (facultatif) La durée maximale (en secondes) de votre optimisation après laquelle le dernier résultat sera renvoyé.'
+        params_optim_help: 'L''une des conditions d''arrêts (a) ou (b) au moins doit être renseignée.'
+        send_click: 'Cliquez sur « Envoyer »'
+        send_click_a: 'Une nouvelle soumission est alors envoyée au moteur d''optimisation'
+        send_click_b: 'Chaque nouvelle soumission est mise à la suite d''une file d''attente de processus'
+        send_click_c : 'Chaque processus est divisé en plusieurs étapes : pré-traitement, calcul des matrices, optimisation, post-traitement'
+        optim_end: 'Une fois l''optimisation terminée, le résultat de celle-ci apparaît dans un bloc sur la page (un lien au dessus du bloc permet également de télécharger le csv correspondant)'
+        optim_end_help: 'Le coût sur lequel a été optimisé la solution est alors affiché : il vous permet de visualiser en un simple coup d''oeil (par comparaison) si la solution actuelle est meilleure ou non qu''une autre (dans le cas où vous ne changez pas les données du problème en entrée)'
+        import_mt_web: 'Importez ce fichier csv dans Mapotempo-web (les informations de dépôts de départ et d''arrivée ne sont pas importées : pensez à les définir dans Mapotempo-web)'
+        import_mt_web_help: 'Un planning se crée lors de l''import, accessible depuis le menu « Planning » de Mapotempo-web'
+        import_customer_file_columns: 'Votre fichier clients doit contenir les colonnes suivantes :'
+        pickup_delivery_setup: 'pickup_setup/delivery_setup : durée de préparation par défaut, elle n''est effective que pour la première activité lors de l''arrivée à la destination liée.'
+        import_vehicle_file_columns: 'Votre fichier véhicules doit contenir les colonnes suivantes :'
+        setup_multiplier: 'setup_multiplier : coefficient multiplicateur des durées pickup_setup ou delivery_setup associée au véhicule (Ex : pickup_setup = 00:10:00 & setup_multiplier = 1,5 --> durée de préparation : 00:15:00)'
+        setup_cost: 'setup_cost : coût associé à la durée de préparation.'
+        bold_columns: 'Les colonnes en gras sont obligatoires.'

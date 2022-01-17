@@ -15,7 +15,7 @@ postForm.on('submit', function (e) {
   e.preventDefault();
   var file = jsonFile || jsonFileDOM.files && jsonFileDOM.files[0];
   if (!file) {
-    alert("Vous devez d'abord selectionner un fichier");
+    alert(i18next.t('alert_need_file'));
     return false;
   }
 
@@ -25,17 +25,17 @@ postForm.on('submit', function (e) {
     try {
       vrp = JSON.parse(evt.target.result);
     } catch(e) {
-      alert("Le fichier fourni n'est pas dans un format JSON valide :\n" + e);
+      alert(i18next.t('invalid_json') + e);
       return false;
     }
 
     if (!vrp.vrp) {
-      alert("Fichier invalide");
+      alert(i18next.t('invalid_file'));
       return false;
     }
 
     $('#send-files').attr('disabled', true);
-    $('#optim-infos').html('<span id="optim-status">' + i18n.optimizeLoading + '</span> <span id="avancement"></span> - <span id="timer"></span>');
+    $('#optim-infos').html('<span id="optim-status">' + i18next.t('optimize_loading') + '</span> <span id="avancement"></span> - <span id="timer"></span>');
 
     jobsManager.submit({
       data: JSON.stringify(vrp),
@@ -43,7 +43,7 @@ postForm.on('submit', function (e) {
       contentType: "application/json",
     }).done(function (submittedJob) {
       timer = displayTimer();
-      $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + submittedJob.job.id + '"></input><button id="optim-kill">' + i18n.killOptim + '</button>');
+      $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + submittedJob.job.id + '"></input><button id="optim-kill">' + i18next.t('kill_optim') + '</button>');
       $('#optim-kill').click(function (e) {
         jobsManager.delete($('#optim-job-uid').val())
           .done(function () {
@@ -63,7 +63,7 @@ postForm.on('submit', function (e) {
         if (err) {
           initForm();
           clearInterval(timer);
-          alert("An error occured");
+          alert(i18next.t('error'));
           return;
         }
         // vrp returning csv, not json
@@ -74,13 +74,13 @@ postForm.on('submit', function (e) {
         $('#avancement').html(job.job.avancement);
 
         if (job.job.status == 'queued') {
-          if ($('#optim-status').html() != i18n.optimizeQueued) $('#optim-status').html(i18n.optimizeQueued);
+          if ($('#optim-status').html() != i18next.t('optimize_queued')) $('#optim-status').html(i18next.t('optimize_queued'));
         }
         else if (job.job.status == 'working') {
-          if ($('#optim-status').html() != i18n.optimizeLoading) $('#optim-status').html(i18n.optimizeLoading);
+          if ($('#optim-status').html() != i18next.t('optimize_loading')) $('#optim-status').html(i18next.t('optimize_loading'));
           if (job.solutions && job.solutions[0]) {
             if (!lastSolution)
-              $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18n.displaySolution + '</a>');
+              $('#optim-infos').append(' - <a href="#" id="display-solution">' + i18next.t('display_solution') + '</a>');
             lastSolution = job.solutions[0];
             $('#display-solution').click(function (e) {
               displaySolution(submittedJob.job.id, lastSolution);
@@ -102,14 +102,14 @@ postForm.on('submit', function (e) {
         }
         else if (job.job.status == 'failed' || job.job.status == 'killed') {
           if (debug) console.log('Job failed/killed: ' + JSON.stringify(job));
-          alert(i18n.failureCallOptim(job.job.avancement));
+          alert(i18next.t('failure_call_optim', { error: job.job.avancement}));
           initForm();
         }
       });
     }).fail(function (xhr, status) {
       if (xhr.readyState !== 0 && xhr.status !== 0) {
         response = xhr.responseJSON
-        alert(response['message'] || "An error occured");
+        alert(response['message'] || i18next.t('error'));
       }
       initForm();
     });

@@ -85,3 +85,5 @@ end
 group :production do
   gem 'redis-activesupport'
 end
+
+gem "rack-server-pages", "~> 0.1.0"

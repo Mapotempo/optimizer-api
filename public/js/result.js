@@ -207,14 +207,14 @@ function createSelect2(vehicleNames, onChange) {
     const option = document.createElement('option')
     option.dataset.color = colorByVehicle[name];
     option.value = name;
-    option.text = name;
+    option.text = name === 'unassigned' ? i18next.t('unassigned') : name;
     select.appendChild(option);
   });
   document.getElementById('select-container').appendChild(select);
 
   const $select = $(`#${select.id}`);
   $select.select2({
-    placeholder: "Selectionner un ou plusieurs véhicules",
+    placeholder: i18next.t('select2_placeholder'),
     allowClear: true,
     width: '90%',
     templateResult: formatSelect2,

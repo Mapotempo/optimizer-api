@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mapotempo Optimizer - Pickup Delivery</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="block">
+    <img src="images/logo.png">
+    <h1>Optimizer</h1>
+  </div>
+  <div class="block">
+    <fieldset id="optim-list-status">
+      <legend id="optim-list-legend"></legend>
+      <div id="jobs-list">
+
+      </div>
+    </fieldset>
+  </div>
+  <form>
+    <a id="doc-link" href="#documentation">documentation</a>
+    <div class="block">
+      <span id="file-customers-label"><%= I18n.t('views.shared.file_customer_label') %></span> <input type="file" id="file-customers">
+    </div>
+    <div class="block">
+      <span id="file-vehicles-label"><%= I18n.t('views.shared.csv_vehicles_label') %></span> <input type="file" id="file-vehicles">
+    </div>
+    <div class="block" id="optim-options">
+      <fieldset>
+        <legend id="optim-options-legend"><%= I18n.t('views.pickup_delivery.optim_options_legend') %></legend>
+        <div><span id="optim-duration-label"><%= I18n.t('views.pickup_delivery.optim_duration_label') %></span> <input type="text" id="optim-duration" value="00:10:00" placeholder="hh:mm:ss"></div>
+        <div><span id="optim-minimum-duration-label"><%= I18n.t('views.pickup_delivery.optim_minimum_duration_label') %></span> <input type="text" id="optim-minimum-duration" value="00:10:00" placeholder="hh:mm:ss"></div>
+        </br>
+        <div><span id="optim-solver-parameter-label"><%= I18n.t('views.pickup_delivery.optim_solver_parameter_label') %><input type="number" id="optim-solver-parameter" step="1"></div>
+
+      </fieldset>
+    </div>
+    <div class="block">
+      <button id="send-files"><%= I18n.t('views.shared.send') %></button>
+      <span id="files-infos"></span>
+    </div>
+  </form>
+  <div class="block">
+    <canvas id="result-graph"></canvas>
+    <div><span id="result-label"></span> <span id="optim-infos"></span></div>
+    <textarea id="result"></textarea>
+  </div>
+  <div class="block">
+    <a name="documentation"></a>
+    <h2>Documentation</h2>
+    <div id="documentation">
+      <ol>
+        <li><%= I18n.t('views.pickup_delivery.documentation.select_customer_file') %></li>
+        <li><%= I18n.t('views.pickup_delivery.documentation.select_vehicle_file') %></li>
+        <li><%= I18n.t('views.pickup_delivery.documentation.params_optim') %>
+          <ul>
+            <li><%= I18n.t('views.pickup_delivery.documentation.params_optim_a') %></li>
+            <li><%= I18n.t('views.pickup_delivery.documentation.params_optim_b') %></li>
+            <%= I18n.t('views.pickup_delivery.documentation.params_optim_help') %>
+          </ul>
+        </li>
+        <li><%= I18n.t('views.pickup_delivery.documentation.send_click') %>
+          <ul>
+            <li><%= I18n.t('views.pickup_delivery.documentation.send_click_a') %></li>
+            <li><%= I18n.t('views.pickup_delivery.documentation.send_click_b') %></li>
+            <li><%= I18n.t('views.pickup_delivery.documentation.send_click_c') %></li>
+          </ul>
+        </li>
+        <li><%= I18n.t('views.pickup_delivery.documentation.optim_end') %>
+          <ul>
+            <li><%= I18n.t('views.pickup_delivery.documentation.optim_end_help') %></li>
+          </ul>
+        </li>
+        <li><%= I18n.t('views.pickup_delivery.documentation.import_mt_web') %></li>
+        <li><%= I18n.t('views.pickup_delivery.documentation.import_mt_web_help') %></li>
+      </ol>
+      <p>
+        <%= I18n.t('views.pickup_delivery.documentation.import_customer_file_columns') %>
+        <table id="file-customers-help" class="file-table-help">
+          <tr class="column-name"></tr>
+          <tr class="column-value"></tr>
+        </table>
+        <ul>
+          <li><%= I18n.t('views.pickup_delivery.documentation.pickup_delivery_setup') %></li>
+        </ul>
+      </p>
+      <p>
+        <%= I18n.t('views.pickup_delivery.documentation.import_vehicle_file_columns') %>
+        <table id="file-vehicles-help" class="file-table-help">
+          <tr class="column-name"></tr>
+          <tr class="column-value"></tr>
+        </table>
+        <ul>
+          <li><%= I18n.t('views.pickup_delivery.documentation.setup_multiplier') %></li>
+          <li><%= I18n.t('views.pickup_delivery.documentation.setup_cost') %></li>
+        </ul>
+      </p>
+      <%= I18n.t('views.pickup_delivery.documentation.bold_columns') %>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/i18next@21.6.6/dist/umd/i18next.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/i18next-browser-languagedetector/6.0.0/i18nextBrowserLanguageDetector.min.js"></script>
+  <script src="js/translations.js?v=20220121"></script>
+  <script src="js/jquery-1.12.3.min.js"></script>
+  <script src="js/papaparse.min.js"></script>
+  <script src="js/Chart.Core.min.js"></script>
+  <script src="js/Chart.Scatter.min.js"></script>
+  <script src="js/conf.js?v=20220121"></script>
+  <script src="js/utils.js?v=20220121"></script>
+  <script src="js/jobManager.js?v=20220121"></script>
+  <script src="js/pickup_delivery.js?v=20220121"></script>
+</body>
+</html>
+
+

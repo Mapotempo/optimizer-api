@@ -5,8 +5,8 @@ var requestPendingAllJobs = false;
 function buildDownloadLink(jobId, state) {
   var extension = state === 'failed' ? '.json' : '';
   var msg = state === 'failed'
-          ? 'Télécharger le rapport d\'erreur de l\'optimisation'
-          : 'Télécharger le résultat de l\'optimisation';
+          ? i18next.t('download_optim_error')
+          : i18next.t('download_optim');
 
   var url = "/0.1/vrp/jobs/" + jobId + extension + '?api_key=' + getParams()['api_key'];
 
@@ -15,7 +15,7 @@ function buildDownloadLink(jobId, state) {
 }
 
 function buildResultLink(jobId) {
-  return '<a href="/result.html?api_key=' + getParams()['api_key'] + '&job_id=' + jobId + '" target="_blank">Visualiser les résultats</a>'
+  return '<a href="/result.html?api_key=' + getParams()['api_key'] + '&job_id=' + jobId + '" target="_blank">' + i18next.t('show_result') + '</a>'
 }
 
 var jobsManager = {
@@ -43,7 +43,7 @@ var jobsManager = {
           + '<span class="optim-start">' + startTime + ' : </span>'
           + '<span class="job_title">' + 'Job N° <b>' + currentJob.uuid + '</b></span> '
           + '<button value=' + currentJob.uuid + ' data-role="delete">'
-          + ((currentJob.status === 'queued' || currentJob.status === 'working') ? i18n.killOptim : i18n.deleteOptim)
+          + ((currentJob.status === 'queued' || currentJob.status === 'working') ? i18next.t('kill_optim') : i18next.t('delete'))
           + '</button>'
           + ' (Status: ' + currentJob.status + completedDate + ')'
           + (donwloadBtn ? buildDownloadLink(currentJob.uuid, currentJob.status) : '')
@@ -85,7 +85,7 @@ var jobsManager = {
             clearInterval(window.AjaxGetRequestInterval);
           }
           if (jqXHR.status == 401) {
-            $('#optim-list-status').prepend('<div class="error">' + i18n.unauthorizedError + '</div>');
+            $('#optim-list-status').prepend('<div class="error">' + i18next.t('unauthorized_error') + '</div>');
             $('form input, form button').prop('disabled', true);
           }
         });
@@ -164,7 +164,7 @@ var jobsManager = {
           ++nbError
           if (nbError > 2) {
             cb({ xhr, status });
-            return alert(i18n.failureOptim(nbError, status));
+            return alert(i18next.t('failure_optim', { attempts: nbError, error: status}));
           }
           requestPendingJobTimeout = true;
         },
