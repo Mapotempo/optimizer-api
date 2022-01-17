@@ -9,6 +9,7 @@
 ### Changed
 
 - Alternative activites are now available using shipment relations [#302](https://github.com/Mapotempo/optimizer-api/pull/302)
+- The `entity` field is now mandatory for a `partition` [#332](https://github.com/Mapotempo/optimizer-api/pull/332)
 
 ### Removed
 
