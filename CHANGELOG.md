@@ -4,11 +4,11 @@
 
 ### Added
 
-- Timewindow violation ("lateness") can now be limited using the `maximum_lateness` field of timewindows. By default, `maximum_lateness` is set to be 100% of the timewindow -- i.e., `end` - `start`. The default value can be overridden via the environment variable `OPTIM_DEFAULT_MAX_LATENESS_RATIO`. [#303](https://github.com/Mapotempo/optimizer-api/pull/303)
+- Timewindow violation ("lateness") can now be limited using the `maximum_lateness` field of timewindows (not yet available for periodic heuristic). By default, `maximum_lateness` is set to be 100% of the timewindow -- i.e., `end` - `start`. The default value can be overridden via the environment variable `OPTIM_DEFAULT_MAX_LATENESS_RATIO`. [#303](https://github.com/Mapotempo/optimizer-api/pull/303)
 
 ### Changed
 
-- Alternative activites are now available using shipment relations [#302](https://github.com/Mapotempo/optimizer-api/pull/302)
+- Alternative activities are now available using shipment relations [#302](https://github.com/Mapotempo/optimizer-api/pull/302)
 - The `entity` field is now mandatory for a `partition` [#332](https://github.com/Mapotempo/optimizer-api/pull/332)
 
 ### Removed
