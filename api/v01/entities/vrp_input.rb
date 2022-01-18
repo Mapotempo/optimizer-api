@@ -149,13 +149,14 @@ module VrpConfiguration
     optional(:metric, type: Symbol, desc: 'Defines partition reference metric. Values should be either duration, visits or any unit you defined in units.')
     requires(:entity, type: Symbol, values: [:vehicle, :work_day], desc: 'Describes what the partition corresponds to. Available only if method in [balanced_kmeans hierarchical_tree].', coerce_with: ->(value) { value.to_sym })
     optional(:threshold, type: Integer, desc: 'Maximum size of partition. Available only if method in [iterative_kmean clique].')
+    optional(:centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Only available through balanced_kmeans and entity vehicle as first partition.')
   end
 
   params :vrp_request_preprocessing do
     optional(:max_split_size, type: Integer, desc: 'Divide the problem into clusters beyond this threshold')
     optional(:partition_method, type: String, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
     optional(:partition_metric, type: Symbol, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
-    optional(:kmeans_centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Available only with deprecated partition_method.')
+    optional(:kmeans_centroids, type: Array[Integer], documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
     optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
     optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
     optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')

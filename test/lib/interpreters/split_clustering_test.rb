@@ -300,13 +300,13 @@ class SplitClusteringTest < Minitest::Test
       vrp[:configuration][:preprocessing][:partitions] = [{
         technique: 'balanced_kmeans',
         metric: 'duration',
-        entity: :work_day
+        entity: :work_day,
+        centroids: [1, 2]
       }]
 
       vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [1, 2]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -320,7 +320,7 @@ class SplitClusteringTest < Minitest::Test
 
       (vrp[:services] + vrp[:vehicles]).each{ |v| v.delete(:skills) }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [9, 10]
+      service_vrp[:vrp][:configuration][:preprocessing][:partitions].first[:centroids] = [9, 10]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -340,7 +340,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [0, 2]
+      service_vrp[:vrp][:configuration][:preprocessing][:partitions].first[:centroids] = [0, 2]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -356,7 +356,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services][3][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 1 }]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
       service_vrp[:vrp].services.each{ |s| s.skills = [] }
-      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [9, 10]
+      service_vrp[:vrp][:configuration][:preprocessing][:partitions].first[:centroids] = [9, 10]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -384,11 +384,11 @@ class SplitClusteringTest < Minitest::Test
       vrp[:points][1][:matrix_index] = vrp[:points][0][:matrix_index]
 
       assert_raises ArgumentError do # initialising centroids with incompatible services should raise an error
-        vrp[:configuration][:preprocessing][:kmeans_centroids] = [0, 1]
+        vrp[:configuration][:preprocessing][:partitions].first[:centroids] = [0, 1]
         Interpreters::SplitClustering.generate_split_vrps(vrp: TestHelper.create(vrp), service: :demo)
       end
 
-      vrp[:configuration][:preprocessing][:kmeans_centroids] = [2, 3] # initialising with other services should be okay
+      vrp[:configuration][:preprocessing][:partitions].first[:centroids] = [2, 3] # initialising with other services should be okay
       generated_services_vrps =
         Interpreters::SplitClustering.generate_split_vrps(vrp: TestHelper.create(vrp), service: :demo)
       generated_services_vrps.flatten!
@@ -414,7 +414,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services][0][:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
       vrp[:vehicles].first[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? }
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [1, 2]
+      service_vrp[:vrp][:configuration][:preprocessing][:partitions].first[:centroids] = [1, 2]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -429,7 +429,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
 
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [9, 10]
+      service_vrp[:vrp][:configuration][:preprocessing][:partitions].first[:centroids] = [9, 10]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -449,7 +449,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services].first[:skills] = [:skill]
       vrp[:vehicles][0][:skills] = [[:skill]]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [1, 2]
+      service_vrp[:vrp][:configuration][:preprocessing][:partitions].first[:centroids] = [1, 2]
       generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
       generated_services_vrps.flatten!
       generated_services_vrps.compact!
@@ -562,7 +562,7 @@ class SplitClusteringTest < Minitest::Test
       vrp[:services].first[:skills] = ['skill']
       vrp[:vehicles][0][:skills] = [['skill'], ['other_skill']]
       service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
-      service_vrp[:vrp][:configuration][:preprocessing][:kmeans_centroids] = [1, 2]
+      service_vrp[:vrp][:configuration][:preprocessing][:partitions].first[:centroids] = [1, 2]
 
       assert_raises OptimizerWrapper::UnsupportedProblemError do
         Interpreters::SplitClustering.generate_split_vrps(service_vrp)

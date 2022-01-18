@@ -90,48 +90,43 @@ module Interpreters
     def self.generate_split_vrps(service_vrp, _job = nil, block = nil)
       log '--> generate_split_vrps (clustering by partition)'
       vrp = service_vrp[:vrp]
-      if vrp.configuration.preprocessing.partitions && !vrp.configuration.preprocessing.partitions.empty?
-        current_service_vrps = [service_vrp]
-        partitions = vrp.configuration.preprocessing.partitions
-        vrp.configuration.preprocessing.partitions = []
-        partitions.each_with_index{ |partition, partition_index|
-          cut_symbol = (partition[:metric] == :duration || partition[:metric] == :visits || vrp.units.any?{ |unit| unit.id.to_sym == partition[:metric] }) ? partition[:metric] : :duration
-          case partition[:technique]
-          when 'balanced_kmeans'
-            generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
-              block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
+      return unless vrp.configuration.preprocessing.partitions&.any?
 
-              # TODO : global variable to know if work_day entity
-              s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices, s_v[:vrp].vehicles, partition[:entity])
-              options = { cut_symbol: cut_symbol, entity: partition[:entity] }
-              options[:restarts] = partition[:restarts] if partition[:restarts]
-              split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options, &block)
-            }
-            current_service_vrps = generated_service_vrps.flatten
-          when 'hierarchical_tree'
-            generated_service_vrps = current_service_vrps.collect{ |s_v|
-              current_vrp = s_v[:vrp]
-              current_vrp.vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices, [current_vrp.vehicles.first], partition[:entity])
-              split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size, cut_symbol: cut_symbol, entity: partition[:entity])
-            }
-            current_service_vrps = generated_service_vrps.flatten
-          else
-            raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{vrp.configuration.preprocessing.partition_technique}"
-          end
-        }
-        current_service_vrps
-      elsif vrp.configuration.preprocessing.partition_technique
-        cut_symbol = (vrp.configuration.preprocessing.partition_metric == :duration || vrp.configuration.preprocessing.partition_metric == :visits ||
-          vrp.units.any?{ |unit| unit.id.to_sym == vrp.configuration.preprocessing.partition_metric }) ? vrp.configuration.preprocessing.partition_metric : :duration
-        case vrp.configuration.preprocessing.partition_technique
+      allowed_metric = %i[duration visits]
+      allowed_metric += vrp.units.map{ |unit| unit.id.to_sym }
+
+      current_service_vrps = [service_vrp]
+      partitions = vrp.configuration.preprocessing.partitions
+      vrp.configuration.preprocessing.partitions = []
+      partitions.each_with_index{ |partition, partition_index|
+        cut_symbol = allowed_metric.include?(partition[:metric]) ? partition[:metric] : :duration
+        case partition[:technique]
         when 'balanced_kmeans'
-          split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol: cut_symbol)
+          generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
+            block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
+
+            # TODO : global variable to know if work_day entity
+            s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
+                                               s_v[:vrp].vehicles, partition[:entity])
+            options = { cut_symbol: cut_symbol, entity: partition[:entity], centroids: partition[:centroids]}
+            options[:restarts] = partition[:restarts] if partition[:restarts]
+            split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options, &block)
+          }
+          current_service_vrps = generated_service_vrps.flatten
         when 'hierarchical_tree'
-          split_hierarchical(service_vrp, vrp.vehicles.size, cut_symbol: cut_symbol)
+          generated_service_vrps = current_service_vrps.collect{ |s_v|
+            current_vrp = s_v[:vrp]
+            current_vrp.vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
+                                                 [current_vrp.vehicles.first], partition[:entity])
+            split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size,
+                               cut_symbol: cut_symbol, entity: partition[:entity])
+          }
+          current_service_vrps = generated_service_vrps.flatten
         else
-          raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{vrp.configuration.preprocessing.partition_technique}"
+          raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{partition[:technique]}"
         end
-      end
+      }
+      current_service_vrps
     end
 
     def self.split_solve_candidate?(service_vrp)
@@ -804,7 +799,9 @@ module Interpreters
 
             limits = { metric_limit: centroid_limits(vrp, nb_clusters, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
 
-            options[:centroid_indices] = vrp.configuration.preprocessing.kmeans_centroids if vrp.configuration.preprocessing.kmeans_centroids&.size == nb_clusters && options[:entity] != :work_day
+            if options[:centroids] && options[:centroids].size == nb_clusters && options[:entity] != :work_day
+              options[:centroid_indices] = options[:centroids]
+            end
 
             if vrp.vehicles.any?{ |v| v.skills.count{ |skill| skill.is_a?(Array) && !skill.empty? } > 1 }
               raise OptimizerWrapper::UnsupportedProblemError.new(

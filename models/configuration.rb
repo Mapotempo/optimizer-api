@@ -31,14 +31,12 @@ module Models
     field :entity
     field :threshold
     field :restarts
+    field :centroids
   end
 
   class Preprocessing < Base
     field :force_cluster, default: false
     field :max_split_size, default: nil
-    field :partition_technique, default: nil
-    field :partition_metric, default: nil
-    field :kmeans_centroids, default: nil
     field :cluster_threshold, default: nil
     field :prefer_short_segment, default: false
     field :neighbourhood_size, default: nil

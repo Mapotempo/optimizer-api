@@ -228,7 +228,8 @@ module Wrappers
     end
 
     def assert_only_force_centroids_if_kmeans_method(vrp)
-      vrp.configuration.preprocessing.kmeans_centroids.nil? || vrp.configuration.preprocessing.partition_technique == 'balanced_kmeans'
+      first_partition = vrp.configuration.preprocessing&.partitions&.first
+      first_partition.nil? || first_partition.centroids.nil? || first_partition.technique == 'balanced_kmeans'
     end
 
     def assert_no_evaluation(vrp)
@@ -312,17 +313,14 @@ module Wrappers
     end
 
     def assert_lat_lon_for_partition(vrp)
-      vrp.configuration.preprocessing.partition_technique.nil? || vrp.points.all?{ |pt| pt.location && pt.location.lat && pt.location.lon }
+      vrp.configuration.preprocessing&.partitions.to_a.empty? ||
+        vrp.points.all?{ |pt| pt&.location&.lat && pt&.location&.lon }
     end
 
     def assert_vehicle_entity_only_before_work_day(vrp)
       vehicle_entity_index = vrp.configuration.preprocessing.partitions.find_index{ |partition| partition.entity == :vehicle }
       work_day_entity_index = vrp.configuration.preprocessing.partitions.find_index{ |partition| partition.entity == :work_day }
       vehicle_entity_index.nil? || work_day_entity_index.nil? || vehicle_entity_index < work_day_entity_index
-    end
-
-    def assert_deprecated_partitions(vrp)
-      !((vrp.configuration.preprocessing.partition_technique || vrp.configuration.preprocessing.partition_metric) && !vrp.configuration.preprocessing.partitions.empty?)
     end
 
     def assert_partitions_entity(vrp)
@@ -334,10 +332,6 @@ module Wrappers
 
     def assert_no_partitions(vrp)
       vrp.configuration.preprocessing.partitions.empty?
-    end
-
-    def assert_no_initial_centroids_with_partitions(vrp)
-      vrp.configuration.preprocessing.partitions.empty? || vrp.configuration.preprocessing.kmeans_centroids.nil?
     end
 
     def assert_valid_partitions(vrp)

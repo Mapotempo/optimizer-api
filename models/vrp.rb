@@ -142,6 +142,24 @@ module Models
       }
     end
 
+    def self.convert_old_partition(hash)
+      # method is an already reserved method name. It was generating conflicts during as_json conversion
+      return if hash[:configuration].nil? || hash[:configuration][:preprocessing].nil? ||
+                hash[:configuration][:preprocessing][:partition_method].nil?
+
+      hash[:configuration][:preprocessing][:partitions] ||= []
+      hash[:configuration][:preprocessing][:partitions] << {
+        technique: hash[:configuration][:preprocessing][:partition_method],
+        metric: hash[:configuration][:preprocessing][:partition_metric],
+        entity: :vehicle,
+        centroids: hash[:configuration][:preprocessing][:kmeans_centroids]
+      }
+
+      hash[:configuration][:preprocessing].delete(:partition_method)
+      hash[:configuration][:preprocessing].delete(:partition_metric)
+      hash[:configuration][:preprocessing].delete(:kmeans_centroids)
+    end
+
     def self.convert_shipments_to_services(hash)
       hash[:services] ||= []
       hash[:relations] ||= []
@@ -381,6 +399,7 @@ module Models
       self.convert_route_indice_into_index(hash)
       self.convert_geometry_polylines_to_geometry(hash)
       self.convert_relation_lapse_into_lapses(hash)
+      self.convert_old_partition(hash)
       self.convert_partition_method_into_technique(hash)
     end
 
