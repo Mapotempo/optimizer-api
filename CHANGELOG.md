@@ -1,6 +1,6 @@
 # Changelog
 
-## [v1.8.2-dev] - Unrealeased
+## [v1.8.2] - 2022-01-19
 
 ### Added
 
