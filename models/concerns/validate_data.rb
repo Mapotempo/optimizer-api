@@ -419,7 +419,7 @@ module ValidateData
     return nil unless periodic_heuristic
 
     if @hash[:services].any?{ |service|
-      (service[:activity].to_a + service[:activities].to_a).any?{ |activity|
+      ([service[:activity]] + service[:activities].to_a).compact.any?{ |activity|
         activity[:timewindows].any?{ |tw| tw[:maximum_lateness] }
       }
     }
