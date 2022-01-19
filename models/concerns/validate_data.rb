@@ -38,6 +38,7 @@ module ValidateData
     check_vehicles(schedule, periodic_heuristic)
     check_relations(periodic_heuristic)
     check_services(schedule)
+    check_maximum_lateness(periodic_heuristic)
 
     check_routes(periodic_heuristic)
     check_configuration(configuration, periodic_heuristic)
@@ -412,6 +413,18 @@ module ValidateData
     end
 
     check_relation_visits_number_lapse_consistency
+  end
+
+  def check_maximum_lateness(periodic_heuristic)
+    return nil unless periodic_heuristic
+
+    if @hash[:services].any?{ |service|
+      ([service[:activity]] + service[:activities].to_a).compact.any?{ |activity|
+        activity[:timewindows]&.any?{ |tw| tw[:maximum_lateness] }
+      }
+    }
+      raise "Periodic heuristic does not support maximum_lateness"
+    end
   end
 
   def check_relation_visits_number_lapse_consistency
