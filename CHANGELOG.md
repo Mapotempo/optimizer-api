@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.9.0-dev] - Unreleased
+
+### Added
+
+### Changed
+
+### Removed
+
+### Fixed
+
 ## [v1.8.2] - 2022-01-19
 
 ### Added

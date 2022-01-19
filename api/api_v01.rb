@@ -53,7 +53,7 @@ module Api
         'application/json; charset=UTF-8',
         'application/xml',
       ],
-      doc_version: '1.8.2',
+      doc_version: '1.9.0-dev',
       info: {
         title: ::OptimizerWrapper.config[:product_title],
         contact_email: ::OptimizerWrapper.config[:product_contact_email],
