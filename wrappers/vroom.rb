@@ -192,9 +192,9 @@ module Wrappers
         begin_time: step['arrival']
       }.merge(route_data)
       if step['type'] == 'end'
-        Models::Solution::Stop.new(vehicle.end_point, info: Models::Solution::Stop::Info.new(times))
+        Models::Solution::StopDepot.new(vehicle.end_point, info: Models::Solution::Stop::Info.new(times))
       else
-        Models::Solution::Stop.new(vehicle.start_point, info: Models::Solution::Stop::Info.new(times))
+        Models::Solution::StopDepot.new(vehicle.start_point, info: Models::Solution::Stop::Info.new(times))
       end
     end
 
