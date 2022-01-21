@@ -583,7 +583,8 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    @zip_condition = vrp.matrices.any? && (cluster_threshold || force_cluster) && !vrp.schedule? &&
+    @zip_condition = vrp.matrices.any? && vrp.services.none?{ |service| service.activity.nil? } &&
+                     (cluster_threshold || force_cluster) && !vrp.schedule? &&
                      (vrp.relations.map(&:type) - RELATION_ZIP_CLUSTER_CAN_HANDLE).empty?
 
     if @zip_condition
