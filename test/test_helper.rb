@@ -1466,4 +1466,108 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
       }
     }
   end
+
+  def self.basic_threshold
+    size = 5
+    {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0,  1,  1, 10,  0],
+          [1,  0,  1, 10,  1],
+          [1,  1,  0, 10,  1],
+          [10, 10, 10, 0, 10],
+          [0,  1,  1, 10,  0]
+        ],
+        distance: [
+          [0,  1,  1, 10,  0],
+          [1,  0,  1, 10,  1],
+          [1,  1,  0, 10,  1],
+          [10, 10, 10, 0, 10],
+          [0,  1,  1, 10,  0]
+        ]
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      rests: [{
+        id: 'rest_0',
+        timewindows: [{
+          start: 1,
+          end: 1
+        }],
+        duration: 1
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0',
+        rest_ids: ['rest_0']
+      }],
+      services: (1..(size - 1)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}",
+          }
+        }
+      },
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 20,
+        }
+      }
+    }
+  end
+
+  def self.real_matrix_threshold
+    size = 6
+    {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0,    693,  655,  1948, 693,  0],
+          [609,  0,    416,  2070, 0,    609],
+          [603,  489,  0,    1692, 489,  603],
+          [1861, 1933, 1636, 0,    1933, 1861],
+          [609,  0,    416,  2070, 0,    609],
+          [0,    693,  655,  1948, 693,  0]
+        ]
+      }],
+      points: (0..(size - 1)).collect{ |i|
+        {
+          id: "point_#{i}",
+          matrix_index: i
+        }
+      },
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        end_point_id: "point_#{size - 1}",
+        matrix_id: 'matrix_0'
+      }],
+      services: (1..(size - 2)).collect{ |i|
+        {
+          id: "service_#{i}",
+          activity: {
+            point_id: "point_#{i}"
+          }
+        }
+      },
+      configuration: {
+        preprocessing: {
+          cluster_threshold: 5
+        },
+        resolution: {
+          duration: 20,
+        }
+      }
+    }
+  end
 end

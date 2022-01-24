@@ -36,7 +36,8 @@ module TSPHelper
       id: "#{tsp_suffix}_#{vehicle.id}",
       start_point_id: start_point && "#{tsp_suffix}_#{start_point.id}",
       end_point_id: end_point && "#{tsp_suffix}_#{end_point.id}",
-      matrix_id: vehicle.matrix_id
+      matrix_id: vehicle.matrix_id,
+      timewindow: { start: options[:begin_time] || 0 }
     }
 
     problem = {
@@ -50,6 +51,8 @@ module TSPHelper
   end
 
   def self.convert_point(point, tsp_suffix)
+    return unless  point
+
     {
       id: "#{tsp_suffix}_#{point.id}",
       matrix_index: point.matrix_index

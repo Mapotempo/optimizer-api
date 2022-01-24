@@ -19,68 +19,14 @@ require './test/test_helper'
 
 class WrapperTest < Minitest::Test
   def test_zip_cluster
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ],
-        distance: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      rests: [{
-        id: 'rest_0',
-        timewindows: [{
-          start: 1,
-          end: 1
-        }],
-        duration: 1
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        rest_ids: ['rest_0']
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: 1,
-              end: 2
-            }]
-          },
-          skills: ['A']
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
+    problem = VRP.basic_threshold
+    problem[:services].each{ |s|
+      s[:activity][:timewindows] = [{
+        start: 1,
+        end: 2
+      }]
+      s[:skills] = ['A']
     }
-    # without start/end/rest
     assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
   end
 
@@ -132,530 +78,97 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    # without start/end/rest
     assert_equal 4, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
   end
 
   def test_no_zip_cluster_tws
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ],
-        distance: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      rests: [{
-        id: 'rest_0',
-        timewindows: [{
-          start: 1,
-          end: 1
-        }],
-        duration: 1
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        rest_ids: ['rest_0']
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: i * 10,
-              end: i * 10 + 1
-            }],
-            duration: 1
-          }
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
+    problem = VRP.basic_threshold
+    problem[:services].each.with_index{ |s, i|
+      s[:activity][:timewindows] = [{
+        start: i * 10,
+        end: i * 10 + 1,
+        maximum_lateness: 0
+      }]
     }
-    # without start/end/rest
     assert_equal 4, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
   end
 
   def test_force_zip_cluster_with_quantities
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ],
-        distance: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ]
-      }],
-      units: [{
-          id: 'unit0',
-          label: 'kg'
-      }, {
-          id: 'unit1',
-          label: 'kg'
-      }, {
-          id: 'unit2',
-          label: 'kg'
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        capacities: [{
-          unit_id: 'unit0',
-          limit: 5
-        }, {
-          unit_id: 'unit1',
-          limit: 5
-        }, {
-          unit_id: 'unit2',
-          limit: 5
-        }]
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          quantities: [{
-            unit_id: "unit#{i % 3}",
-            value: 1
-          }],
-          activity: {
-            point_id: "point_#{i}"
-          }
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
+    problem = VRP.basic_threshold
+    problem[:units] = [{ id: 'unit0' }, { id: 'unit1' }, { id: 'unit2' }]
+    problem[:vehicles].first[:capacities] = [{ unit_id: 'unit0', limit: 5 },
+                                             { unit_id: 'unit1', limit: 5 },
+                                             { unit_id: 'unit2', limit: 5 }]
+
+    problem[:services].each.with_index{ |s, i|
+      s[:quantities] = [{
+        unit_id: "unit#{i % 3}",
+        value: 1
+      }]
     }
     assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, true).size
   end
 
   def test_force_zip_cluster_with_timewindows
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ],
-        distance: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: i * 10,
-              end: i * 10 + 10
-            }]
-          }
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
+    problem = VRP.basic_threshold
+    problem[:services].each.with_index{ |s, i|
+      s[:activity][:timewindows] = [{
+        start: i * 10,
+        end: i * 10 + 10,
+        maximum_lateness: 10
+      }]
     }
     assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, true).size
   end
 
   def test_zip_cluster_with_timewindows
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ],
-        distance: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: i * 10,
-              end: i * 10 + 10
-            }]
-          }
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
+    problem = VRP.basic_threshold
+    problem[:services].each.with_index{ |s, i|
+      s[:activity][:timewindows] = [{
+        start: i * 10,
+        end: i * 10 + 10,
+        maximum_lateness: 10
+      }]
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+    assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
   end
 
-  def test_zip_cluster_with_multiple_vehicles_and_duration
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ],
-        distance: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }, {
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            duration: 1
-          }
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
-    }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
-  end
-
-  def test_zip_cluster_with_multiple_vehicles_without_duration
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ],
-        distance: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }, {
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}"
-          }
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
-    }
+  def test_zip_cluster_with_multiple_vehicles
+    problem = VRP.basic_threshold
+    second_vehicle = problem[:vehicles].first.dup
+    second_vehicle[:id] = 'vehicle_1'
+    problem[:vehicles] << second_vehicle
     assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
   end
 
   def test_zip_cluster_with_real_matrix
-    size = 6
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,    693,  655,  1948, 693,  0],
-          [609,  0,    416,  2070, 0,    609],
-          [603,  489,  0,    1692, 489,  603],
-          [1861, 1933, 1636, 0,    1933, 1861],
-          [609,  0,    416,  2070, 0,    609],
-          [0,    693,  655,  1948, 693,  0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: "point_#{size - 1}",
-        matrix_id: 'matrix_0'
-      }],
-      services: (1..(size - 2)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}",
-            timewindows: [{
-              start: 1,
-              end: 2
-            }],
-            duration: 0
-          },
-          skills: ['A']
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
+    problem = VRP.real_matrix_threshold
+    problem[:services].each{ |s|
+      s[:skills] = ['A']
+      s[:activity][:timewindows] = [{ start: 1, end: 2 }]
+      s[:activity][:duration] = 0
     }
-    # without start/end/rest
     assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
   end
 
   def test_no_zip_cluster_with_real_matrix
-    size = 6
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,    655,  1948, 5231, 2971, 0],
-          [603,  0,    1692, 4977, 2715, 603],
-          [1861, 1636, 0,    6143, 1532, 1861],
-          [5184, 4951, 6221, 0,    7244, 5184],
-          [2982, 2758, 1652, 7264, 0,    2982],
-          [0,    655,  1948, 5231, 2971, 0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_' + (size - 1).to_s,
-        matrix_id: 'matrix_0'
-      }],
-      services: (1..(size - 2)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}"
-          }
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
-    }
-    # without start/end/rest
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+    problem = VRP.real_matrix_threshold
+    assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
   end
 
   def test_with_cluster
-    size = 5
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ],
-        distance: [
-          [0,  1,  1, 10,  0],
-          [1,  0,  1, 10,  1],
-          [1,  1,  0, 10,  1],
-          [10, 10, 10, 0, 10],
-          [0,  1,  1, 10,  0]
-        ]
-      }],
-      points: (0..(size - 1)).collect{ |i|
-        {
-          id: "point_#{i}",
-          matrix_index: i
-        }
-      },
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }],
-      services: (1..(size - 1)).collect{ |i|
-        {
-          id: "service_#{i}",
-          activity: {
-            point_id: "point_#{i}"
-          }
-        }
-      },
-      configuration: {
-        preprocessing: {
-          cluster_threshold: 5
-        },
-        resolution: {
-          duration: 20,
-        }
-      }
-    }
+    problem = VRP.basic_threshold
+    size = problem[:services].size
     [:ortools, :vroom].compact.each{ |o|
       # zip_cluser generates sub problems which register identical objects
       vrp = TestHelper.create(problem)
       solution = OptimizerWrapper.solve(service: o, vrp: vrp)
-      assert_equal size - 1 + 1, solution.routes[0].stops.size, "[#{o}] "
+      assert_equal size + 2 , solution.routes[0].stops.size, "[#{o}] " # 1 depot + 1 rest
       services = solution.routes[0].stops.map(&:service_id)
       1.upto(size - 1).each{ |i|
         assert_includes services, "service_#{i}", "[#{o}] Service missing: #{i}"
       }
-      points = solution.routes[0].stops.map{ |act| act.activity.point.id }
+      points = solution.routes[0].stops.map{ |stop| stop.activity.point&.id }.compact
       assert_includes points, 'point_0', "[#{o}] Point missing: 0"
     }
   end

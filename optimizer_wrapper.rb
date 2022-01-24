@@ -583,9 +583,8 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    @zip_condition = vrp.matrices.any? && vrp.services.none?{ |service| service.activity.nil? } &&
-                     (cluster_threshold || force_cluster) && !vrp.schedule? &&
-                     (vrp.relations.map(&:type) - RELATION_ZIP_CLUSTER_CAN_HANDLE).empty?
+    @zip_condition = cluster_threshold && vrp.matrices.any? && vrp.services.all?(&:activity) &&
+                     !vrp.schedule? && (vrp.relations.map(&:type) - RELATION_ZIP_CLUSTER_CAN_HANDLE).empty?
 
     if @zip_condition
       if vrp.services.any?{ |s| s.activities.any? }
@@ -617,26 +616,30 @@ module OptimizerWrapper
         lambda do |a, b|
           aa = vrp.services[a[0]]
           bb = vrp.services[b[0]]
-          aa.activity.timewindows.empty? && bb.activity.timewindows.empty? ||
+          aa.activity.timewindows.empty? || bb.activity.timewindows.empty? ||
             aa.activity.timewindows.any?{ |twa|
-              bb.activity.timewindows.any?{ |twb| twa.start <= twb.end && twb.start <= twa.end }
+              bb.activity.timewindows.any?{ |twb|
+                twa.start <= twb.end + twb.maximum_lateness &&
+                  twb.start <= twa.end + twb.maximum_lateness
+              }
             } ?
             matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
             Float::INFINITY
         end
       else
-        cost_late_multiplier = vrp.vehicles.all?{ |v| v.cost_late_multiplier && v.cost_late_multiplier != 0 }
         no_capacities = vrp.vehicles.all?{ |v| v.capacities&.empty? }
 
         lambda do |a, b|
           aa = vrp.services[a[0]]
           bb = vrp.services[b[0]]
-          aa.activity.timewindows.collect{ |t| [t.start, t.end] } == bb.activity.timewindows.collect{ |t| [t.start, t.end] } &&
-            ((cost_late_multiplier && aa.activity.late_multiplier.to_f.positive? && bb.activity.late_multiplier.to_f.positive?) || (aa.activity.duration&.zero? && bb.activity.duration&.zero?)) &&
-            (no_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) &&
-            aa.skills == bb.skills ?
-            matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
-            Float::INFINITY
+          # We suppose that all the services within the range of the threshold can be served in the same row.
+          # It may not be correct, but cluster_threshold is an approximation to consider close points
+          # as a single one.
+          aa.activity.timewindows.empty? || bb.activity.timewindows.empty? ||
+            aa.activity.timewindows.any?{ |twa|
+              bb.activity.timewindows.any?{ |twb| twa.start <= twb.end && twb.start <= twa.end }
+            } && (no_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) && aa.skills == bb.skills ?
+            matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] : Float::INFINITY
         end
       end
 
@@ -725,10 +728,10 @@ module OptimizerWrapper
     return solution unless clusters
 
     new_routes = solution.routes.map{ |route|
-      last_point = nil
-      new_stops = route.stops.flat_map.with_index{ |activity, act_index|
-        if activity.service_id
-          service_index = original_vrp.services.index{ |s| s.id == activity.service_id }
+      previous_stop = nil
+      new_stops = route.stops.flat_map.with_index{ |stop, act_index|
+        if stop.service_id
+          service_index = original_vrp.services.index{ |s| s.id == stop.service_id }
           cluster_index = clusters.index{ |z| z.data_items.flatten.include? service_index }
           if cluster_index && clusters[cluster_index].data_items.size > 1
             cluster_data_indices = clusters[cluster_index].data_items.collect{ |i| i[0] }
@@ -739,20 +742,23 @@ module OptimizerWrapper
             tsp = TSPHelper.create_tsp(original_vrp,
                                        vehicle: route.vehicle,
                                        services: cluster_services,
-                                       start_point: last_point,
-                                       end_point: next_point)
+                                       start_point: previous_stop.activity.point,
+                                       end_point: next_point,
+                                       begin_time: previous_stop.info.end_time)
             solution = TSPHelper.solve(tsp)
-            last_point = solution.routes[0].stops.reverse.find(&:service_id).activity.point
-            service_ids = solution.routes[0].stops.select{ |a| a.type == :service }.map(&:id).compact
-            service_ids.map{ |service_id|
-              Models::Solution::Stop.new(original_vrp.services.find{ |service| service.id == service_id })
+            previous_stop = solution.routes[0].stops.reverse.find(&:service_id)
+            service_stops = solution.routes[0].stops.select{ |a| a.type == :service }
+            service_stops.map!{ |service_stop|
+              original_service = original_vrp.services.find{ |service| service.id == service_stop.id }
+              stop = Models::Solution::Stop.new(original_service, info: service_stop.info)
             }
+            service_stops
           else
-            activity
+            stop
           end
         else
-          last_point = activity.activity.point || last_point
-          activity
+          previous_stop = stop || previous_stop
+          stop
         end
       }
       Models::Solution::Route.new(stops: new_stops, vehicle: route.vehicle)
