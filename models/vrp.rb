@@ -80,6 +80,7 @@ module Models
     end
 
     def empty_solution(solver, unassigned_with_reason = [], already_expanded = true)
+      Models.delete_all # TODO: Remove once periodic heuristic use the proper object creation instead of duplicate_safe
       self.vehicles = expand_vehicles_for_consistent_empty_result if self.schedule? && !already_expanded
       solution = Models::Solution.new(
         solvers: [solver],
