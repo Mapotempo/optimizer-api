@@ -353,13 +353,13 @@ module OptimizerWrapper
                                                               vehicle_indices)[:vrp]
     }
     total_size = vrp.services.all?{ |service| service.sticky_vehicle_ids.any? } ? vrp.vehicles.size :
-     independent_vrps.collect{ |s_vrp| s_vrp.services.size * [1, s_vrp.vehicles.size].min }.sum
+      independent_vrps.collect{ |s_vrp| s_vrp.services.size * [1, s_vrp.vehicles.size].min }.sum
     independent_vrps.each{ |sub_vrp|
       # If one sub vrp has no vehicle or no service, duration can be zero.
       # We only split duration among sub_service_vrps that have at least one vehicle and one service.
       this_sub_size = vrp.services.all?{ |service| service.sticky_vehicle_ids.any? } ? sub_vrp.vehicles.size :
         sub_vrp.services.size * [1, sub_vrp.vehicles.size].min
-      adjust_independent_duration(sub_vrp, this_sub_size, total_size)
+      Interpreters::SplitClustering.adjust_independent_duration(sub_vrp, this_sub_size, total_size)
     }
 
     return independent_vrps if unused_vehicle_indices.empty?
@@ -368,16 +368,6 @@ module OptimizerWrapper
     independent_vrps.push(sub_service_vrp[:vrp])
 
     independent_vrps
-  end
-
-  def self.adjust_independent_duration(vrp, this_sub_size, total_size)
-    split_ratio = this_sub_size.to_f / total_size
-    vrp.configuration.resolution.duration = vrp.configuration.resolution.duration&.*(split_ratio)&.ceil
-    vrp.configuration.resolution.minimum_duration =
-      vrp.configuration.resolution.minimum_duration&.*(split_ratio)&.ceil
-    vrp.configuration.resolution.iterations_without_improvment =
-      vrp.configuration.resolution.iterations_without_improvment&.*(split_ratio)&.ceil
-    vrp
   end
 
   def self.split_independent_vrp(vrp)

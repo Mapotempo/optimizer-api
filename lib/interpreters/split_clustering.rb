@@ -694,6 +694,16 @@ module Interpreters
       }
     end
 
+    def self.adjust_independent_duration(vrp, this_sub_size, total_size)
+      split_ratio = this_sub_size.to_f / total_size
+      vrp.configuration.resolution.duration = vrp.configuration.resolution.duration&.*(split_ratio)&.ceil
+      vrp.configuration.resolution.minimum_duration =
+        vrp.configuration.resolution.minimum_duration&.*(split_ratio)&.ceil
+      vrp.configuration.resolution.iterations_without_improvment =
+        vrp.configuration.resolution.iterations_without_improvment&.*(split_ratio)&.ceil
+      vrp
+    end
+
     # TODO: private method, reduce params
     def self.kmeans_process(nb_clusters, data_items, related_item_indices, limits, options = {}, &block)
       biggest_cluster_size = 0
