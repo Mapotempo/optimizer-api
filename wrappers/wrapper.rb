@@ -1232,6 +1232,7 @@ module Wrappers
 
         vrp[:simplified_rests] = vrp.rests.select{ |r| vrp.vehicles.none?{ |v| v.rests.include?(r) } }
         vrp.rests -= vrp[:simplified_rests]
+        simplification_active ||= vrp[:simplified_rests].any?
       when :rewind
         # take the modifications back in case the vehicle is moved to another sub-problem
         vrp.vehicles&.each{ |vehicle|
