@@ -122,6 +122,9 @@ module OptimizerWrapper
       output_periodic: ENV['OPTIM_DBG_OUTPUT_SCHEDULE'] == 'true',
       batch_heuristic: ENV['OPTIM_DBG_BATCH_HEURISTIC'] == 'true'
     },
+    restitution: {
+      allow_polylines: true
+    },
     redis_count: REDIS_COUNT,
   }
 end

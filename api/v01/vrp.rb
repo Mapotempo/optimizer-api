@@ -146,7 +146,11 @@ module Api
                 if vrp.configuration.restitution.csv
                   present(OutputHelper::Result.build_csv(solutions), type: CSV)
                 else
-                  present({ solutions: solutions, job: { status: :completed }}, with: VrpResult)
+                  present({
+                            solutions: solutions,
+                            geojsons: OutputHelper::Result.generate_geometry({ result: solutions }),
+                            job: { status: :completed }
+                          }, with: VrpResult)
                 end
               else
                 error!('Internal Server Error', 500)

@@ -85,17 +85,22 @@ module TestHelper
     hex = Digest::MD5.hexdigest params.to_s
     puts "#{hex} #{Time.now} submiting #{hex}"
     post '/0.1/vrp/submit', params.to_json, 'CONTENT_TYPE' => 'application/json'
-    assert_includes [200, 201], last_response.status
     assert last_response.body
-    if last_response.status == 201
+    case last_response.status
+    when 201
       job_id = JSON.parse(last_response.body)['job']['id']
       assert job_id
       puts "#{job_id} #{Time.now} submitted #{hex}"
       job_id
-    else
+    when 200
       response = JSON.parse(last_response.body)
-      puts "#{job_id} #{Time.now} submitted #{hex} but it returned a result"
+      puts "#{job_id} #{Time.now} submitted #{hex} and it returned a result synchronously"
       assert response['job']['status']['completed'] || response['job']['status']['queued']
+      response
+    else
+      puts "#{job_id} #{Time.now} submitted #{hex} and returned an unexpected status code"
+      puts JSON.parse(last_response.body)
+      raise
     end
   end
 
@@ -107,15 +112,20 @@ module TestHelper
     post '/0.1/vrp/submit', params.to_json, 'CONTENT_TYPE' => 'application/json', 'HTTP_ACCEPT_LANGUAGE' => language
     assert_includes [200, 201], last_response.status
     assert last_response.body
-    if last_response.status == 201
+    case last_response.status
+    when 201
       job_id = JSON.parse(last_response.body)['job']['id']
       assert job_id
       puts "#{job_id} #{Time.now} submitted_csv #{hex}"
       job_id
-    else
+    when 200
       response = last_response.body.slice(1..-1).split('\n').map{ |line| line.split(',') }
       puts "#{job_id} #{Time.now} submitted_csv #{hex} but it returned a result"
       response
+    else
+      puts "#{job_id} #{Time.now} submitted_csv #{hex} and returned an unexpected status code"
+      puts JSON.parse(last_response.body)
+      raise
     end
   end
 
