@@ -165,6 +165,9 @@ module VrpConfiguration
       use :vrp_request_partition
     end
     optional(:first_solution_strategy, type: Array[String], desc: 'Forces first solution strategy. Either one value to force specific behavior, or a list in order to test several ones and select the best. If string is \'internal\', we will choose among pre-selected behaviors. There can not be more than three behaviors (ORtools only).', coerce_with: ->(value) { FirstSolType.new.type_cast(value) })
+    mutually_exclusive :partitions, :partition_method
+    mutually_exclusive :partitions, :partition_metric
+    mutually_exclusive :partitions, :kmeans_centroids
   end
 
   params :vrp_request_resolution do
