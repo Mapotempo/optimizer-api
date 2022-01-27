@@ -243,10 +243,11 @@ class HeuristicTest < Minitest::Test
       problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:schedule] = { range_indices: { start: 0, end: 83 } }
 
-      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }},
-                                               TestHelper.load_vrp(self, problem: problem), nil)
+      solutions = OptimizerWrapper.wrapper_vrp(
+        'demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil
+      ).vrp_result
       assert solutions[0]
-      route_vehicle_ids = solutions[0].routes.collect{ |route| route.vehicle.id }
+      route_vehicle_ids = solutions[0]['routes'].collect{ |route| route['vehicle_id'] }
       route_uniq_vehicle_ids = route_vehicle_ids.uniq
       assert_includes route_uniq_vehicle_ids, 'vehicle_0_0'
       assert_includes route_uniq_vehicle_ids, 'vehicle_1_0'

@@ -880,9 +880,7 @@ module Interpreters
       else
         log 'Split is not available if there are services with no activity, no location', level: :error
 
-        # TODO : remove marshal dump
-        # ensure test_instance_800unaffected_clustered and test_instance_800unaffected_clustered_same_point work
-        [Marshal.load(Marshal.dump(service_vrp))]
+        [service_vrp]
       end
     end
 
@@ -1018,10 +1016,19 @@ module Interpreters
       available_days.collect{ |day|
         next unless (schedule[:start]..schedule[:end]).any?{ |day_index| day_index % 7 == day }
 
-        tw = timewindow ? Marshal.load(Marshal.dump(timewindow)) : Models::Timewindow.create({})
+        tw = Models::Timewindow.create(timewindow.as_json || {})
         tw.day_index = day
         provide_work_day_skill(vehicle, day)
-        new_vehicle = Marshal.load(Marshal.dump(vehicle))
+        vehicle_hash = vehicle.as_json.symbolize_keys
+        vehicle_hash.delete(:id)
+        vehicle_hash.delete(:start_point_id)
+        vehicle_hash.delete(:end_point_id)
+        new_vehicle = Models::Vehicle.create(vehicle_hash)
+
+        # Current depot points may not be currently in the active_hash base due to
+        # the delete_all in build_partial_service_vrp
+        new_vehicle.start_point = vehicle.start_point
+        new_vehicle.end_point = vehicle.end_point
         new_vehicle.timewindow = tw
         new_vehicle.sequence_timewindows = nil
         new_vehicle
