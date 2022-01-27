@@ -122,7 +122,7 @@ module OptimizerWrapper
       check_solutions_consistency(expected_activity_count, several_solutions)
     end
 
-    nb_routes = several_solutions.sum(&:count_assigned_services)
+    nb_routes = several_solutions.sum(&:count_used_routes)
     nb_unassigned = several_solutions.sum(&:count_unassigned_services)
     percent_unassigned = (100.0 * nb_unassigned / expected_activity_count).round(1)
 
