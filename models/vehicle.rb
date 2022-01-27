@@ -119,7 +119,7 @@ module Models
       end
 
       hash[:skills] = [[]] if hash[:skills].to_a.empty? # If vehicle has no skills, it has the empty skillset
-
+      hash[:skills].map!{ |skill_set| skill_set.map!(&:to_sym) }
       hash[:skills].each(&:sort!) # The order of skills of a skillset should not matter
 
       super(hash)

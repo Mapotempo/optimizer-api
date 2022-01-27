@@ -65,6 +65,7 @@ module Models
 
     def self.create(hash, _options = {})
       hash[:skills] = [] if hash[:skills].to_a.empty?
+      hash[:skills].map!(&:to_sym)
       hash[:skills].sort!
 
       super(hash)
