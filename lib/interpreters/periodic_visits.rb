@@ -194,15 +194,19 @@ module Interpreters
     end
 
     def build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
-      new_vehicle = duplicate_safe(
-        vehicle,
-        id: "#{vehicle.id}_#{vehicle_day_index}",
-        global_day_index: vehicle_day_index,
-        skills: associate_skills(vehicle, vehicle_day_index),
-        rests: generate_rests(vehicle, vehicle_day_index, rests_durations),
-        sequence_timewindows: [],
-      )
-      @equivalent_vehicles[vehicle.id] << new_vehicle.id
+      new_vehicle_hash = vehicle.as_json(except: [:id, :start_point_id, :end_point_id, :sequence_timewindows])
+      new_vehicle_hash[:global_day_index] = vehicle_day_index
+      new_vehicle_hash[:skills] = associate_skills(vehicle, vehicle_day_index)
+      new_vehicle_hash[:rests] = generate_rests(vehicle, vehicle_day_index, rests_durations)
+
+      new_vehicle = Models::Vehicle.create(new_vehicle_hash)
+
+    # Current depot points may not be currently in the active_hash base due to
+    # the delete_all in build_partial_service_vrp
+      new_vehicle.start_point = vehicle.start_point
+      new_vehicle.end_point = vehicle.end_point
+
+      @equivalent_vehicles[vehicle.original_id] << [new_vehicle.id, new_vehicle.global_day_index]
       vrp.rests += new_vehicle.rests
       vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |service|
         service.sticky_vehicles.insert(-1, new_vehicle)

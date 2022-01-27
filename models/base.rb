@@ -76,7 +76,8 @@ module Models
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|
-        next if !respond_to?(field_name) ||
+        next if options[:except]&.include?(field_name.to_sym) ||
+                !respond_to?(field_name) ||
                 send(field_name).nil? ||
                 self.class.default_attributes&.fetch(field_name, nil) == send(field_name)
 
