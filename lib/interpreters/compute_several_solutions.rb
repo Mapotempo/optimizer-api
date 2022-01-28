@@ -196,7 +196,8 @@ module Interpreters
         first_results.each_with_index{ |result, i|
           synthesis << {
             heuristic: custom_heuristics[i],
-            quality: result.nil? ? Float::MAX : result[:cost].to_i + (times[i] / 1000).to_i,
+            # If the cost is 0 we might want to set it to Float::MAX because 0 cost is not possible.
+            quality: result.nil? ? [Float::MAX] : [result[:unassigned]&.size.to_i, result[:cost].to_i, times[i]],
             used: false,
             cost: result ? result[:cost] : nil,
             time_spent: times[i],

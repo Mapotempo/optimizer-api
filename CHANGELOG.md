@@ -4,11 +4,16 @@
 
 ### Added
 
+
 ### Changed
+
 
 ### Removed
 
+
 ### Fixed
+
+- Fix find_best_heuristic selection logic [#337](https://github.com/Mapotempo/optimizer-api/pull/337)
 
 ## [v1.8.2] - 2022-01-19
 
