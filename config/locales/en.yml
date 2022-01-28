@@ -75,7 +75,7 @@ en:
       optim_options_legend: 'Optimization options:'
       optim_duration_label: 'Maximum duration:'
       optim_minimum_duration_label: 'Minimum duration:'
-      optim_solver_parameter_label: 'Resolution method:'
+      optim_solver_parameter_label: 'Initial solution heuristic:'
       documentation:
         select_customer_file: 'Select customers file'
         select_vehicle_file: 'Select vehicles file'
