@@ -26,6 +26,7 @@ module Models
       field :value, default: 0
       field :lateness, default: 0
       field :overload, default: 0
+      field :exclusion, default: 0
 
       def vrp_result(options = {})
         hash = super(options)
@@ -45,7 +46,14 @@ module Models
           value: value + other.value,
           lateness: lateness + other.lateness,
           overload: overload + other.overload,
+          exclusion: exclusion + other.exclusion
         )
+      end
+
+      def ==(other)
+        self.class.field_names.all?{ |field|
+          self.send(field) == other.send(field)
+        }
       end
     end
   end

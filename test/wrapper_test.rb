@@ -2239,9 +2239,17 @@ class WrapperTest < Minitest::Test
       }
     }
 
+    problem[:services].each.with_index{ |s, i| s[:exclusion_cost] = 1001 + i }
+
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
     assert_equal 1, (solutions[0].routes.sum{ |route| route.stops.count(&:service_id) })
     assert_equal 5, solutions[0].unassigned_stops.size
+
+    solutions[0].unassigned_stops.each{ |un|
+      assert_equal un.exclusion_cost - 1000, un.service_id.split('_')[1].to_i,
+                   "Invalid exclusion cost for #{un.service_id}"
+    }
+    assert_equal 5019, solutions[0].cost_info.exclusion
   end
 
   def test_all_points_rejected_by_capacity

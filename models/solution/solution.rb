@@ -44,7 +44,9 @@ module Models
     end
 
     def cost_info
-      routes.sum(&:cost_info)
+      sum_cost = routes.sum(&:cost_info)
+      sum_cost.exclusion = unassigned_stops.sum{ |un| un.exclusion_cost || 0 }
+      sum_cost
     end
 
     def vrp_result(options = {})
