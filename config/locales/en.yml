@@ -82,7 +82,7 @@ en:
         params_optim: 'Set your optimization parameters:'
         params_optim_a: '(a) (optional) The minimum duration (in seconds), the optimization is guaranteed to be run (assuming a feasible instance).'
         params_optim_b: '(b) (optional) The maximum duration (in seconds) of optimization after which the latest result will be returned.'
-        params_optim_help: 'At least one of the stop conditions (a), (b), (c) must be filled in.'
+        params_optim_help: 'At least one of the stopping conditions, (a) or (b), must be set.'
         send_click: 'Click "Send"'
         send_click_a: 'A new submission is sent to the optimization engine.'
         send_click_b: 'Each new submission is put at the end of a process queue.'
