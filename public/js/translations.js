@@ -50,7 +50,7 @@ var en = {
     optimize_queued: 'Waiting for an available process...',
     display_solution: 'Display the intermediate solution',
     download_csv: 'Download CSV file',
-    download_json: 'Download json file',
+    download_json: 'Download JSON file',
     show_result: 'View results',
     optimize_finished: 'Optimization completed',
     optimize_finished_error: 'optimization without result',
