@@ -269,6 +269,31 @@ class SplitClusteringTest < Minitest::Test
       assert_equal 2, generated_services_vrps.size
     end
 
+    def test_partitioning_splits_resolution_duration
+      vrp = VRP.lat_lon_periodic_two_vehicles
+      vrp[:configuration][:preprocessing][:partitions] = [TestHelper.vehicle_and_days_partitions.first]
+      vrp[:configuration][:preprocessing][:partitions][0][:restarts] = 1
+
+      service_vrp = { vrp: TestHelper.create(vrp), service: :demo }
+      generated_services_vrps = Interpreters::SplitClustering.generate_split_vrps(service_vrp)
+      generated_services_vrps.flatten!
+      generated_services_vrps.compact!
+
+      assert_equal vrp[:vehicles].size, generated_services_vrps.size
+
+      assert_in_epsilon vrp[:configuration][:resolution][:duration],
+                        generated_services_vrps.sum{ |sv| sv[:vrp].configuration.resolution.duration },
+                        vrp[:vehicles].size # due to rounding we might have overshoot the duration
+
+      s_ratio = generated_services_vrps.map{ |sv| sv[:vrp].services.size }.inject{ |ratio, service_count|
+        ratio / service_count.to_f
+      }
+      d_ratio = generated_services_vrps.map{ |sv| sv[:vrp].configuration.resolution.duration }.inject{ |ratio, duration|
+        ratio / duration.to_f
+      }
+      assert_in_epsilon s_ratio, d_ratio, 0.05 # 5% diff can be expected due to rounding in extreme cases
+    end
+
     def test_work_day_without_vehicle_entity
       vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions

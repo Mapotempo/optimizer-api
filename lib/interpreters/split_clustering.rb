@@ -123,9 +123,18 @@ module Interpreters
           }
           current_service_vrps = generated_service_vrps.flatten
         else
-          raise OptimizerWrapper::UnsupportedProblemError, "Unknown partition method #{partition[:technique]}"
+          raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition technique #{partition[:technique]}")
         end
       }
+
+      total_size = current_service_vrps.sum{ |s_vrp| s_vrp[:vrp].services.size * [1, s_vrp[:vrp].vehicles.size].min }
+      current_service_vrps.each{ |s_vrp|
+        # If one sub vrp has no vehicle or no service, duration can be zero.
+        # We only split duration among sub_service_vrps that have at least one vehicle and one service.
+        this_sub_size = s_vrp[:vrp].services.size * [1, s_vrp[:vrp].vehicles.size].min
+        adjust_independent_duration(s_vrp[:vrp], this_sub_size, total_size)
+      }
+
       current_service_vrps
     end
 
