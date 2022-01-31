@@ -83,7 +83,7 @@ module Models
         next if options[:except]&.include?(field_name) ||
                 !respond_to?(field_name) ||
                 send(field_name).nil? ||
-                self.class.default_attributes&.fetch(field_name, nil) == send(field_name)
+                self.class.default_attributes&.fetch(field_name.to_sym, nil) == send(field_name)
 
         hash[field_name] = self.send(field_name).as_json
       }
@@ -146,6 +146,9 @@ module Models
       # respect English spelling rules:
       # vehicles -> vehicle_ids | capacities -> capacity_ids | matrices -> matrix_ids
       ids_function_name = "#{ActiveSupport::Inflector.singularize(name.to_s)}_ids".to_sym
+
+      add_default_value(name, options[:options] || [])
+      add_default_value(ids_function_name, options[:options] || [])
 
       case options[:as_json]
       when :ids
