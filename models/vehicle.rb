@@ -258,6 +258,23 @@ module Models
       true
     end
 
+    def update_timewindows(latest_end, max_time)
+      if self.sequence_timewindows.any?
+        self.sequence_timewindows.each{ |tw|
+          raise 'sequence timewindows should have a end' unless tw.end
+        }
+      else
+        self.timewindow = Models::Timewindow.new({}) unless self.timewindow
+        self.timewindow&.update(latest_end + max_time)
+      end
+    end
+
+    def latest_end
+      max_start = timewindow&.end
+      max_start ||= sequence_timewindows&.max_by{ |tw| tw.end + 86400 * tw.day_index }&.end
+      max_start || 0
+    end
+
     private
 
     def working_week_days

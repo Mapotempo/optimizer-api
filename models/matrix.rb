@@ -20,5 +20,13 @@ require './models/base'
 module Models
   class Matrix < Base
     fields :time, :distance, :value
+
+    def upper_bound(dimension = :time)
+      raise "Unknown dimension #{dimension}" unless self.respond_to?(dimension)
+
+      self.send(dimension).sum{ |line|
+        line.map{ |cell| cell < 2147483647 ? cell : 0 }.max
+      }
+    end
   end
 end

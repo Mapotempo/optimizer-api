@@ -72,5 +72,28 @@ module Models
       vrp.vehicles.first.sequence_timewindows << Models::Timewindow.create({ start: 5, end: 6, day_index: 0 })
       assert_equal 13, vrp.vehicles.first.total_work_time_in_range(0, 3)
     end
+
+    def test_vehicle_update_timewindow
+      vrp = VRP.lat_lon_two_vehicles
+      vrp = TestHelper.create(vrp)
+
+      vrp.vehicles.each{ |v|
+        assert_nil v.timewindow
+      }
+      vrp.update_timewindows
+
+      vrp.vehicles.each{ |v|
+        assert_equal 0, v.timewindow.start
+        assert_equal 63535, v.timewindow.end
+      }
+
+      vrp = VRP.lat_lon_two_vehicles
+      vrp = TestHelper.create(vrp)
+      vrp.vehicles.first.timewindow = Models::Timewindow.create(start: 0, end: 5000)
+      vrp.update_timewindows
+
+      assert_equal 5000, vrp.vehicles.first.timewindow.end
+      assert_equal 5000 + 63535, vrp.vehicles.last.timewindow.end
+    end
   end
 end

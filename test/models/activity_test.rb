@@ -67,5 +67,25 @@ module Models
         end: 3
       }]).validate
     end
+
+    def test_update_timewindows
+      act = Activity.create(timewindows: [{ start: 0 }])
+
+      assert_equal 1, act.timewindows.size
+      assert_nil act.timewindows.first.end
+      latest_end = 0
+      act.update_timewindows(latest_end, 5)
+      assert_equal 5, act.timewindows.first.end
+
+      # end is already defined and should not change
+      latest_end = 5
+      act.update_timewindows(latest_end, 5)
+      assert_equal 5, act.timewindows.first.end
+
+      act = Activity.create(timewindows: [{ start: 0 }])
+      latest_end = 3
+      act.update_timewindows(latest_end, 5)
+      assert_equal 8, act.timewindows.first.end
+    end
   end
 end

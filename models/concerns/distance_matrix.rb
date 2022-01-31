@@ -81,6 +81,8 @@ module DistanceMatrix
       uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
         vehicle.matrix_id = matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]] }.id
       }
+
+      update_timewindows
     end
   end
 

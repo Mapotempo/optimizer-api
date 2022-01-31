@@ -38,5 +38,15 @@ module Models
                                   # the code would continue to accept invalid time windows thorugh API because
                                   # vrp.valid? doesn't call the validator of activity
                                   # We need to implement a check inside Api::V01::Vrp and fix the ActivityTest::test_timewindows accordingly
+
+    def update_timewindows(latest_start, max_time)
+      self.timewindows.each{ |tw|
+        tw.update(latest_start + max_time)
+      }
+    end
+
+    def latest_end
+      self.timewindows&.max_by{ |tw| tw.end + (tw&.day_index || 0) * 86400 }&.end || 0
+    end
   end
 end

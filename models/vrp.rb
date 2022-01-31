@@ -749,5 +749,31 @@ module Models
     def periodic_heuristic?
       self.preprocessing_first_solution_strategy.to_a.include?('periodic')
     end
+
+    def update_timewindows
+      max_time =
+        if self.vehicles.all?{ |v| v.timewindow&.end }
+          self.vehicles.map{ |v| v.timewindow.end + v.timewindow&.maximum_lateness || 0 }.max
+        else
+          self.services.sum{ |s| s.activity&.duration || 0 + s.activities.max(&:duration) } +
+            self.matrices.map{ |matrix| matrix.upper_bound(:time) }.max
+        end
+
+      max_end = 0
+      self.vehicles.each{ |v|
+        max_end = [max_end, v.latest_end].max
+      }
+
+      self.services.each{ |s|
+        s.activities.each{ |act|
+          act.update_timewindows(max_end, max_time)
+        }
+        s.activity&.update_timewindows(max_end, max_time)
+      }
+
+      self.vehicles.each{ |v|
+        v.update_timewindows(max_end, max_time)
+      }
+    end
   end
 end

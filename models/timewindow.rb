@@ -40,5 +40,12 @@ module Models
 
       super(hash)
     end
+
+    def update(max_time)
+      return unless self.end.nil?
+
+      self.end = max_time
+      self.maximum_lateness = (DEFAULT_MAX_LATENESS_RATIO.to_f * (self.end - self.start)).round
+    end
   end
 end
