@@ -7,6 +7,7 @@
 
 ### Changed
 
+- Geojson object colors are now related to vehicle partition if defined [#338](https://github.com/Mapotempo/optimizer-api/pull/338)
 
 ### Removed
 
