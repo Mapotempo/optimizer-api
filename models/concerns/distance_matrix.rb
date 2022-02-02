@@ -60,7 +60,7 @@ module DistanceMatrix
       uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, options|
         block&.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix', nil, nil, nil)
         # set matrix_time and matrix_distance depending of dimensions order
-        log "matrix computation #{matrix_points.size}x#{matrix_points.size}"
+        log "matrix computation #{matrix_points.size}x#{matrix_points.size} -- #{services.size} services, #{vehicles.size} vehicles"
         tic = Time.now
         router_matrices = router.matrix(OptimizerWrapper.config[:router][:url], mode, dimensions, matrix_points, matrix_points, options)
         log "matrix computed in #{(Time.now - tic).round(2)} seconds"
