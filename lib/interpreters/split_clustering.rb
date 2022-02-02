@@ -675,7 +675,7 @@ module Interpreters
       sub_vrp_hash = JSON.parse(sub_vrp.to_json, symbolize_names: true)
 
       vehicle_ids = sub_vrp_hash[:vehicles]&.map{ |v| v[:id] } || []
-      sub_vrp_hash[:services].each{ |service|
+      sub_vrp_hash[:services]&.each{ |service|
         service[:sticky_vehicle_ids]&.delete_if{ |stick| !vehicle_ids.include?(stick) }
       }
 
