@@ -38,7 +38,7 @@ class OptimizerLogger
   @@logger.level = @@level_map[@@level]
 
   @@logger.formatter = proc do |severity, datetime, progname, msg|
-    datetime = OptimizerLogger.with_datetime ? "[#{datetime.strftime("%Y-%m-%d %H:%M:%S.%L %z")}]" : nil
+    datetime = OptimizerLogger.with_datetime ? datetime.strftime("[%FT%T.%N%:z]") : nil # iso8601 time with 9 decimals
     job_id = OptimizerWrapper::Job.current_job_id ? "#{OptimizerWrapper::Job.current_job_id} -" : nil
     progname = progname&.empty? ? nil : "- #{progname}"
 

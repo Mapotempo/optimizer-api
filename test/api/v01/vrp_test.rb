@@ -326,7 +326,7 @@ class Api::V01::VrpTest < Minitest::Test
     # [date time_with_ms_and_zone] jobid - INFO: avancement: repetition (1..2)/2 - process (1..9)/10 - solving periodic heuristic
 
     lines_with_avancement.each{ |line|
-      date_time_jobid_pattern = '\[(?<date>[0-9-]*) (?<time_with_ms_and_zone>[0-9:. +]*)\] (?<job_id>[0-9a-z]*)'
+      date_time_jobid_pattern = '\[(?<date>[0-9-]*)T(?<time_with_ms_and_zone>[0-9:.+]*)\] (?<job_id>[0-9a-z]*)'
       # There needs to be avancement and repetition
       %r{#{date_time_jobid_pattern} - INFO: avancement: repetition [1-2]/2 - (?<remaining_log>.*)\n} =~ line
 
