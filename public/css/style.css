@@ -153,3 +153,15 @@ form #optim-options input {
 body[data-page=result] {
   margin: 0;
 }
+
+#select-container {
+  padding-left: 10px;
+}
+
+.dot {
+  height: 13px;
+  width: 13px;
+  background-color: #bbb;
+  border-radius: 50%;
+  display: inline-block;
+}

@@ -3,14 +3,11 @@ const ATTRIBUTION = 'Tiles by OpenStreetMap';
 const MAP_ID = 'map';
 const DEFAULT_POSITION = [51.505, -0.09];
 const DEFAULT_ZOOM = 5;
-const FEATURE_COLLECTION = 'FeatureCollection'
-const POINT = 'Point'
-const POLYLINE = 'LineString'
-const POLYGON = 'Polygon'
 
 var map;
 var queryParams;
-const layers = {}
+var layers = {}
+const colorByVehicle = {};
 
 function forEachLayers(callback) {
   Object.keys(layers).forEach(function(layerName) {
@@ -39,47 +36,80 @@ function toggleLoading() {
 }
 
 function switchCluster() {
-  forEachLayers(function(layerName) {
-    const layerInfos = layers[layerName];
-    if (layerInfos.type === POINT && (map.hasLayer(layerInfos.layer) || map.hasLayer(layerInfos.cluster))) {
-      if (window.leafletOptions.showClusters) {
-        map.removeLayer(layerInfos.layer);
-        map.addLayer(layerInfos.cluster);
-      } else {
-        map.removeLayer(layerInfos.cluster);
-        map.addLayer(layerInfos.layer);
+  const layerNames = $('#vehicle-select').select2('data').map(option => option.id);
+  clearLayers(layers);
+  showLayersOnMap(layerNames);
+  fitBounds(layerNames);
+}
+
+function getCheckboxesState() {
+  const states = { points: false, polylines: false, partitionsWorkDay: false, partitionsVehicle: false };
+  $('#checkbox-container input').each((i, checkbox) => {
+    states[checkbox.id] = checkbox.checked;
+  });
+  return states;
+}
+
+function showLayersOnMap(layerNames) {
+  const checkboxesState = getCheckboxesState();
+
+  layerNames.forEach(layerName => {
+    Object.keys(checkboxesState).forEach(key => {
+      if (checkboxesState[key] && key === 'points' && window.leafletOptions.showClusters) {
+        layers[layerName]['clusters'].addTo(map);
       }
-    }
+      else if (checkboxesState[key]) {
+        layers[layerName][key].addTo(map);
+      }
+    })
   })
 }
 
-function showJobOnMap(body) {
-  let isFitBound = false;
+function fitBounds(layerNames) {
+  if (layerNames < 1) {
+    return;
+  }
+  const featureGroup = new L.featureGroup();
+  layerNames.forEach(name => {
+    layers[name].points.addTo(featureGroup)
+  })
+  map.fitBounds(featureGroup.getBounds());
+}
+
+function setup(body) {
   if (body.geojsons) {
     const geojson = body.geojsons[body.geojsons.length - 1]
-    parseGeojsonObject(geojson, '');
-    forEachLayers(function(layerName) {
-      if (!isFitBound && layers[layerName].type === POINT) {
-        map.fitBounds(window.leafletOptions.showClusters ? layers[layerName].cluster.getBounds() : layers[layerName].layer.getBounds())
-      }
+    const parsedGeojson = parseGeojson(geojson);
+
+    layers = parsedGeojsonToLayers(parsedGeojson);
+    createSelect2(Object.keys(layers), (layerNames) => {
+      clearLayers(layers);
+      showLayersOnMap(layerNames);
+      fitBounds(layerNames);
+    });
+    $('#checkbox-container input').each((i, checkbox) => {
+      checkbox.addEventListener('change', () => {
+        const layerNames = $('#vehicle-select').select2('data').map(option => option.id);
+        clearLayers(layers);
+        showLayersOnMap(layerNames);
+        fitBounds(layerNames);
+      });
     });
   }
 }
 
 function resetPage() {
   $('#checkbox-container').empty();
+  $("#select-container").empty();
   forEachLayers(function(layerName) {
     const layerInfos = layers[layerName];
-    let layer;
-    if (layerInfos.type === POINT) {
-      layer = window.leafletOptions.showClusters ? layerInfos.cluster : layerInfos.layer;
-    } else {
-      layer = layerInfos.layer;
-    }
-    if (map.hasLayer(layer)) {
-      map.removeLayer(layer);
-    }
-  })
+    Object.keys(layerInfos).forEach(key => {
+      const layer = layerInfos[key];
+      if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    });
+  });
 }
 
 function getJob(job_id, api_key) {
@@ -89,7 +119,7 @@ function getJob(job_id, api_key) {
     type: 'GET',
     url: '/0.1/vrp/jobs/' + job_id + '.json',
     data: {api_key: api_key},
-    success: showJobOnMap,
+    success: setup,
     error: function(xhr) {
       console.error(xhr);
     },
@@ -97,26 +127,13 @@ function getJob(job_id, api_key) {
   })
 }
 
-function createCheckbox(layerName) {
-  const label = layerName.split('.').join(' - ');
-  const id = layerName.split('.').join('_');
+function createCheckbox(label, id) {
   const html =
       '<div class="block">' +
       '<input type="checkbox" id="' + id + '"/>' +
       '<label for="' + id + '">' + label + '</label>' +
       '</div>';
   $('#checkbox-container').append(html);
-  $('#' + id).on('click', function(e) {
-    let layer = layers[layerName].layer;
-    if (layers[layerName].type === POINT) {
-      layer = window.leafletOptions.showClusters ? layers[layerName].cluster : layers[layerName].layer;
-    }
-    if (e.target.checked) {
-      map.addLayer(layer);
-    } else {
-      map.removeLayer(layer);
-    }
-  });
 }
 
 function createPopupContent(properties) {
@@ -131,57 +148,6 @@ function createPopupContent(properties) {
     }
     return content;
   }).join('');
-}
-
-function createPointLayer(featuresCollection, key, featureType) {
-  layers[key] = { layer: new L.featureGroup(), cluster: new L.markerClusterGroup(), type: featureType };
-
-  new L.geoJSON(featuresCollection, {
-    pointToLayer: function(geoJsonPoint, latlng) {
-      const marker = L.marker(latlng, {
-        icon: L.divIcon({html: '<span class="circle" style="background-color: '+ geoJsonPoint.properties.color + ';"/>'}),
-      });
-      marker.bindPopup(createPopupContent(geoJsonPoint.properties));
-      return marker;
-    }
-  }).addTo(layers[key].layer).addTo(layers[key].cluster);
-}
-
-function createLayer(featuresCollection, key, featureType) {
-  layers[key] = { layer: new L.layerGroup(), type: featureType }
-  new L.geoJSON(featuresCollection, {
-    onEachFeature: function (feature, layer) {
-      layer.setStyle({
-        color: feature.properties.color
-      });
-      layer.bindPopup(createPopupContent(feature.properties));
-    }
-  }).addTo(layers[key].layer)
-}
-
-function getFeatureType(featuresCollection) {
-  if (featuresCollection.features) {
-    return featuresCollection.features[0].geometry.type;
-  }
-  return null;
-}
-
-function parseGeojsonObject(obj, parent) {
-  const featureType = getFeatureType(obj);
-  if (obj.type === FEATURE_COLLECTION) {
-    featureType === POINT ? createPointLayer(obj, parent, featureType) : createLayer(obj, parent, featureType);
-    createCheckbox(parent);
-    return [parent];
-  } else {
-
-    Object.keys(obj).forEach(key => {
-      if (typeof obj[key] === 'object') {
-        const newKey = parent + (parent.length > 0 ? '.' : '') + key;
-        parseGeojsonObject(obj[key], newKey);
-      }
-    });
-
-  }
 }
 
 function handleBack() {
@@ -217,3 +183,137 @@ function initialize() {
 }
 
 $(document).ready(initialize);
+
+function formatSelect2(state) {
+  if (state.loading) {
+    return state.text;
+  }
+  const container = document.createElement('span')
+  const dot = document.createElement('span')
+  dot.classList.add('dot')
+  dot.style = `background-color: ${state.element.dataset.color}`
+  const txt = document.createElement('span')
+  txt.textContent = ' ' + state.text;
+  container.appendChild(dot);
+  container.appendChild(txt);
+  return container;
+}
+
+function createSelect2(vehicleNames, onChange) {
+  const select = document.createElement('select');
+  select.setAttribute('multiple', '');
+  select.id = 'vehicle-select';
+  vehicleNames.forEach(name => {
+    const option = document.createElement('option')
+    option.dataset.color = colorByVehicle[name];
+    option.value = name;
+    option.text = name;
+    select.appendChild(option);
+  });
+  document.getElementById('select-container').appendChild(select);
+
+  const $select = $(`#${select.id}`);
+  $select.select2({
+    placeholder: "Selectionner un ou plusieurs véhicules",
+    allowClear: true,
+    width: '90%',
+    templateResult: formatSelect2,
+    templateSelection: formatSelect2
+  }).on('change.select2', () => {
+    onChange($select.select2('data').map(option => option.id));
+  });
+
+}
+
+function createVehicle() {
+  return { points: [], polylines: [], partitionsWorkDay: [], partitionsVehicle: [] }
+}
+
+function parseFeatures(result, features, key) {
+  features.forEach(feature => {
+    if (feature.properties.vehicle) {
+      if (!result[feature.properties.vehicle]) {
+        result[feature.properties.vehicle] = createVehicle();
+      }
+      return result[feature.properties.vehicle][key].push(feature);
+    }
+    result.unassigned[key].push(feature)
+  });
+}
+
+function parseGeojson(geojson) {
+  const result = {
+    unassigned: { points: [], polylines: [], partitionsWorkDay: [], partitionsVehicle: [] },
+  };
+
+  if (geojson.points) {
+    parseFeatures(result, geojson.points.features, 'points');
+    createCheckbox('Points', 'points');
+  }
+  if (geojson.polylines) {
+    parseFeatures(result, geojson.polylines.features, 'polylines');
+    createCheckbox('Polylines', 'polylines');
+  }
+  if (!geojson.partitions) {
+    return result;
+  }
+  if (geojson.partitions.work_day) {
+    parseFeatures(result, geojson.partitions.work_day.features, 'partitionsWorkDay');
+    createCheckbox('Partitions work day', 'partitionsWorkDay');
+  }
+  if (geojson.partitions.vehicle) {
+    parseFeatures(result, geojson.partitions.vehicle.features, 'partitionsVehicle');
+    createCheckbox('Partitions vehicle', 'partitionsVehicle');
+  }
+  return result;
+}
+
+function clearLayers(layers) {
+  Object.keys(layers).forEach(layersKey => {
+    Object.keys(layers[layersKey]).forEach(layerKey => {
+      map.removeLayer(layers[layersKey][layerKey]);
+    })
+  });
+};
+
+function parseVehicleFeatures(features, layer, onEachFeatureCallback) {
+  L.geoJSON({ type: "FeatureCollection", features }, {
+    onEachFeature: function (feature, layer) {
+      if (onEachFeatureCallback) {
+        onEachFeatureCallback(feature, layer);
+      }
+      layer.setStyle({
+        color: feature.properties.color
+      });
+      layer.bindPopup(createPopupContent(feature.properties));
+    }
+  }).addTo(layer)
+}
+
+function vehicleToGeojson(vehicle) {
+  const layers = { clusters: new L.markerClusterGroup(), points: new L.featureGroup(), polylines: new L.featureGroup(), partitionsWorkDay: new L.featureGroup(), partitionsVehicle: new L.featureGroup() }
+
+  L.geoJSON({ type: "FeatureCollection", features: vehicle.points }, {
+    pointToLayer: function(geoJsonPoint, latlng) {
+      const marker = L.marker(latlng, {
+        icon: L.divIcon({html: '<span class="circle" style="background-color: '+ geoJsonPoint.properties.color + ';"/>'}),
+      });
+      marker.bindPopup(createPopupContent(geoJsonPoint.properties));
+      return marker;
+    }
+  }).addTo(layers.points).addTo(layers.clusters);
+
+  parseVehicleFeatures(vehicle.polylines, layers.polylines);
+  parseVehicleFeatures(vehicle.partitionsWorkDay, layers.partitionsWorkDay);
+  parseVehicleFeatures(vehicle.partitionsVehicle, layers.partitionsVehicle, (feature) => colorByVehicle[feature.properties.vehicle] = feature.properties.color);
+
+  return layers;
+}
+
+function parsedGeojsonToLayers(parsedGeojson) {
+  const layers = {}
+  Object.keys(parsedGeojson).forEach(key => {
+    layers[key] = vehicleToGeojson(parsedGeojson[key]);
+  });
+  return layers;
+}
