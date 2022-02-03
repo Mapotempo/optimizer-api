@@ -8,6 +8,7 @@
 ### Changed
 
 - Geojson object colors are now related to vehicle partition if defined [#338](https://github.com/Mapotempo/optimizer-api/pull/338)
+- The time horizon has been changed in optimizer-ortools which increases the performances in case of timewindows without end [#341](https://github.com/Mapotempo/optimizer-api/pull/341)
 
 ### Removed
 
