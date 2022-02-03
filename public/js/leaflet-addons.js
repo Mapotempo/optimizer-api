@@ -34,6 +34,7 @@ L.Control.ClustersControl = L.Control.extend({
         that.options.onSwitch();
       }
       $('.cluster-icon').toggleClass('fa-circle-o');
+      $('.cluster-icon').toggleClass('fa-certificate');
       button.title = $('.cluster-icon').hasClass('fa-circle-o') ? buttonTitleEnabled : buttonTitleDisabled;
     };
 

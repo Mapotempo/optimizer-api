@@ -156,12 +156,37 @@ body[data-page=result] {
 
 #select-container {
   padding-left: 10px;
+  margin-top: 10px;
 }
 
 .dot {
   height: 13px;
   width: 13px;
-  background-color: #bbb;
   border-radius: 50%;
   display: inline-block;
+}
+
+.color-selector {
+  display: inline-block;
+  width: 20%;
+  padding-left: 5px;
+}
+
+.color-selector > div {
+  text-align: center;
+}
+
+#color-select-container {
+  margin-top: 10px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+#color-select-container > .color-selector:first-child, #color-select-container > br + .color-selector {
+  padding-left: 0;
+}
+
+#select-container .select2-container {
+  max-height: 200px;
+  overflow-y: auto;
 }

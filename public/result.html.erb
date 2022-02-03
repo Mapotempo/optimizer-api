@@ -1,53 +1,70 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Result</title>
+  <meta charset="UTF-8">
+  <title>Result</title>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-          integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
-          crossorigin=""/>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+        integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+        crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css">
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" integrity="sha512-P9vJUXK+LyvAzj8otTOKzdfF1F3UYVl13+F8Fof8/2QNb8Twd6Vb+VD52I7+87tex9UXxnzPgWA3rH96RExA7A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/regular.min.css" integrity="sha512-d2x1oQUT6HACW9UlXxWI6XrIBDrEE5z2tit/+kWEdXdVYuift7sm+Q6ucfGWQr1F0+GD9/6eYoYDegw2nm05Vw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="css/style.css">
 
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
-            integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
-            crossorigin=""></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+          integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+          crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
-    <script src="js/jquery-1.12.3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="js/jquery-1.12.3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script src="https://unpkg.com/i18next@21.6.6/dist/umd/i18next.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/i18next-browser-languagedetector/6.0.0/i18nextBrowserLanguageDetector.min.js"></script>
-    <script src="js/translations.js?v=20220121"></script>
+    <script src="js/translations.js?v=20220203"></script>
 
-    <script src="js/leaflet-addons.js?v=20220121"></script>
-    <script src="js/result.js?v=20220121"></script>
+    <script src="js/leaflet-addons.js?v=20220203"></script>
+    <script src="js/result.js?v=20220203"></script>
 </head>
 <body data-page="result">
 <div id="map-container">
-    <div id="sidebar">
-        <div class="block">
-            <h1><%= I18n.t('views.result.title') %></h1>
-        </div>
-        <div class="block form">
-            <label for="job-id">Job id</label>
-            <div>
-                <input placeholder="Job id" id="job-id"/>
-            </div>
-            <button id="get-job"><%= I18n.t('views.result.show_result') %></button>
-        </div>
-        <div id="checkbox-container"></div>
-        <div id="select-container"></div>
-        <div class="block">
-            <button id="back"><%= I18n.t('views.result.back') %></button>
-        </div>
+  <div id="sidebar">
+    <div class="block">
+      <h1><%= I18n.t('views.result.title') %></h1>
     </div>
-    <div id="map"></div>
+    <div class="block form">
+      <label for="job-id">Job id</label>
+      <div>
+        <input placeholder="Job id" id="job-id"/>
+      </div>
+      <button id="get-job"><%= I18n.t('views.result.show_result') %></button>
+    </div>
+    <div id="checkbox-container"></div>
+    <div id="select-container"></div>
+    <div id="color-select-container"></div>
+    <div class="block">
+      <button id="back"><%= I18n.t('views.result.back') %></button>
+    </div>
+    <select id="color-select-template" tabindex="-1" aria-hidden="true" hidden>
+      <option value="default" selected>default</option>
+      <option value="hidden">hidden</option>
+      <option value="#003880">#003880</option>
+      <option value="#9000EE">#9000EE</option>
+      <option value="#00CC00">#00CC00</option>
+      <option value="#DD0000">#DD0000</option>
+      <option value="#009EFF">#009EFF</option>
+      <option value="#CC1882">#CC1882</option>
+      <option value="#558800">#558800</option>
+      <option value="#FFBB00">#FFBB00</option>
+      <option value="#0077A3">#0077A3</option>
+      <option value="#BEE562">#BEE562</option>
+    </select>
+  </div>
+  <div id="map"></div>
 </div>
 </body>
 </html>
