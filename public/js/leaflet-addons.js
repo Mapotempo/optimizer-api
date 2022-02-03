@@ -12,8 +12,8 @@ L.Control.ClustersControl = L.Control.extend({
     container.style.height = '26px';
 
     const button = L.DomUtil.create('a', '', container);
-    const buttonTitleEnabled = 'Désactiver les clusters';
-    const buttonTitleDisabled = 'Activer les clusters';
+    const buttonTitleEnabled = i18next.t('disable_cluster');
+    const buttonTitleDisabled = i18next.t('enable_cluster');
 
     let icon;
 

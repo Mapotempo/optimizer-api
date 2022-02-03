@@ -22,10 +22,10 @@
   <form id="post-form" autocomplete="off">
     <!-- <a id="doc-link" href="#documentation">documentation</a> -->
     <div class="block">
-      <span id="file-customers-label"></span> <input type="file" id="json-file" value="">
+      <span id="file-customers-label"><%= I18n.t('views.shared.file_customer_label') %></span> <input type="file" id="json-file" value="">
     </div>
     <div class="block">
-      <button id="send-files">Envoyer</button>
+      <button id="send-files"><%= I18n.t('views.shared.send') %></button>
       <span id="files-infos"></span>
     </div>
   </form>
@@ -35,13 +35,16 @@
     <textarea id="result"></textarea>
   </div>
 
+  <script src="https://unpkg.com/i18next@21.6.6/dist/umd/i18next.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/i18next-browser-languagedetector/6.0.0/i18nextBrowserLanguageDetector.min.js"></script>
+  <script src="js/translations.js?v=20220121"></script>
   <script src="js/jquery-1.12.3.min.js"></script>
   <script src="js/papaparse.min.js"></script>
   <script src="js/Chart.Core.min.js"></script>
   <script src="js/Chart.Scatter.min.js"></script>
-  <script src="js/conf.js?v=20190828"></script>
-  <script src="js/utils.js?v=20200909"></script>
-  <script src="js/jobManager.js?v=20200909"></script>
-  <script src="js/index.js?v=20200909"></script>
+  <script src="js/conf.js?v=20220121"></script>
+  <script src="js/utils.js?v=20220121"></script>
+  <script src="js/jobManager.js?v=20220121"></script>
+  <script src="js/index.js?v=20220121"></script>
 </body>
 </html>

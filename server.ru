@@ -34,13 +34,18 @@ use Raven::Rack
 
 use Rack::Locale
 
+use Rack::ServerPages do |config|
+  config.view_path = 'public'
+end
+run Rack::ServerPages::NotFound
+
 #\ -p 1791
 run Api::Root
 
 # Serve files from the public directory
-use Rack::TryStatic,
-    root: 'public',
-    urls: %w[/],
-    try: ['.html', 'index.html', '/index.html']
+# use Rack::TryStatic,
+#     root: 'public',
+#     urls: %w[/],
+#     try: ['.html', 'index.html', '/index.html']
 
 use ActionDispatch::RemoteIp
