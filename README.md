@@ -60,7 +60,7 @@ bundle install
 
 This project requires some solver and interface projects in order to be fully functional!
 * [Vroom v1.8.0](https://github.com/VROOM-Project/vroom/releases/tag/v1.8.0)
-* [Optimizer-ortools v1.10.0](https://github.com/Mapotempo/optimizer-ortools) & [OR-Tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8) (use the version corresponding to your system operator, not source code).
+* [Optimizer-ortools v1.11.0](https://github.com/Mapotempo/optimizer-ortools) & [OR-Tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8) (use the version corresponding to your system operator, not source code).
 
 Note : when updating OR-Tools you should to recompile optimizer-ortools.
 
