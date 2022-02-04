@@ -54,9 +54,7 @@ group :development, :test do
   gem 'benchmark-ips' # to in-place benchmark of different implementations
   gem 'byebug'
 
-  # For linting and offline code analysis
-  gem 'rubocop', '< 0.82'
-  gem 'mapotempo_rubocop', github: 'Mapotempo/mapotempo_rubocop'
+  # Offline code analysis
   gem 'solargraph'
 
   # For creating dependency graphs
@@ -72,6 +70,12 @@ group :development, :test do
   # gem 'psych', '<3.0.2' # TODO: Waiting Ruby 2.2
   # gem 'ruby-debug-ide'
   # gem 'debase'
+end
+
+group :rubocop do
+  # Linting
+  gem 'rubocop', '< 0.82'
+  gem 'mapotempo_rubocop', github: 'Mapotempo/mapotempo_rubocop'
 end
 
 group :test do
