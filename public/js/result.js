@@ -208,6 +208,7 @@ function createSelect2(vehicleNames, onChange) {
     option.dataset.color = colorByVehicle[name];
     option.value = name;
     option.text = name === 'unassigned' ? i18next.t('unassigned') : name;
+    option.selected = 'selected';
     select.appendChild(option);
   });
   document.getElementById('select-container').appendChild(select);
