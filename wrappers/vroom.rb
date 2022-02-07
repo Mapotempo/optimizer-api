@@ -63,6 +63,7 @@ module Wrappers
 
         # Mission constraints
         :assert_no_activity_with_position,
+        :assert_no_empty_or_fill,
         :assert_no_exclusion_cost,
         :assert_no_complex_setup_durations,
         :assert_services_no_late_multiplier,
