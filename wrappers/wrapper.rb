@@ -188,6 +188,12 @@ module Wrappers
       true
     end
 
+    def assert_no_empty_or_fill(vrp)
+      vrp.services.none?{ |service|
+        service.quantities.any?{ |q| q.empty || q.fill }
+      }
+    end
+
     def assert_end_optimization(vrp)
       vrp.resolution_duration || vrp.resolution_iterations_without_improvment
     end
