@@ -443,6 +443,8 @@ module Wrappers
                     point_id: vehicle.start_point.id,
                     type: 'depot',
                     begin_time: earliest_start,
+                    end_time: earliest_start,
+                    departure_time: earliest_start,
                     current_distance: activity.current_distance,
                     detail: build_detail(nil, nil, vehicle.start_point, nil, activity_loads, vehicle)
                   }.delete_if{ |_k, v| !v }
@@ -457,6 +459,8 @@ module Wrappers
                     type: 'depot',
                     current_distance: activity.current_distance,
                     begin_time: earliest_start,
+                    end_time: earliest_start,
+                    departure_time: earliest_start,
                     detail: {
                       lat: vehicle.end_point.location&.lat,
                       lon: vehicle.end_point.location&.lon,
