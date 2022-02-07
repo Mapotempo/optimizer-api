@@ -60,6 +60,10 @@ module Models
       end
 
       def vrp_result(options = {})
+        if info.travel_time&.positive?
+          options[:apply] ||= []
+          options[:apply] << [:setup]
+        end
         hash = super(options)
         hash['original_service_id'] = id
         hash.merge!(info.vrp_result(options))

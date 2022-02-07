@@ -35,6 +35,7 @@ module Models
       end
 
       def vrp_result(options = {})
+        options[:vehicle] = vehicle
         hash = super(options)
         hash['activities'] = hash.delete('stops')
         hash['cost_details'] = hash.delete('cost_info')
