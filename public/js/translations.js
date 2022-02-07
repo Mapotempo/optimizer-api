@@ -31,7 +31,9 @@ var fr = {
     missing_file: 'Veuillez renseigner un fichier clients et un fichier véhicles.',
     error_file: 'Une erreur est survenue en lisant le fichier {{filename}} : ',
     customers: 'clients',
-    vehicles: 'véhicules'
+    vehicles: 'véhicules',
+    select2_hidden_title: 'Cacher',
+    select2_default_title: 'Défaut'
   }
 };
 
@@ -68,7 +70,9 @@ var en = {
     missing_file: 'Please fill in a customer file and a vehicle file.',
     error_file: 'An error occurred while reading the file {{filename}}:',
     customers: 'customers',
-    vehicles: 'vehicles'
+    vehicles: 'vehicles',
+    select2_hidden_title: 'Hide',
+    select2_default_title: 'Default'
   }
 };
 
@@ -105,7 +109,9 @@ var es = {
     missing_file: 'Por favor, rellene una ficha de cliente y una ficha de vehículo.',
     error_file: 'Se ha producido un error al leer el archivo {{filename}}:',
     customers: 'clientes',
-    vehicle: 'vehículos'
+    vehicle: 'vehículos',
+    select2_hidden_title: 'Ocultar',
+    select2_default_title: 'Fallo'
   }
 };
 

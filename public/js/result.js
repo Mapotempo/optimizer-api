@@ -7,6 +7,7 @@ const DEFAULT_ZOOM = 5;
 var map;
 var queryParams;
 var layers = {}
+var dayMap = [ 'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun' ]
 const colorByVehicle = {};
 
 function forEachLayers(callback) {
@@ -87,6 +88,7 @@ function setup(body) {
       showLayersOnMap(layerNames);
       fitBounds(layerNames);
     });
+    createColorsSelectsByDay();
     $('#checkbox-container input').each((i, checkbox) => {
       checkbox.addEventListener('change', () => {
         const layerNames = $('#vehicle-select').select2('data').map(option => option.id);
@@ -101,6 +103,8 @@ function setup(body) {
 function resetPage() {
   $('#checkbox-container').empty();
   $("#select-container").empty();
+  $("#color-select-container").empty();
+
   forEachLayers(function(layerName) {
     const layerInfos = layers[layerName];
     Object.keys(layerInfos).forEach(key => {
@@ -184,7 +188,7 @@ function initialize() {
 
 $(document).ready(initialize);
 
-function formatSelect2(state) {
+function formatVehicleSelect2(state) {
   if (state.loading) {
     return state.text;
   }
@@ -197,6 +201,156 @@ function formatSelect2(state) {
   container.appendChild(dot);
   container.appendChild(txt);
   return container;
+}
+
+const layersStore = {};
+
+function hideDay(day) {
+  const layerNames = ['points', 'polylines', 'partitionsWorkDay', 'clusters'];
+  if (!layersStore[day]) {
+    layersStore[day] = [];
+  }
+  Object.keys(layers).forEach(vehicle => {
+    layerNames.forEach(layerName => {
+      const mainLayer = layerName === layerNames[3] ? layers[vehicle][layerName] : layers[vehicle][layerName].getLayers()[0];
+      mainLayer.eachLayer(layer => {
+        if (layer.feature.properties.work_day === day || (layerName === layerNames[1] && (layer.feature.properties.day - 1) % 7 === dayMap.findIndex(d => d === day))) {
+          layersStore[day].push({ vehicle: vehicle, layerName: layerName, layer: layer });
+          mainLayer.removeLayer(layer);
+        }
+      });
+    });
+  });
+  refreshClusters();
+}
+
+function resetHiddenLayers(day) {
+  if (!layersStore[day]) {
+    return;
+  }
+  layersStore[day].forEach(info => {
+    if (info.layerName === 'clusters') {
+      return layers[info.vehicle][info.layerName].addLayer(info.layer);
+    }
+    layers[info.vehicle][info.layerName].getLayers()[0].addLayer(info.layer);
+  });
+  layersStore[day] = [];
+}
+
+function formatColorSelect2(state) {
+  if (state.loading) {
+    return state.text;
+  }
+  const container = document.createElement('span');
+  if (state.text === 'hidden') {
+    const icon = document.createElement('i');
+    icon.classList.add('far');
+    icon.classList.add('fa-eye-slash');
+    container.appendChild(icon);
+  } else {
+    const dot = document.createElement('span')
+    dot.classList.add('dot')
+    dot.style = state.text === 'default' ? 'border: 1px solid grey;' : `background-color: ${state.text};`;
+    container.appendChild(dot);
+  }
+  if (state.text === 'hidden' || state.text === 'default') {
+    container.title = i18next.t('select2_' + state.text + '_title');
+  }
+  return container;
+}
+
+function resetColorForDay(day) {
+  Object.keys(layers).forEach(layerName => {
+    layers[layerName].partitionsWorkDay.getLayers()[0].eachLayer(layer => {
+      if (layer.feature.properties.work_day === day) {
+        layer.setStyle({color: layer.feature.properties.color});
+        layers[layerName].partitionsWorkDay.removeLayer(layer);
+      }
+    });
+    layers[layerName].points.getLayers()[0].eachLayer(layer => {
+      if (layer.feature.properties.work_day === day) {
+        layer.setIcon( L.divIcon({html: '<span class="circle" style="background-color: '+ layer.feature.properties.color + ';"/>'}) )
+      }
+    });
+    layers[layerName].polylines.getLayers()[0].eachLayer(layer => {
+      if ((layer.feature.properties.day - 1) % 7 === dayMap.findIndex(d => d === day)) {
+        layer.setStyle({color: layer.feature.properties.color});
+      }
+    });
+  });
+  refreshClusters();
+}
+
+function setColorForDay(color, day) {
+  Object.keys(layers).forEach(layerName => {
+    layers[layerName].partitionsWorkDay.getLayers()[0].eachLayer(layer => {
+      if (layer.feature.properties.work_day === day) {
+        layer.setStyle({color});
+      }
+    });
+    layers[layerName].points.getLayers()[0].eachLayer(layer => {
+      if (layer.feature.properties.work_day === day) {
+        layer.setIcon( L.divIcon({html: '<span class="circle" style="background-color: '+ color + ';"/>'}) )
+      }
+    });
+    layers[layerName].polylines.getLayers()[0].eachLayer(layer => {
+      if (layer.feature.properties.day % 7 === dayMap.findIndex(d => d === day)) {
+        layer.setStyle({color});
+      }
+    });
+  });
+}
+
+function refreshClusters() {
+  Object.keys(layers).forEach(layerName => {
+    if (map.hasLayer(layers[layerName].clusters)) {
+      layers[layerName].clusters.refreshClusters();
+    }
+  });
+}
+
+function createColorsSelectsByDay() {
+  const colorSelectContainer = document.getElementById('color-select-container');
+  dayMap.forEach((day, idx) => {
+    if (day !== undefined) {
+      const container = document.createElement('div');
+      const select = document.getElementById('color-select-template').cloneNode(true);
+      const div = document.createElement('div');
+      const id = day + '-select';
+
+      div.textContent = day;
+      select.id = id;
+      container.appendChild(div);
+      container.appendChild(select);
+      container.classList.add('color-selector');
+
+      if (colorSelectContainer.childNodes.length === 4) {
+        colorSelectContainer.appendChild(document.createElement('br'));
+      }
+
+      colorSelectContainer.appendChild(container);
+
+      const $select = $('#' + id);
+      $select.select2({
+        placeholder: i18next.t('select2_placeholder'),
+        minimumResultsForSearch: -1,
+        width: '90%',
+        templateResult: formatColorSelect2,
+        templateSelection: formatColorSelect2
+      }).on('change.select2', () => {
+        const option = $select.select2('data')[0].id;
+        if (option === 'hidden' ) {
+          return hideDay(day);
+        }
+        resetHiddenLayers(day);
+        if (option === 'default') {
+          return resetColorForDay(day);
+        }
+        setColorForDay(option, day);
+        refreshClusters();
+      });
+    }
+  });
 }
 
 function createSelect2(vehicleNames, onChange) {
@@ -218,8 +372,8 @@ function createSelect2(vehicleNames, onChange) {
     placeholder: i18next.t('select2_placeholder'),
     allowClear: true,
     width: '90%',
-    templateResult: formatSelect2,
-    templateSelection: formatSelect2
+    templateResult: formatVehicleSelect2,
+    templateSelection: formatVehicleSelect2
   }).on('change.select2', () => {
     onChange($select.select2('data').map(option => option.id));
   });
