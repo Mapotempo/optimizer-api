@@ -476,7 +476,8 @@ module Wrappers
               elsif activity.type == 'service'
                 collected_indices << current_index
                 service = vrp.services[current_index]
-                point = service.activity&.point || !service.activities.empty? && service.activities[activity.alternative].point
+                service_activity = service.activity || service.activities[activity.alternative]
+                point = service_activity.point
                 current_matrix_index = point.matrix_index
                 route_data = build_route_data(vehicle_matrix, previous_matrix_index, current_matrix_index)
                 # TODO: The logic behing pickup_shipment_id and delivery_shipment_id should be moved
@@ -490,11 +491,18 @@ module Wrappers
                   type: service.type,
                   current_distance: activity.current_distance,
                   begin_time: earliest_start,
-                  end_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
-                  departure_time: earliest_start + (service.activity ? service.activity[:duration].to_i : service.activities[activity.alternative][:duration].to_i),
-                  detail: build_detail(service, service.activity, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle),
+                  end_time: earliest_start + service_activity[:duration].to_i,
+                  departure_time: earliest_start + service_activity[:duration].to_i,
+                  detail: build_detail(service, service_activity, point, vehicle.global_day_index ? vehicle.global_day_index % 7 : nil, activity_loads, vehicle),
                   alternative: service.activities ? activity.alternative : nil
                 }.merge(route_data).delete_if{ |_k, v| !v }
+                if current_activity[:travel_time]
+                  if current_activity[:travel_time] > 0
+                    current_activity[:travel_time] -= service_activity&.setup_duration || 0
+                  else
+                    current_activity[:detail][:setup_duration] = 0
+                  end
+                end
                 previous_matrix_index = current_matrix_index
               elsif activity.type == 'break'
                 activity.id
