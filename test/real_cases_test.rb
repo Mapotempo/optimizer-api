@@ -290,7 +290,6 @@ class RealCasesTest < Minitest::Test
 
     # Haute-Savoie - A single route with a visit with 2 open timewindows (0 ; x] [y ; ∞)
     def test_ortools_open_timewindows
-      # TODO: the timing of this test can be decreased (by 10x) when optimizer-api/-/issues/841 is fixed
       vrp = TestHelper.load_vrp(self)
       check_vrp_services_size = vrp.services.size
       result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
@@ -311,7 +310,8 @@ class RealCasesTest < Minitest::Test
       assert result[:routes].sum{ |r| r[:total_travel_time] } <= 13225, "Too long travel time: #{result[:routes].sum{ |r| r[:total_travel_time] }}"
 
       # Check elapsed time
-      assert result[:elapsed] < 15000, "Too long elapsed time: #{result[:elapsed]}"
+      # The rework of time horizon in optimizer-ortools has decreased the computation time drastically
+      assert result[:elapsed] < 1000, "Too long elapsed time: #{result[:elapsed]}"
     end
 
     # Nantes - A single route with an order defining the most part of the route
