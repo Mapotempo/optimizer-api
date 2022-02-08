@@ -62,9 +62,10 @@ module Api
 
       parser :csv, CSVParser
 
-      namespace :vrp do # rubocop:disable Metrics/BlockLength
+      # rubocop:disable Metrics/BlockLength
+      namespace :vrp do
         helpers VrpInput, VrpConfiguration, VrpMisc, VrpMissions, VrpShared, VrpVehicles
-        resource :submit do # rubocop:disable Metrics/BlockLength
+        resource :submit do
           desc 'Submit VRP problem', {
 
             nickname: 'submit_vrp',
@@ -157,7 +158,7 @@ module Api
           end
         end
 
-        resource :jobs do # rubocop:disable Metrics/BlockLength
+        resource :jobs do
           desc 'Fetch vrp job status', {
             nickname: 'get_job',
             success: VrpResult,
@@ -169,7 +170,7 @@ module Api
           params {
             requires :id, type: String, desc: 'Job id returned by creating VRP problem.'
           }
-          get ':id' do # rubocop:disable Metrics/BlockLength
+          get ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
             stored_result = APIBase.dump_vrp_dir.read([id, params[:api_key], 'solution'].join('_'))
@@ -235,7 +236,7 @@ module Api
           params {
             requires :id, type: String, desc: 'Job id returned by creating VRP problem.'
           }
-          delete ':id' do # rubocop:disable Metrics/BlockLength
+          delete ':id' do
             id = params[:id]
             job = Resque::Plugins::Status::Hash.get(id)
 
@@ -280,6 +281,7 @@ module Api
           end
         end
       end
+      # rubocop:enable Metrics/BlockLength
     end
   end
 end

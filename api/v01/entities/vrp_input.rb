@@ -64,7 +64,7 @@ module VrpInput
   end
 
   # Input as expected in CSV
-  params :request_files do # rubocop:disable Metrics/BlockLength
+  params :request_files do
                            # We expect here to keep the definition of the high level model in a single place
     optional :points, type: Array,
                       documentation: { hidden: true, desc: 'Warning : CSV Format expected here ! Particular place in the map.' },
