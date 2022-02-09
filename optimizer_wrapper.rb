@@ -103,14 +103,14 @@ module OptimizerWrapper
           }
           Models.delete_all # needed to prevent duplicate ids because expand_repeat uses Marshal.load/dump
 
-          break if repeated_results.last[:unassigned].empty? # No need to repeat more, cannot do better than this
+          break if repeated_results.last.unassigned_stops.empty? # No need to repeat more, cannot do better than this
         }
 
         # NOTE: the only criteria is number of unassigneds at the moment so if there is ever a solution with zero
         # unassigned, the loop is cut early. That is, if the criteria below is evolved, the above `break if` condition
         # should be modified in a similar fashion)
-        (result, position) = repeated_results.each.with_index(1).min_by { |rresult, _| rresult.unassigned.size } # find the best result and its index
-        log "#{job}_repetition - #{repeated_results.collect{ |r| r.unassigned.size }} : chose to keep the #{position.ordinalize} solution"
+        (result, position) = repeated_results.each.with_index(1).min_by { |rresult, _| rresult.unassigned_stops.size } # find the best result and its index
+        log "#{job}_repetition - #{repeated_results.collect{ |r| r.unassigned_stops.size }} : chose to keep the #{position.ordinalize} solution"
         result
       }
     }
@@ -261,7 +261,7 @@ module OptimizerWrapper
       optim_solution.name = vrp.name
       optim_solution.configuration.csv = vrp.configuration.restitution.csv
       optim_solution.configuration.geometry = vrp.configuration.restitution.geometry
-      optim_solution.unassigned += unfeasible_services.values.flatten
+      optim_solution.unassigned_stops += unfeasible_services.values.flatten
       optim_solution.parse(vrp)
 
       if vrp.configuration.preprocessing.first_solution_strategy
@@ -747,7 +747,7 @@ module OptimizerWrapper
       }
       Models::Solution::Route.new(stops: new_stops, vehicle: route.vehicle)
     }
-    new_unassigned = solution.unassigned.flat_map{ |un|
+    new_unassigned = solution.unassigned_stops.flat_map{ |un|
       if un.service_id
         service_index = original_vrp.services.index{ |s| s.id == un.service_id }
         cluster_index = clusters.index{ |z| z.data_items.flatten.include? service_index }
@@ -763,7 +763,7 @@ module OptimizerWrapper
         un
       end
     }
-    solution = Models::Solution.new(routes: new_routes, unassigned: new_unassigned)
+    solution = Models::Solution.new(routes: new_routes, unassigned_stops: new_unassigned)
     solution.parse(original_vrp, compute_dimensions: true)
   end
 end

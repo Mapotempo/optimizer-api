@@ -129,7 +129,7 @@ module Wrappers
         elapsed: elapsed_time,
         solvers: [:vroom],
         routes: routes,
-        unassigned: unassigneds
+        unassigned_stops: unassigneds
       )
       solution.parse(vrp)
     end

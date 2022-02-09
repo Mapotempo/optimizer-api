@@ -1071,14 +1071,14 @@ module Wrappers
 
         simplification_data[:original_services].each{ |service|
           # delete the unassigned expanded version of service and calculate how many of them planned/unassigned
-          unassigned_exp_ser_count = solution.unassigned.size
-          unassigned_exp_ser_count -= solution.unassigned.delete_if{ |uns| uns.id == service.original_id }.size
+          unassigned_exp_ser_count = solution.unassigned_stops.size
+          unassigned_exp_ser_count -= solution.unassigned_stops.delete_if{ |uns| uns.id == service.original_id }.size
           planned_exp_ser_count = simplification_data[:expanded_services].count{ |s| s.original_id == service.original_id } - unassigned_exp_ser_count
 
           if planned_exp_ser_count == 0
             # if all of them were unplanned
             # replace the deleted unassigned expanded ones with one single original un-expanded service
-            solution.unassigned << Models::Solution::Stop.new(service)
+            solution.unassigned_stops << Models::Solution::Stop.new(service)
           else
             # replace the planned one(s) into one single unexpanded original service
             solution.routes.each{ |route|
@@ -1474,7 +1474,7 @@ module Wrappers
         }
         solution.info.total_travel_time -= overall_total_travel_time_correction.round
 
-        solution.unassigned.each{ |stop|
+        solution.unassigned_stops.each{ |stop|
           setup_duration = stop.activity[:simplified_setup_duration].to_i
 
           stop.activity.setup_duration = setup_duration

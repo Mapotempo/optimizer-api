@@ -577,7 +577,7 @@ module Models
 
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
 
-      reasons = solutions[0].unassigned.flat_map{ |u| u[:reason].split(' && ') }
+      reasons = solutions[0].unassigned_stops.flat_map{ |u| u[:reason].split(' && ') }
 
       assert_includes reasons, 'Inconsistent timewindows within relations of service', 'Expected an unfeasible shipment'
 
@@ -585,7 +585,7 @@ module Models
 
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
 
-      assert_empty solutions[0].unassigned, 'There should be no unassigned services'
+      assert_empty solutions[0].unassigned_stops, 'There should be no unassigned services'
     end
 
     def test_uniqueness_of_provided_services_or_vehicles_in_relation

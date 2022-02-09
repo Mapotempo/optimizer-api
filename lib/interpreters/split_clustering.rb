@@ -65,7 +65,7 @@ module Interpreters
               stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
             end
           }
-          solution.unassigned.each do |stop|
+          solution.unassigned_stops.each do |stop|
             next if stop.service_id.nil?
 
             stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
@@ -485,12 +485,12 @@ module Interpreters
     def self.transfer_unused_resources(split_solve_data, vrp, solution)
       # remove used empties_or_fills
       split_solve_data[:transferred_empties_or_fills].delete_if{ |service|
-        solution.unassigned.none?{ |a| a.service_id == service.id }
+        solution.unassigned_stops.none?{ |a| a.service_id == service.id }
       }
 
       remove_empty_routes(solution)
       # empty poorly populated routes only if necessary
-      if solution.unassigned.empty? &&
+      if solution.unassigned_stops.empty? &&
          solution.routes.size == vrp.vehicles.size &&
          (vrp.configuration.resolution.vehicle_limit.nil? || solution.routes.size == vrp.configuration.resolution.vehicle_limit)
         remove_poorly_populated_routes(vrp, solution, 0.1)
@@ -581,7 +581,7 @@ module Interpreters
           log "route #{route.vehicle.id} is emptied: #{number_of_services_in_the_route} " \
               'services are now unassigned.', level: :info
 
-          solution.unassigned += route.stops.select(&:service_id)
+          solution.unassigned_stops += route.stops.select(&:service_id)
           true
         end
       }

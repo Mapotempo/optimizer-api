@@ -47,8 +47,8 @@ class HeuristicTest < Minitest::Test
       }
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
-      assert_equal 4, solutions[0].unassigned.size
-      assert(solutions[0].unassigned.all?{ |unassigned|
+      assert_equal 4, solutions[0].unassigned_stops.size
+      assert(solutions[0].unassigned_stops.all?{ |unassigned|
         unassigned.reason.include?('Partial assignment only') ||
         unassigned.reason.include?('Inconsistency between visit number and minimum lapse')
       })
@@ -138,7 +138,7 @@ class HeuristicTest < Minitest::Test
         }
       }
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
-      assert_equal 10, solutions[0].unassigned.size
+      assert_equal 10, solutions[0].unassigned_stops.size
     end
 
     def test_visit_every_day_2
@@ -155,7 +155,7 @@ class HeuristicTest < Minitest::Test
       }
 
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
-      assert_equal 'service_1_1_1', solutions[0].unassigned.first.service_id
+      assert_equal 'service_1_1_1', solutions[0].unassigned_stops.first.service_id
     end
 
     def test_same_cycle
@@ -266,7 +266,7 @@ class HeuristicTest < Minitest::Test
 
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }},
                                                TestHelper.load_vrp(self, problem: problem), nil)
-      refute_includes solutions[0].unassigned.collect{ |una| una[:reason] }, 'No vehicle with compatible timewindow'
+      refute_includes solutions[0].unassigned_stops.collect{ |una| una[:reason] }, 'No vehicle with compatible timewindow'
     end
 
     def test_no_duplicated_skills_with_clustering
@@ -276,7 +276,7 @@ class HeuristicTest < Minitest::Test
 
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},
                                             TestHelper.load_vrp(self, problem: problem), nil)
-      assert_empty solutions[0].unassigned
+      assert_empty solutions[0].unassigned_stops
       assert(solutions[0].routes.all?{ |route|
         route.stops.all?{ |stop| stop.skills.empty? || stop.skills.size == 3 }
       })
@@ -286,14 +286,14 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self)
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
       solutions[0].routes.each{ |r| assert_equal 15, r.stops.size }
-      assert_empty solutions[0].unassigned
+      assert_empty solutions[0].unassigned_stops
     end
 
     def test_same_point_day_relaxation
       vrp = TestHelper.load_vrp(self)
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, Marshal.load(Marshal.dump(vrp)), nil)
 
-      result_service_size = solutions[0].routes.sum{ |route| route.stops.count(&:service_id) } + solutions[0].unassigned.size
+      result_service_size = solutions[0].routes.sum{ |route| route.stops.count(&:service_id) } + solutions[0].unassigned_stops.size
       assert_equal vrp.visits, result_service_size, "Found #{result_service_size} instead of #{vrp.visits} expected"
 
       vrp[:services].group_by{ |s| s[:activity][:point][:id] }.each{ |point_id, services_set|
@@ -332,8 +332,8 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
       vrp.routes = routes
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal 1, solutions[0].unassigned.size
-      assert_equal expected_nb_visits, solutions[0].routes.sum{ |r| r.stops.size - 2 } + solutions[0].unassigned.size
+      assert_equal 1, solutions[0].unassigned_stops.size
+      assert_equal expected_nb_visits, solutions[0].routes.sum{ |r| r.stops.size - 2 } + solutions[0].unassigned_stops.size
       assert_equal expecting.size,
                    (solutions[0].routes.find{ |r| r.vehicle.id == 'ANDALUCIA 1_2' }.stops.collect{ |a|
                      a.service_id.to_s.split('_')[0..-3].join('_')
@@ -348,7 +348,7 @@ class HeuristicTest < Minitest::Test
       vrp.routes.first.day_index = day
 
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal expected_nb_visits, solutions[0].routes.sum{ |r| r.stops.size - 2 } + solutions[0].unassigned.size
+      assert_equal expected_nb_visits, solutions[0].routes.sum{ |r| r.stops.size - 2 } + solutions[0].unassigned_stops.size
       assert_equal expecting.size,
                    (solutions[0].routes.find{ |r| r.vehicle.id == "#{vehicle_id}_#{day}" }.stops.collect{ |a|
                      a.service_id.to_s.split('_')[0..-3].join('_')
@@ -379,7 +379,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_baleares2')
       vrp.routes = [Models::Route.create(vehicle: vrp.vehicles.first, mission_ids: %w[5482 0833 8595 0352 0799 2047 5446 0726 0708], day_index: 300)]
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      assert_equal 36, solutions[0].unassigned.size
+      assert_equal 36, solutions[0].unassigned_stops.size
     end
 
     def test_sticky_in_periodic
@@ -612,7 +612,7 @@ class HeuristicTest < Minitest::Test
 
       vrp[:configuration][:resolution][:same_point_day] = true
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-      assert_empty solutions[0].unassigned # there is one service that happens every day so there is no conflict between visits assignment
+      assert_empty solutions[0].unassigned_stops # there is one service that happens every day so there is no conflict between visits assignment
 
       # TODO : repartition of visits could be improved
       # current repartition : (all shifted at sooner days)
@@ -626,13 +626,13 @@ class HeuristicTest < Minitest::Test
 
       vrp[:services].delete_if{ |s| s[:visits_number] == 6 }
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-      assert_equal 2, solutions[0].unassigned.size
+      assert_equal 2, solutions[0].unassigned_stops.size
       # TODO : this message should be improved
       # in fact service with 5 visits goes from day 0 to day 4
       # therefore service 2 can not be assigned because it will be assigned after service with 5 visits
       # and service with 5 visits implies that no visit should be assigned at day 5
-      assert_equal [2, 2], (solutions[0].unassigned.collect{ |un| un.service_id.split('_').last.to_i })
-      reasons = solutions[0].unassigned.map(&:reason)
+      assert_equal [2, 2], (solutions[0].unassigned_stops.collect{ |un| un.service_id.split('_').last.to_i })
+      reasons = solutions[0].unassigned_stops.map(&:reason)
       assert_equal ["All this service's visits can not be assigned with other services at same location"], reasons.uniq
     end
 
@@ -778,8 +778,8 @@ class HeuristicTest < Minitest::Test
       vrp[:configuration][:schedule] = { range_date: { start: Date.new(2021, 1, 19), end: Date.new(2021, 1, 24)} }
 
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-      assert_equal 4, solutions[0].unassigned.size
-      assert(solutions[0].unassigned.all?{ |u| u.reason == 'First and last possible days do not allow this service planification' })
+      assert_equal 4, solutions[0].unassigned_stops.size
+      assert(solutions[0].unassigned_stops.all?{ |u| u.reason == 'First and last possible days do not allow this service planification' })
     end
   end
 end

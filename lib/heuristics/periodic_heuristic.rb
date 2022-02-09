@@ -388,7 +388,7 @@ module Wrappers
     end
 
     def collect_unassigned
-      unassigned = []
+      unassigned_stops = []
 
       @services_assignment.each{ |id, data|
         next unless data[:unassigned_indices].any?
@@ -400,13 +400,13 @@ module Wrappers
         data[:unassigned_indices].each{ |index|
           service_in_vrp = @services_data[id][:raw]
           unassigned_id = "#{id}_#{index}_#{@services_data[id][:raw].visits_number}"
-          unassigned << Models::Solution::Stop.new(service_in_vrp,
+          unassigned_stops << Models::Solution::Stop.new(service_in_vrp,
                                                    service_id: unassigned_id,
                                                    reason: @services_assignment[id][:unassigned_reasons].join(','))
         }
       }
 
-      unassigned
+      unassigned_stops
     end
 
     def provide_group_tws(services, day)
@@ -456,7 +456,7 @@ module Wrappers
 
           solution = OptimizerWrapper.solve(service: :ortools, vrp: route_vrp)
 
-          next if solution.nil? || !solution.unassigned.empty?
+          next if solution.nil? || !solution.unassigned_stops.empty?
 
           back_to_depot = route_data[:stops].last[:end] +
                           matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
@@ -1215,12 +1215,12 @@ module Wrappers
                                                          vehicle: vrp_vehicle)
         }
       }
-      unassigned = collect_unassigned
+      unassigned_stops = collect_unassigned
       # TODO: fulfill cost_details with solution_routes costs
       solution = Models::Solution.new(cost: @cost,
                                       solvers: [:heuristic],
                                       routes: solution_routes,
-                                      unassigned: unassigned,
+                                      unassigned_stops: unassigned_stops,
                                       elapsed: (Time.now - @starting_time) * 1000) # ms
       solution.parse(vrp)
       vrp.configuration.preprocessing.heuristic_result = solution

@@ -197,7 +197,7 @@ module Interpreters
           synthesis << {
             heuristic: custom_heuristics[i],
             # If the cost is 0 we might want to set it to Float::MAX because 0 cost is not possible.
-            quality: solution.nil? ? [Float::MAX] : [solution.unassigned&.size.to_i, solution.cost.to_i, times[i]],
+            quality: solution.nil? ? [Float::MAX] : [solution.unassigned_stops&.size.to_i, solution.cost.to_i, times[i]],
             used: false,
             cost: solution ? solution.cost : nil,
             time_spent: times[i],

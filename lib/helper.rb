@@ -103,13 +103,13 @@ module Helper
 
     # Correct unassigned services
     new_service_ids = new_solution.routes.flat_map{ |route| route.stops.map(&:service_id) }.compact +
-                      new_solution.unassigned.map(&:service_id).compact
+                      new_solution.unassigned_stops.map(&:service_id).compact
 
-    solution.unassigned.delete_if{ |activity|
+    solution.unassigned_stops.delete_if{ |activity|
       # Remove from unassigned if they appear in new unassigned or if they are served in new routes
       new_service_ids.include?(activity.service_id)
     }
-    solution.unassigned += new_solution.unassigned
+    solution.unassigned_stops += new_solution.unassigned_stops
 
     # Correct total stats and delete old routes
     new_solution.routes.each{ |new_route|

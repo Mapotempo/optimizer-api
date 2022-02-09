@@ -270,15 +270,15 @@ class RealCasesTest < Minitest::Test
       assert solutions[0]
 
       # Check stops
-      assert(solutions[0].unassigned.one? { |un| un.service_id == 'service35' })
-      assert(solutions[0].unassigned.one? { |un| un.service_id == 'service83' })
-      assert(solutions[0].unassigned.one? { |un| un.service_id == 'service84' })
-      assert(solutions[0].unassigned.one? { |un| un.service_id == 'R1169' })
-      assert(solutions[0].unassigned.one? { |un| un.service_id == 'R1183' })
-      assert_operator solutions[0].unassigned.size, :<=, 6
+      assert(solutions[0].unassigned_stops.one? { |un| un.service_id == 'service35' })
+      assert(solutions[0].unassigned_stops.one? { |un| un.service_id == 'service83' })
+      assert(solutions[0].unassigned_stops.one? { |un| un.service_id == 'service84' })
+      assert(solutions[0].unassigned_stops.one? { |un| un.service_id == 'R1169' })
+      assert(solutions[0].unassigned_stops.one? { |un| un.service_id == 'R1183' })
+      assert_operator solutions[0].unassigned_stops.size, :<=, 6
 
       assert_equal check_vrp_services_size,
-                   (solutions[0].routes.sum{ |r| r.stops.count(&:service_id) } + solutions[0].unassigned.size)
+                   (solutions[0].routes.sum{ |r| r.stops.count(&:service_id) } + solutions[0].unassigned_stops.size)
 
       # Check routes
       assert_equal 29, (solutions[0].routes.count{ |r| r.stops.count(&:service_id).positive? })
@@ -301,8 +301,8 @@ class RealCasesTest < Minitest::Test
       assert solutions[0]
       # Check stops
       assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.stops.count{ |a| a[:service_id] } } +
-                                            solutions[0].unassigned.size)
-      assert_equal 1, solutions[0].unassigned.count(&:reason)
+                                            solutions[0].unassigned_stops.size)
+      assert_equal 1, solutions[0].unassigned_stops.count(&:reason)
 
       # Check total travel time
       assert_operator solutions[0].routes.sum{ |r| r.info.total_travel_time }, :<=,
@@ -443,7 +443,7 @@ class RealCasesTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
       routes = solutions[0].routes
-      unassigned = solutions[0].unassigned
+      unassigned = solutions[0].unassigned_stops
 
       result_num = {
         points: routes.flat_map{ |route| route.stops.map{ |act| act.activity.point.id } } +
@@ -484,7 +484,7 @@ class RealCasesTest < Minitest::Test
       total_return_distance = solutions[0].routes.sum{ |route| route.stops.last.info.travel_distance }
       assert solutions[0]
       assert solutions[0].info.total_distance - total_return_distance <= 85100
-      assert solutions[0].unassigned.size <= 6
+      assert solutions[0].unassigned_stops.size <= 6
     end
 
     # North West of France - at the fastest with distance minimization
@@ -498,7 +498,7 @@ class RealCasesTest < Minitest::Test
       total_return_distance = solutions[0].routes.sum{ |route| route.stops.last.info.travel_distance }
       assert solutions[0]
       assert solutions[0].info.total_distance - total_return_distance <= 183800
-      assert_equal 0, solutions[0].unassigned.size
+      assert_equal 0, solutions[0].unassigned_stops.size
     end
 
     # North West of France - at the fastest with distance minimization
@@ -511,7 +511,7 @@ class RealCasesTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert solutions[0]
       assert solutions[0].info.total_distance <= 97400
-      assert_equal 0, solutions[0].unassigned.size
+      assert_equal 0, solutions[0].unassigned_stops.size
     end
 
     # North West of France - at the fastest with distance minimization with vehicle returning at the depot
@@ -528,7 +528,7 @@ class RealCasesTest < Minitest::Test
       total_return_distance = solutions[0].routes.sum{ |route| route.stops.last.info.travel_distance }
       assert solutions[0]
       assert solutions[0].info.total_distance - total_return_distance <= 105700
-      assert_equal 0, solutions[0].unassigned.size
+      assert_equal 0, solutions[0].unassigned_stops.size
     end
 
     # Paris - Multiple independent routes

@@ -37,7 +37,7 @@ class RealCasesTest < Minitest::Test
       log "duration_elapsed =  #{t2 - t1}", level: :debug
 
       # Check activities
-      assert solutions[0].unassigned.size < 50, "Too many unassigned services #{solutions[0].unassigned.size}"
+      assert solutions[0].unassigned_stops.size < 50, "Too many unassigned services #{solutions[0].unassigned_stops.size}"
 
       # Check time
       duration_min = vrp.configuration.resolution.minimum_duration / 1000.to_f
@@ -73,7 +73,7 @@ class RealCasesTest < Minitest::Test
       log "duration_elapsed =  #{t2 - t1}", level: :debug
 
       # Check activities
-      assert solutions[0].unassigned.size < 50, "Too many unassigned services #{solutions[0].unassigned.size}"
+      assert solutions[0].unassigned_stops.size < 50, "Too many unassigned services #{solutions[0].unassigned_stops.size}"
 
       # Check routes
       assert solutions[0].routes.size < 48, "Too many routes: #{solutions[0].routes.size}"

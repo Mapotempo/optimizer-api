@@ -427,7 +427,7 @@ module Wrappers
         iterations: content.iterations,
         elapsed: content.duration * 1000,
         routes: routes,
-        unassigned: build_unassigned(problem_services, problem_rests)
+        unassigned_stops: build_unassigned(problem_services, problem_rests)
       )
     end
 

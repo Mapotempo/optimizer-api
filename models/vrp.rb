@@ -84,7 +84,7 @@ module Models
       solution = Models::Solution.new(
         solvers: [solver],
         routes: self.vehicles.map{ |v| self.empty_route(v) },
-        unassigned: (unassigned_visits(unassigned_with_reason) +
+        unassigned_stops: (unassigned_visits(unassigned_with_reason) +
                      unassigned_rests)
       )
       solution.parse(self)

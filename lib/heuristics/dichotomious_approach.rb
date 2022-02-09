@@ -41,7 +41,7 @@ module Interpreters
 
     def self.feasible_vrp(solution, service_vrp)
       solution.nil? || solution.count_unassigned_services != service_vrp[:vrp].services.size ||
-        solution.unassigned.reject(&:reason).any?
+        solution.unassigned_stops.reject(&:reason).any?
     end
 
     def self.dichotomious_heuristic(service_vrp, job = nil, &block)
@@ -70,7 +70,7 @@ module Interpreters
           update_exclusion_cost(service_vrp)
         end
 
-        if (solution.nil? || solution.unassigned.size >= 0.7 * service_vrp[:vrp].services.size) &&
+        if (solution.nil? || solution.unassigned_stops.size >= 0.7 * service_vrp[:vrp].services.size) &&
            feasible_vrp(solution, service_vrp) &&
            service_vrp[:vrp].vehicles.size > service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit &&
            service_vrp[:vrp].services.size > service_vrp[:vrp].configuration.resolution.dicho_division_service_limit
@@ -111,15 +111,15 @@ module Interpreters
           service_vrp[:vrp].configuration.resolution.total_split_number = sub_service_vrps[1][:vrp].configuration.resolution.total_split_number
           solution = solutions.reduce(&:+)
           log "dicho - level(#{service_vrp[:dicho_level]}) before remove_bad_skills unassigned rate " \
-              "#{solution.unassigned.size}/#{service_vrp[:vrp].services.size}: " \
-              "#{(solution.unassigned.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
+              "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
+              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
 
           remove_bad_skills(service_vrp, solution)
           Interpreters::SplitClustering.remove_empty_routes(solution)
           solution.parse(vrp)
           log "dicho - level(#{service_vrp[:dicho_level]}) before end_stage_insert  unassigned rate " \
-              "#{solution.unassigned.size}/#{service_vrp[:vrp].services.size}: " \
-              "#{(solution.unassigned.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
+              "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
+              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
 
           solution = end_stage_insert_unassigned(service_vrp, solution, job)
           Interpreters::SplitClustering.remove_empty_routes(solution)
@@ -134,8 +134,8 @@ module Interpreters
 
 
           log "dicho - level(#{service_vrp[:dicho_level]}) unassigned rate " \
-              "#{solution.unassigned.size}/#{service_vrp[:vrp].services.size}: " \
-              "#{(solution.unassigned.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
+              "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
+              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
         end
       else
         service_vrp[:vrp].configuration.resolution.init_duration = nil
@@ -284,7 +284,7 @@ module Interpreters
           next unless r.vehicle.skills.all?{ |xor_skills| (service.skills & xor_skills).size != service.skills.size }
 
           log "dicho - removed service #{a.service_id} from vehicle #{r.vehicle.id}"
-          solution.unassigned << a
+          solution.unassigned_stops << a
           r.stops.delete(a)
           # TODO: remove bad sticky?
         }
@@ -327,7 +327,7 @@ module Interpreters
       vehicle_count = (skills.empty? && !vrp.routes.empty?) ? [vrp.routes.size, 6].min : 3
       impacted_routes = []
       vehicles_with_skills.each_slice(vehicle_count) do |vehicles_indices|
-        remaining_service_ids = solution.unassigned.map(&:service_id) & unassigned_with_skills.map(&:id)
+        remaining_service_ids = solution.unassigned_stops.map(&:service_id) & unassigned_with_skills.map(&:id)
         next if remaining_service_ids.empty?
 
         rate_vehicles = vehicles_indices.size / vehicles_with_skills.size.to_f
@@ -376,7 +376,7 @@ module Interpreters
 
         # TODO: Remove unnecessary if conditions and .nil? checks
         # Initial routes can be refused... check unassigned size before take into account solution
-        next if remaining_service_ids.size < solution_loop.unassigned.size
+        next if remaining_service_ids.size < solution_loop.unassigned_stops.size
 
         if vrp.configuration.resolution.vehicle_limit # correct the lefover vehicle limit count
           @leftover_vehicle_limit -=
@@ -396,14 +396,14 @@ module Interpreters
 
     def self.end_stage_insert_unassigned(service_vrp, solution, job = nil)
       log "---> dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
-      return solution if solution.unassigned.empty?
+      return solution if solution.unassigned_stops.empty?
 
       vrp = service_vrp[:vrp]
-      log "try to insert #{solution.unassigned.size} unassigned from #{vrp.services.size} services"
+      log "try to insert #{solution.unassigned_stops.size} unassigned from #{vrp.services.size} services"
       transfer_unused_time_limit = 0
       vrp.routes = build_initial_routes([solution])
       vrp.configuration.resolution.init_duration = nil
-      unassigned_service_ids = solution.unassigned.map(&:service_id).compact
+      unassigned_service_ids = solution.unassigned_stops.map(&:service_id).compact
       unassigned_services = vrp.services.select{ |s| unassigned_service_ids.include?(s.id) }
       unassigned_services_by_skills = unassigned_services.group_by(&:skills)
 
@@ -413,7 +413,7 @@ module Interpreters
       unassigned_services_by_skills[[]] = [] if unassigned_services_by_skills.empty?
 
       unassigned_services_by_skills.each{ |skills, un_w_services|
-        next if solution.unassigned.empty?
+        next if solution.unassigned_stops.empty?
 
         insert_unassigned_by_skills(service_vrp, unassigned_services, un_w_services,
                                     skills, solution, transfer_unused_time_limit)

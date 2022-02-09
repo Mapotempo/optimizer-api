@@ -553,7 +553,7 @@ class Wrappers::VroomTest < Minitest::Test
         # Return empty result to make sure the code continues regularly
         Models::Solution.new(
           solvers: [:vroom],
-          unassigned: vrp_in.services.map{ |service| Models::Solution::Stop.new(service) }
+          unassigned_stops: vrp_in.services.map{ |service| Models::Solution::Stop.new(service) }
         )
       }
     ) do
@@ -580,7 +580,7 @@ class Wrappers::VroomTest < Minitest::Test
            solution.routes.first.stops.index{ |activity| activity.delivery_shipment_id == 'shipment_0' }
     assert solution.routes.first.stops.index{ |activity| activity.pickup_shipment_id == 'shipment_1' } <
            solution.routes.first.stops.index{ |activity| activity.delivery_shipment_id == 'shipment_1' }
-    assert_equal 0, solution.unassigned.size
+    assert_equal 0, solution.unassigned_stops.size
     assert_equal 6, solution.routes.first.stops.size
   end
 
@@ -600,7 +600,7 @@ class Wrappers::VroomTest < Minitest::Test
            solution.routes.first.stops.index{ |activity| activity.delivery_shipment_id == 'shipment_0' }
     assert solution.routes.first.stops.index{ |activity| activity.pickup_shipment_id == 'shipment_1' } <
            solution.routes.first.stops.index{ |activity| activity.delivery_shipment_id == 'shipment_1' }
-    assert_equal 0, solution.unassigned.size
+    assert_equal 0, solution.unassigned_stops.size
     assert_equal 6, solution.routes.first.stops.size
   end
 
@@ -691,7 +691,7 @@ class Wrappers::VroomTest < Minitest::Test
                  solution.routes.first.stops.index{ |activity| activity.delivery_shipment_id == 'shipment_0' })
     assert_equal(solution.routes.first.stops.index{ |activity| activity.pickup_shipment_id == 'shipment_1' } + 1,
                  solution.routes.first.stops.index{ |activity| activity.delivery_shipment_id == 'shipment_1' })
-    assert_equal 0, solution.unassigned.size
+    assert_equal 0, solution.unassigned_stops.size
     assert_equal 6, solution.routes.first.stops.size
   end
 
@@ -770,7 +770,7 @@ class Wrappers::VroomTest < Minitest::Test
     assert solution
     assert solution.routes.first.stops.index{ |activity| activity.pickup_shipment_id == 'shipment_1' } <
            solution.routes.first.stops.index{ |activity| activity.delivery_shipment_id == 'shipment_1' }
-    assert_equal 0, solution.unassigned.size
+    assert_equal 0, solution.unassigned_stops.size
     assert_equal 5, solution.routes.first.stops.size
   end
 
@@ -798,7 +798,7 @@ class Wrappers::VroomTest < Minitest::Test
     }
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom] }}, TestHelper.create(problem), nil)
-    assert_equal 1, solutions[0].unassigned.size, 'The solution is expected to contain 1 unassigned'
+    assert_equal 1, solutions[0].unassigned_stops.size, 'The solution is expected to contain 1 unassigned'
 
     assert_operator solutions[0].routes.first.stops.count(&:service_id), :<=, 2,
                     'The vehicle cannot load more than 2 services and 3 kg'

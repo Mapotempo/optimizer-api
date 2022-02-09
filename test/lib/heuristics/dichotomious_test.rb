@@ -30,25 +30,25 @@ class DichotomiousTest < Minitest::Test
       active_route_size = solutions[0].routes.count{ |route| route.count_services.positive? }
       # Check stops
       activity_assert_message =
-        "Too many unassigned services (#{solutions[0].unassigned.size}) for #{active_route_size} routes"
+        "Too many unassigned services (#{solutions[0].unassigned_stops.size}) for #{active_route_size} routes"
       if active_route_size > 12
-        assert solutions[0].unassigned.size <= 27, activity_assert_message
+        assert solutions[0].unassigned_stops.size <= 27, activity_assert_message
       elsif active_route_size == 12
-        assert solutions[0].unassigned.size <= 37, activity_assert_message
+        assert solutions[0].unassigned_stops.size <= 37, activity_assert_message
       elsif active_route_size == 11
-        assert solutions[0].unassigned.size <= 57, activity_assert_message
+        assert solutions[0].unassigned_stops.size <= 57, activity_assert_message
       else
-        assert solutions[0].unassigned.size <= 78, activity_assert_message
+        assert solutions[0].unassigned_stops.size <= 78, activity_assert_message
       end
 
       # Check routes
       route_assert_message =
-        "Too many routes (#{active_route_size}) to have #{solutions[0].unassigned.size} unassigned services"
-      if solutions[0].unassigned.size > 30
+        "Too many routes (#{active_route_size}) to have #{solutions[0].unassigned_stops.size} unassigned services"
+      if solutions[0].unassigned_stops.size > 30
         assert active_route_size < 12, route_assert_message
-      elsif solutions[0].unassigned.size > 15
+      elsif solutions[0].unassigned_stops.size > 15
         assert active_route_size < 13, route_assert_message
-      elsif solutions[0].unassigned.size > 5
+      elsif solutions[0].unassigned_stops.size > 5
         assert active_route_size < 14, route_assert_message
       else
         assert active_route_size < 15, route_assert_message

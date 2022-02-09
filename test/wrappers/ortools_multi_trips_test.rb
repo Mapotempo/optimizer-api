@@ -23,7 +23,7 @@ class MultiTripsTest < Minitest::Test
     vrp = VRP.lat_lon_capacitated
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 1, solutions[0].routes.size
-    assert_equal 4, solutions[0].unassigned.size
+    assert_equal 4, solutions[0].unassigned_stops.size
 
     # increasing number of trips increases overall available capacity and reduces unassigned :
 
@@ -35,7 +35,7 @@ class MultiTripsTest < Minitest::Test
     }]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 2, solutions[0].routes.size
-    assert_equal 2, solutions[0].unassigned.size
+    assert_equal 2, solutions[0].unassigned_stops.size
     routes_start = solutions[0].routes.collect{ |route| route.stops.first.info.begin_time }
     routes_end = solutions[0].routes.collect{ |route| route.stops.last.info.begin_time }
     assert_operator routes_end[0], :<=, routes_start[1]
@@ -45,7 +45,7 @@ class MultiTripsTest < Minitest::Test
     vrp[:relations].first[:linked_vehicle_ids] << vrp[:vehicles].last[:id]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 3, solutions[0].routes.size
-    assert_empty solutions[0].unassigned
+    assert_empty solutions[0].unassigned_stops
     routes_start = solutions[0].routes.collect{ |route| route.stops.first.info.begin_time }
     routes_end = solutions[0].routes.collect{ |route| route.stops.last.info.begin_time }
     [1, 2].each{ |next_one|
@@ -60,7 +60,7 @@ class MultiTripsTest < Minitest::Test
     vrp[:vehicles].first[:duration] = 10
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 1, solutions[0].routes.size
-    assert_equal 2, solutions[0].unassigned.size
+    assert_equal 2, solutions[0].unassigned_stops.size
 
     # increasing number of trips increases overall available duration and reduces unassigned :
 
@@ -72,7 +72,7 @@ class MultiTripsTest < Minitest::Test
     }]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 2, solutions[0].routes.size
-    assert_equal 1, solutions[0].unassigned.size
+    assert_equal 1, solutions[0].unassigned_stops.size
     routes_start = solutions[0].routes.collect{ |route| route.stops.first.info.begin_time }
     routes_end = solutions[0].routes.collect{ |route| route.stops.last.info.begin_time }
     assert_operator routes_end[0], :<=, routes_start[1]
@@ -82,7 +82,7 @@ class MultiTripsTest < Minitest::Test
     vrp[:relations].first[:linked_vehicle_ids] << vrp[:vehicles].last[:id]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
     assert_equal 3, solutions[0].routes.size
-    assert_empty solutions[0].unassigned
+    assert_empty solutions[0].unassigned_stops
     routes_start = solutions[0].routes.collect{ |route| route.stops.first.info.begin_time }
     routes_end = solutions[0].routes.collect{ |route| route.stops.last.info.begin_time }
     [1, 2].each{ |next_one|

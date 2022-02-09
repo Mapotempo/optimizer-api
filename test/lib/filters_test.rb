@@ -317,7 +317,7 @@ class FiltersTest < Minitest::Test
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
-    assert_equal 2, solutions[0].unassigned.size
+    assert_equal 2, solutions[0].unassigned_stops.size
     solutions[0].routes.each{ |route|
       assert_equal(2, route.stops.count(&:service_id))
     }

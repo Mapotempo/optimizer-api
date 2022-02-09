@@ -37,8 +37,8 @@ module Parsers
       solution.configuration.geometry = vrp.configuration.restitution.geometry
       solution.configuration.schedule_start_date = vrp.configuration.schedule&.start_date
 
-      log "solution - unassigned rate: #{solution.unassigned.size} of (ser: #{vrp.visits} " \
-          "(#{(solution.unassigned.size.to_f / vrp.visits * 100).round(1)}%)"
+      log "solution - unassigned rate: #{solution.unassigned_stops.size} of (ser: #{vrp.visits} " \
+          "(#{(solution.unassigned_stops.size.to_f / vrp.visits * 100).round(1)}%)"
       used_vehicle_count = solution.routes.count{ |r| r.stops.any?(&:service_id) }
       log "result - #{used_vehicle_count}/#{vrp.vehicles.size}(limit: #{vrp.configuration.resolution.vehicle_limit}) " \
           "vehicles used: #{used_vehicle_count}"

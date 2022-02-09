@@ -83,12 +83,12 @@ module Cleanse
         if previous_activity && stop && same_position(vrp, stop) &&
            same_empty_units(capacities_units, previous_activity, stop) &&
            !same_fill_units(capacities_units, previous_activity, stop)
-          add_unnassigned(solution.unassigned, stop, 'Duplicate empty service.')
+          add_unnassigned(solution.unassigned_stops, stop, 'Duplicate empty service.')
           true
         elsif previous_activity && stop && same_position(vrp, stop) &&
               same_fill_units(capacities_units, previous_activity, stop) &&
               !same_empty_units(capacities_units, previous_activity, stop)
-          add_unnassigned(solution.unassigned, stop, 'Duplicate fill service.')
+          add_unnassigned(solution.unassigned_stops, stop, 'Duplicate fill service.')
           true
         else
           previous_activity = stop if previous_activity.nil? || stop.service_id

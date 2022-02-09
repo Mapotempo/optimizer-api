@@ -604,7 +604,7 @@ class SplitClusteringTest < Minitest::Test
         OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
       end
       assert_equal check_vrp_services_size, problem.services.size
-      assert_equal problem.services.size, solutions[0].unassigned.count(&:service_id) +
+      assert_equal problem.services.size, solutions[0].unassigned_stops.count(&:service_id) +
                                           solutions[0].routes.sum{ |r| r.stops.count(&:service_id) }
     end
 
@@ -615,7 +615,7 @@ class SplitClusteringTest < Minitest::Test
       solution = Models::Solution.new(result)
       Interpreters::SplitClustering.remove_poor_routes(vrp, solution)
 
-      assert_equal 0, solution.unassigned.size, 'remove_poor_routes should not remove any services from this result'
+      assert_equal 0, solution.unassigned_stops.size, 'remove_poor_routes should not remove any services from this result'
     end
 
     def test_max_split_functionality
@@ -631,7 +631,7 @@ class SplitClusteringTest < Minitest::Test
           end
 
           assert solutions[0].routes.size <= 7, "There shouldn't be more than 7 routes -- it is #{solutions[0].routes.size}"
-          assert_equal [], solutions[0].unassigned, 'There should be no unassigned services.'
+          assert_equal [], solutions[0].unassigned_stops, 'There should be no unassigned services.'
           return
         end
       end
@@ -828,11 +828,11 @@ class SplitClusteringTest < Minitest::Test
       (1..@regularity_restarts).each{ |trial|
         puts "Regularity trial: #{trial}/#{@regularity_restarts}"
         solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
-        visits_unassigned << solutions[0].unassigned.size
-        unassigned_service_ids = solutions[0].unassigned.map(&:id)
+        visits_unassigned << solutions[0].unassigned_stops.size
+        unassigned_service_ids = solutions[0].unassigned_stops.map(&:id)
         unassigned_service_ids.uniq!
         services_unassigned << unassigned_service_ids.size
-        reason_unassigned << solutions[0].unassigned.map{ |unass|
+        reason_unassigned << solutions[0].unassigned_stops.map{ |unass|
           unass.reason.slice(0, 8)
         }.group_by{ |e| e }.transform_values(&:length)
       }
@@ -880,11 +880,11 @@ class SplitClusteringTest < Minitest::Test
       (1..@regularity_restarts).each{ |trial|
         OptimizerLogger.log "Regularity trial: #{trial}/#{@regularity_restarts}"
         solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
-        visits_unassigned << solutions[0].unassigned.size
-        unassigned_service_ids = solutions[0].unassigned.map(&:id)
+        visits_unassigned << solutions[0].unassigned_stops.size
+        unassigned_service_ids = solutions[0].unassigned_stops.map(&:id)
         unassigned_service_ids.uniq!
         services_unassigned << unassigned_service_ids.size
-        reason_unassigned << solutions[0].unassigned.map{ |unass|
+        reason_unassigned << solutions[0].unassigned_stops.map{ |unass|
           unass.reason.slice(0, 8)
         }.group_by{ |e| e }.transform_values(&:length)
       }
