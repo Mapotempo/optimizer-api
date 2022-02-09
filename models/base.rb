@@ -60,6 +60,18 @@ module Models
       end
     end
 
+    def to_hash
+      as_json
+    end
+
+    def to_s
+      as_json
+    end
+
+    def inspect
+      as_json
+    end
+
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|
