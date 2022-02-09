@@ -22,7 +22,7 @@ module Models
     field :polygon
     field :allocations, default: []
 
-    has_many :vehicles, class_name: 'Models::Vehicle'
+    has_many :vehicles, class_name: 'Models::Vehicle', as_json: :ids
 
     def decode_geom
       @geom = RGeo::GeoJSON.decode(polygon.to_json, json_parser: :json)
