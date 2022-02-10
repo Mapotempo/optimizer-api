@@ -582,6 +582,7 @@ module Wrappers
       stdin&.close
       stdout_and_stderr&.close
       pipe&.close
+      thread_proc&.call([])
       log "<---- run_ortools #{Time.now - tic}sec elapsed", level: :debug
     end
 
