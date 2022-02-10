@@ -54,22 +54,22 @@ fr:
   views:
     shared:
       send: Envoyer
-      csv_vehicles_label: 'Votre fichier vehicules csv :'
-      file_customer_label: 'Votre fichier clients csv :'
+      csv_vehicles_label: 'Véhicules (CSV) :'
+      file_customer_label: 'Clients (CSV) :'
     result:
       title: Visualisation des résultats
       show_result: Visualiser les résultats du job
       back: Retourner à l'index
     scheduling:
       status_label: 'Status de votre optimisation :'
-      csv_points_label: 'Fichier Points (CSV) :'
-      csv_units_label: 'Fichier Units (CSV) :'
-      csv_capacities_label: 'Fichier Capacities (CSV) :'
-      csv_quantities_label: 'Fichier Quantities (CSV) :'
-      csv_timewindows_label: 'Fichier Timewindows (CSV) :'
-      csv_services_label: 'Fichier Services (CSV) :'
-      csv_shipments_label: 'Fichier Shipments (CSV) :'
-      json_config_label: 'Fichier de configuration (JSON) :'
+      csv_points_label: 'Points (CSV) :'
+      csv_units_label: 'Units (CSV) :'
+      csv_capacities_label: 'Capacities (CSV) :'
+      csv_quantities_label: 'Quantities (CSV) :'
+      csv_timewindows_label: 'Timewindows (CSV) :'
+      csv_services_label: 'Services (CSV) :'
+      csv_shipments_label: 'Shipments (CSV) :'
+      json_config_label: 'Configuration (JSON) :'
       waiting_submit: 'En attente de l''envoi du problème'
     pickup_delivery:
       optim_options_legend: 'Options de l''optimisation :'
@@ -96,4 +96,4 @@ fr:
         import_vehicle_file_columns: 'Votre fichier véhicules doit contenir les colonnes suivantes :'
         setup_multiplier: 'setup_multiplier : coefficient multiplicateur des durées pickup_setup ou delivery_setup associée au véhicule (Ex : pickup_setup = 00:10:00 & setup_multiplier = 1,5 --> durée de préparation : 00:15:00)'
         setup_cost: 'setup_cost : coût associé à la durée de préparation.'
-        bold_columns: 'Les colonnes en gras sont obligatoires.'
+        mandatory_columns: 'Les colonnes en gras sont obligatoires.'

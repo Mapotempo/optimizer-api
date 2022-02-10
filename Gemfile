@@ -7,6 +7,7 @@ gem 'puma'
 gem 'rack', github: 'senhalil/rack', branch: 'improved-asserts' # remove the custom github definition after the following PR commit is on the stable branch https://github.com/rack/rack/commit/1970771c7e01d54cb631dae0bc7618e2561ad1c7
 gem 'rack-contrib', require: 'rack/contrib'
 gem 'rack-cors', require: 'rack/cors'
+gem 'rack-server-pages', '~> 0.1.0'
 gem 'rake'
 gem 'thin'
 
@@ -85,4 +86,3 @@ group :production do
   gem 'redis-activesupport'
 end
 
-gem "rack-server-pages", "~> 0.1.0"

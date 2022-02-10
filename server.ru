@@ -42,10 +42,4 @@ run Rack::ServerPages::NotFound
 #\ -p 1791
 run Api::Root
 
-# Serve files from the public directory
-# use Rack::TryStatic,
-#     root: 'public',
-#     urls: %w[/],
-#     try: ['.html', 'index.html', '/index.html']
-
 use ActionDispatch::RemoteIp
