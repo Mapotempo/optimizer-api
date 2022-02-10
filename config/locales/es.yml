@@ -82,7 +82,7 @@ es:
         params_optim: 'Establezca sus parámetros de optimización:'
         params_optim_a: '(a) (opcional) La duración mínima (en segundos), se garantiza la ejecución de la optimización (suponiendo una instancia factible).'
         params_optim_b: '(b) (opcional) La duración máxima (en segundos) de la optimización tras la cual se devolverá el último resultado.'
-        params_optim_help: 'Al menos una de las condiciones de parada (a), (b), (c) debe ser rellenada.'
+        params_optim_help: 'Al menos una de las condiciones de parada (a), (b) debe ser rellenada.'
         send_click: 'Haga clic en "Enviar"'
         send_click_a: 'Se envía un nuevo envío al motor de optimización.'
         send_click_b: 'Cada nuevo envío se pone al final de una cola de procesos.'
