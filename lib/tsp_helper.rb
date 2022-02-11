@@ -17,41 +17,54 @@
 #
 
 module TSPHelper
-  def self.create_tsp(vrp, vehicle)
-    services = []
-    tsp_prefix = Digest::MD5.hexdigest(
+  def self.create_tsp(vrp, options = {})
+    services = options[:services] || vrp.services
+    tsp_suffix = Digest::MD5.hexdigest(
       (vrp.points.map(&:id) + vrp.services.map(&:id) + vrp.vehicles.map(&:id) + [Time.now.to_f, rand]).join(' ')
     )
-    vrp.points.each{ |pt|
-      service = vrp.services.find{ |service_| service_.activity.point_id == pt.id }
-      next if !service
+    vehicle = options[:vehicle] || vrp.vehicles.first
+    start_point = options.key?(:start_point) ? options[:start_point] : vehicle.start_point
+    end_point = options.key?(:start_point) ? options[:end_point] : vehicle.end_point
 
-      services << {
-        id: "#{tsp_prefix}_#{service[:id]}",
-        activity: {
-          point_id: "#{tsp_prefix}_#{service.activity.point_id}",
-          duration: service.activity.duration
-        }
-      }
+    tsp_points = [convert_point(start_point, tsp_suffix), convert_point(end_point, tsp_suffix)].compact
+    tsp_services = services.map{ |service|
+      tsp_points << convert_point(service.activity.point, tsp_suffix)
+      convert_service(service, tsp_suffix)
+    }
+    # raise tsp_points.map(&:id).uniq.inspect
+    tsp_vehicle = {
+      id: "#{tsp_suffix}_#{vehicle.id}",
+      start_point_id: start_point && "#{tsp_suffix}_#{start_point.id}",
+      end_point_id: end_point && "#{tsp_suffix}_#{end_point.id}",
+      matrix_id: vehicle.matrix_id
     }
 
     problem = {
-      matrices: vrp.matrices,
-      points: vrp.points.collect{ |pt|
-        {
-          id: "#{tsp_prefix}_#{pt.id}",
-          matrix_index: pt.matrix_index
-        }
-      },
-      vehicles: [{
-        id: "#{tsp_prefix}_#{vehicle.id}",
-        start_point_id: "#{tsp_prefix}_#{vehicle.start_point_id}",
-        matrix_id: vehicle.matrix_id
-      }],
-      services: services
+      matrices: [vrp.matrices.find{ |matrix| matrix.id == vehicle.matrix_id }],
+      points: tsp_points.uniq{ |p| p[:id] },
+      services: tsp_services,
+      vehicles: [tsp_vehicle]
     }
 
-    Models::Vrp.create(problem, false)
+    Models::Vrp.create(problem, delete: false)
+  end
+
+  def self.convert_point(point, tsp_suffix)
+    {
+      id: "#{tsp_suffix}_#{point.id}",
+      matrix_index: point.matrix_index
+    }
+  end
+
+  def self.convert_service(service, tsp_suffix)
+    {
+      id: "#{tsp_suffix}_#{service.id}",
+      original_id: service.original_id || service.id,
+      activity: {
+        point_id: "#{tsp_suffix}_#{service.activity.point_id}",
+        duration: service.activity.duration
+      }
+    }
   end
 
   def self.solve(tsp)

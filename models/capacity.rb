@@ -29,6 +29,6 @@ module Models
     # validates_numericality_of :initial
     # validates_numericality_of :overload_multiplier, allow_nil: true
 
-    belongs_to :unit, class_name: 'Models::Unit'
+    belongs_to :unit, class_name: 'Models::Unit', as_json: :id
   end
 end

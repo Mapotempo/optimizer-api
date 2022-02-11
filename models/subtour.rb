@@ -27,7 +27,7 @@ module Models
     field :skills, default: []
     field :duration, default: nil
 
-    has_many :transmodal_stops, class_name: 'Models::Point'
-    has_many :capacities, class_name: 'Models::Capacity'
+    has_many :transmodal_stops, class_name: 'Models::Point', as_json: :ids
+    has_many :capacities, class_name: 'Models::Capacity', as_json: :ids
   end
 end

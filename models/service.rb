@@ -19,6 +19,7 @@ require './models/base'
 
 module Models
   class Service < Base
+    field :id
     field :original_id, default: nil
 
     field :priority, default: 4
@@ -35,6 +36,7 @@ module Models
     field :last_possible_days, default: []
 
     field :visits_number, default: 1
+    field :visit_index, default: nil
 
     # validates_numericality_of :visits_number
 
@@ -49,20 +51,21 @@ module Models
 
     # validates_inclusion_of :type, :in => %i(service pickup delivery)
 
-    field :skills, default: []
-    field :original_skills, default: []
+    field :skills
+    field :original_skills
 
     ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'
     has_many :activities, class_name: 'Models::Activity'
-    has_many :sticky_vehicles, class_name: 'Models::Vehicle'
+    has_many :sticky_vehicles, class_name: 'Models::Vehicle', as_json: :ids
     has_many :quantities, class_name: 'Models::Quantity'
-    has_many :relations, class_name: 'Models::Relation'
-  end
+    has_many :relations, class_name: 'Models::Relation', as_json: :none
 
-  def self.create(hash)
-    hash[:skills]&.sort!
+    def self.create(hash)
+      hash[:skills] = [] if hash[:skills].to_a.empty?
+      hash[:skills].sort!
 
-    super(hash)
+      super(hash)
+    end
   end
 end

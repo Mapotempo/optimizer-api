@@ -54,6 +54,36 @@ class Api::V01::OutputTest < Minitest::Test
     # tmpdir and generated files are already deleted
   end
 
+  def test_basic_output
+    vrp = VRP.lat_lon
+    vrp[:matrices].first[:distance] = vrp[:matrices].first[:time]
+    response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body, symbolize_names: true)
+
+    solution = result[:solutions][0]
+    solution[:cost_details].each{ |_key, value|
+      assert value
+    }
+    detail_keys = %i[lat lon setup_duration duration quantities timewindows]
+    increasing_activity_keys = %i[begin_time end_time departure_time current_distance]
+    activity_keys = %i[point_id waiting_time travel_time travel_distance type]
+    solution[:routes].each{ |route|
+      increasing_activity_keys.each{ |key|
+        previous_value = -1
+        route[:activities].each.with_index{ |activity, index|
+          assert_operator activity[key], :>=, previous_value, "#{key} at index #{index} should increase along the route"
+          previous_value = activity[key]
+        }
+      }
+
+      route[:activities].each{ |activity|
+        activity_keys.each{ |key| assert activity[key] }
+
+        detail_keys.each{ |key| assert activity[:detail][key] }
+      }
+    }
+  end
+
   def test_day_week_num_and_other_periodic_fields
     vrp = VRP.periodic
     vrp[:services].first[:visits_number] = 2
@@ -83,7 +113,7 @@ class Api::V01::OutputTest < Minitest::Test
     result = JSON.parse(response.body)
     assert_equal [0, 1, 2, 3], result['solutions'].first['routes'].collect{ |route| route['day'] }.sort
     visit_indices = result['solutions'].first['routes'].flat_map{ |r|
-      r['activities'].flat_map{ |a| a['visit_index'] }
+      r['activities'].map{ |a| a['visit_index'] }
     }.compact
     assert_equal [1], visit_indices.uniq
 
@@ -231,8 +261,8 @@ class Api::V01::OutputTest < Minitest::Test
     vrp = VRP.lat_lon_periodic
     vrp[:name] = name
     vrp[:configuration][:preprocessing][:partitions] = [
-      {method: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :vehicle},
-      {method: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :work_day}
+      {technique: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :vehicle},
+      {technique: 'balanced_kmeans', metric: 'duration', restarts: 1, entity: :work_day}
     ]
     vrp[:configuration][:resolution][:repetition] = 1
     vrp = TestHelper.create(vrp)
@@ -283,7 +313,7 @@ class Api::V01::OutputTest < Minitest::Test
       OutputHelper::Result.stub(
         :build_csv,
         lambda { |solutions|
-          assert_equal parameter_value, solutions.first[:use_deprecated_csv_headers]
+          assert_equal parameter_value, solutions.first[:configuration][:deprecated_headers]
         }
       ) do
         submit_csv api_key: 'demo', vrp: vrp, http_accept_language: 'fr'

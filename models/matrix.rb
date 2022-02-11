@@ -18,7 +18,14 @@
 require './models/base'
 
 module Models
+  DIMENSIONS = %i[time distance value].freeze
+
   class Matrix < Base
+    field :id
     fields :time, :distance, :value
+
+    def self.dimensions
+      DIMENSIONS
+    end
   end
 end

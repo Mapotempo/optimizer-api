@@ -18,10 +18,11 @@
 require './models/base'
 
 module Models
-  class Rest < Base
+  class Rest < Activity
+    field :id
     field :duration, default: 0
-    field :late_multiplier, default: 0
-    field :exclusion_cost, default: nil
+    field :late_multiplier, default: 0, vrp_result: :hide
+    field :exclusion_cost, default: nil, vrp_result: :hide
 
     # ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params

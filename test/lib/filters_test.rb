@@ -141,7 +141,6 @@ class FiltersTest < Minitest::Test
       services: [
         {
           id: 'service_0',
-          type: 'service',
           activity: {
             point_id: 'point_0'
           },
@@ -316,11 +315,11 @@ class FiltersTest < Minitest::Test
     vrp[:services][0][:activity][:duration] = 21
     vrp[:services][4][:activity][:timewindows] = [{ start: 0, end: 10 }]
 
-    result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+    solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
 
-    assert_equal 2, result[:unassigned].size
-    result[:routes].each{ |route|
-      assert_equal(2, route[:activities].count{ |activity| activity[:service_id] })
+    assert_equal 2, solutions[0].unassigned_stops.size
+    solutions[0].routes.each{ |route|
+      assert_equal(2, route.stops.count(&:service_id))
     }
   end
 end

@@ -188,6 +188,7 @@ class HeuristicTest < Minitest::Test
       add_missing_visits_candidate_routes.each_value{ |vehicle| vehicle.each_value{ |route| route[:matrix_id] = vrp.vehicles.first.matrix_id } }
       s.instance_variable_set(:@candidate_routes, add_missing_visits_candidate_routes)
       services_data = Marshal.load(File.binread('test/fixtures/add_missing_visits_services_data.bindump')) # rubocop: disable Security/MarshalLoad
+      services_data.each_value{ |v| v[:raw].skills ||= [] }
       s.instance_variable_set(:@services_data, services_data)
       s.instance_variable_set(:@services_assignment, Marshal.load(File.binread('test/fixtures/add_missing_visits_services_assignment.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@points_assignment, Marshal.load(File.binread('test/fixtures/add_missing_visits_points_assignment.bindump'))) # rubocop: disable Security/MarshalLoad
@@ -322,7 +323,7 @@ class HeuristicTest < Minitest::Test
 
     def test_compute_next_insertion_cost_when_activities
       vrp = TestHelper.create(VRP.basic)
-      vrp.schedule_range_indices = { start: 0, end: 365 }
+      vrp.configuration.schedule = Models::Schedule.create(range_indices: { start: 0, end: 365 })
       vrp.vehicles = []
       s = Wrappers::PeriodicHeuristic.new(vrp)
 
@@ -568,7 +569,7 @@ class HeuristicTest < Minitest::Test
     def test_compute_latest_authorized_day
       [10, 14].each{ |visits_number|
         vrp = TestHelper.create(VRP.periodic)
-        vrp.schedule_range_indices[:end] = 13
+        vrp.configuration.schedule.range_indices[:end] = 13
 
         if visits_number == 10
           vrp.vehicles.first.sequence_timewindows = (0..4).collect{ |day_index|
@@ -623,7 +624,7 @@ class HeuristicTest < Minitest::Test
 
     def test_exist_possible_first_route_according_to_same_point_day
       vrp = TestHelper.create(VRP.lat_lon_periodic)
-      vrp.resolution_same_point_day = true
+      vrp.configuration.resolution.same_point_day = true
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
 
@@ -692,8 +693,8 @@ class HeuristicTest < Minitest::Test
 
     def test_generate_timewindows_with_extra_day_indices
       vrp = TestHelper.create(VRP.periodic)
-      vrp.schedule_range_indices[:start] = 1 # schedule starts at 1 but there is a service tw with day_index = 0
-      vrp.schedule_range_indices[:end] = 2
+      vrp.configuration.schedule.range_indices[:start] = 1 # schedule starts at 1 but there is a service tw with day_index = 0
+      vrp.configuration.schedule.range_indices[:end] = 2
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       periodic = Interpreters::PeriodicVisits.new(vrp)
 
@@ -709,7 +710,7 @@ class HeuristicTest < Minitest::Test
     def test_day_in_possible_interval
       vrp = TestHelper.create(VRP.periodic)
       vrp.services.first.visits_number = 4
-      vrp.schedule_range_indices[:end] = 40
+      vrp.configuration.schedule.range_indices[:end] = 40
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
 

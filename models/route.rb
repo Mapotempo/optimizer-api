@@ -21,6 +21,6 @@ module Models
   class Route < Base
     field :mission_ids, default: []
     field :day_index
-    belongs_to :vehicle, class_name: 'Models::Vehicle'
+    belongs_to :vehicle, class_name: 'Models::Vehicle', as_json: :id
   end
 end

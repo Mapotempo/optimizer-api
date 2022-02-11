@@ -30,12 +30,12 @@ module Wrappers
       return if vrp.services.empty?
 
       # global data
-      @schedule_end = vrp.schedule_range_indices[:end]
-      @allow_partial_assignment = vrp.resolution_allow_partial_assignment
-      @same_point_day = vrp.resolution_same_point_day
+      @schedule_end = vrp.configuration.schedule.range_indices[:end]
+      @allow_partial_assignment = vrp.configuration.resolution.allow_partial_assignment
+      @same_point_day = vrp.configuration.resolution.same_point_day
       @relaxed_same_point_day = false
       @duration_in_tw = false # TODO: create parameter for this
-      @spread_among_days = !vrp.resolution_minimize_days_worked
+      @spread_among_days = !vrp.configuration.resolution.minimize_days_worked
 
       # heuristic data
       @services_data = {}
@@ -80,7 +80,7 @@ module Wrappers
     def compute_initial_solution(vrp, &block)
       if vrp.services.empty?
         # TODO : create and use result structure instead of using wrapper function
-        vrp[:preprocessing_heuristic_result] = empty_result('heuristic', vrp)
+        vrp.configuration.preprocessing.heuristic_result = vrp.empty_solution(:heuristic)
         return []
       end
 
@@ -106,7 +106,7 @@ module Wrappers
       save_status
 
       # Reorder routes with solver and try to add more visits
-      if vrp.resolution_solver && !@candidate_services_ids.empty?
+      if vrp.configuration.resolution.solver && !@candidate_services_ids.empty?
         block&.call(nil, nil, nil, 'periodic heuristic - re-ordering routes', nil, nil, nil)
         reorder_stops(vrp)
         @output_tool&.add_comment('FILL_AFTER_REORDERING')
@@ -381,13 +381,14 @@ module Wrappers
       # if no capacity limitation, would there be a way to assign this service
       # while respecting same_point_day constraints ?
       point_id = @services_data[service_id][:points_ids][0]
-      reason = "All this service's visits can not be assigned with other services at same location" unless exist_possible_first_route_according_to_same_point_day?(service_id, point_id)
-
+      unless exist_possible_first_route_according_to_same_point_day?(service_id, point_id)
+        reason = "All this service's visits can not be assigned with other services at same location"
+      end
       reason
     end
 
     def collect_unassigned
-      unassigned = []
+      unassigned_stops = []
 
       @services_assignment.each{ |id, data|
         next unless data[:unassigned_indices].any?
@@ -397,14 +398,15 @@ module Wrappers
         end
 
         data[:unassigned_indices].each{ |index|
+          service_in_vrp = @services_data[id][:raw]
           unassigned_id = "#{id}_#{index}_#{@services_data[id][:raw].visits_number}"
-          unassigned << get_unassigned_info(unassigned_id,
-                                            @services_data[id][:raw],
-                                            @services_assignment[id][:unassigned_reasons].join(','))
+          unassigned_stops << Models::Solution::Stop.new(service_in_vrp,
+                                                   service_id: unassigned_id,
+                                                   reason: @services_assignment[id][:unassigned_reasons].join(','))
         }
       }
 
-      unassigned
+      unassigned_stops
     end
 
     def provide_group_tws(services, day)
@@ -452,22 +454,22 @@ module Wrappers
           route_vrp.routes = collect_generated_routes(route_vrp.vehicles.first, route_data[:stops])
           route_vrp.services = provide_group_tws(route_vrp.services, day) if @same_point_day || @relaxed_same_point_day # to have same data in ORtools and periodic. Customers should ensure all timewindows are the same for same points
 
-          result = OptimizerWrapper.solve(service: :ortools, vrp: route_vrp)
+          solution = OptimizerWrapper.solve(service: :ortools, vrp: route_vrp)
 
-          next if result.nil? || !result[:unassigned].empty?
+          next if solution.nil? || !solution.unassigned_stops.empty?
 
           back_to_depot = route_data[:stops].last[:end] +
                           matrix(route_data, route_data[:stops].last[:point_id], route_data[:end_point_id])
           periodic_route_time = back_to_depot - route_data[:stops].first[:start]
-          solver_route_time = (result[:routes].first[:activities].last[:begin_time] -
-                              result[:routes].first[:activities].first[:begin_time]) # last activity is vehicle depot
+          solver_route_time = (solution.routes.first.stops.last.info.begin_time -
+                              solution.routes.first.stops.first.info.begin_time) # last activity is vehicle depot
 
           minimum_duration = @candidate_services_ids.flat_map{ |s| @services_data[s][:durations] }.min
           original_indices = route_data[:stops].collect{ |s| @indices[s[:id]] }
           next if periodic_route_time - solver_route_time < minimum_duration ||
-                  result[:routes].first[:activities].collect{ |stop| @indices[stop[:service_id]] }.compact == original_indices # we did not change our points order
+                  solution.routes.first.stops.collect{ |act| @indices[act.service_id] }.compact == original_indices # we did not change our points order
 
-          route_data[:stops] = compute_route_from(route_data, result[:routes].first[:activities])
+          route_data[:stops] = compute_route_from(route_data, solution.routes.first.stops)
         }
       }
     end
@@ -552,7 +554,7 @@ module Wrappers
     def compute_route_from(new_route, solver_route)
       solver_order = solver_route.collect{ |s| s[:service_id] }.compact
       new_route[:stops].sort_by!{ |stop| solver_order.find_index(stop[:id]) }.collect{ |s| s[:id] }
-      update_route(new_route, 0, solver_route.first[:begin_time])
+      update_route(new_route, 0, solver_route.first.info.begin_time)
     end
 
     def compute_costs_for_route(route_data, set = nil)
@@ -1047,20 +1049,6 @@ module Wrappers
       list
     end
 
-    def get_unassigned_info(custom_id, service_in_vrp, reason)
-      {
-        original_service_id: service_in_vrp.id,
-        service_id: custom_id,
-        point_id: service_in_vrp.activity&.point_id,
-        detail: build_detail(service_in_vrp,
-                             service_in_vrp.activity,
-                             service_in_vrp.activity&.point,
-                             nil, nil, nil),
-        type: 'service',
-        reason: reason
-      }
-    end
-
     def insert_point_in_route(route_data, point_to_add, first_visit = true)
       ### modify [route_data] such that [point_to_add] is in the route ###
       current_route = route_data[:stops]
@@ -1114,53 +1102,34 @@ module Wrappers
       end
     end
 
-    def get_stop(day, vrp, type, vehicle, data = {})
+    def get_stop(day, type, vehicle, data = {})
       size_weeks = (@schedule_end.to_f / 7).ceil.to_s.size
       week = Helper.string_padding(day / 7 + 1, size_weeks)
+      times = Models::Solution::Stop::Info.new(begin_time: data[:arrival],
+                                               day_week_num: "#{day % 7}_#{week}",
+                                               day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}")
 
-      service_in_vrp = @services_data[data[:id]][:raw] if type == 'service'
-      associated_point = vrp.points.find{ |point| point.id == data[:point_id] }
-
-      stop_detail = case type
-                    when 'service'
-                      build_detail(
-                        service_in_vrp, service_in_vrp.activity || service_in_vrp.activities[data[:activity]],
-                        associated_point, day % 7, nil, vehicle
-                      )
-                    else
-                      build_detail(nil, nil, associated_point, nil, nil, vehicle)
-                    end
-      stop_detail[:setup_duration] = data[:considered_setup_duration]
-      if type == 'service'
+      case type
+      when 'start'
+        Models::Solution::Stop.new(vehicle.start_point, info: times)
+      when 'end'
+        Models::Solution::Stop.new(vehicle.end_point, info: times)
+      when 'service'
+        service = @services_data[data[:id]][:raw] if type == 'service'
+        loads = service.quantities.map{ |quantity|
+          Models::Solution::Load.new(quantity: Models::Quantity.new(unit: quantity.unit))
+        }
         number_in_sequence =
           @services_assignment[data[:id]][:assigned_indices][@services_assignment[data[:id]][:days].find_index(day)]
+        Models::Solution::Stop.new(
+          service,
+          service_id: "#{data[:id]}_#{number_in_sequence}_#{service.visits_number}",
+          visit_index: number_in_sequence,
+          info: times,
+          index: data[:activity],
+          loads: loads
+        )
       end
-      {
-        day_week_num: "#{day % 7}_#{week}",
-        day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}",
-        point_id: data[:point_id],
-        service_id: ("#{data[:id]}_#{number_in_sequence}_#{service_in_vrp.visits_number}" if type == 'service'),
-        original_service_id: service_in_vrp&.id,
-        travel_time: data[:travel_time],
-        travel_distance: data[:travel_distance],
-        begin_time: data[:arrival],
-        end_time: data[:end],
-        departure_time: data[:end],
-        type: type,
-        alternative: (data[:activity] if service_in_vrp&.activities),
-        detail: stop_detail
-      }.delete_if{ |_k, v| !v }
-    end
-
-    def collect_route_stops(route_data, day, vrp, vehicle)
-      previous = route_data[:start_point_id]
-      route_data[:stops].collect{ |stop|
-        stop[:travel_time] = matrix(route_data, previous, stop[:point_id])
-        stop[:travel_distance] = matrix(route_data, previous, stop[:point_id], :distance)
-        previous = stop[:point_id]
-
-        get_stop(day, vrp, 'service', vehicle, stop)
-      }
     end
 
     def get_route_data(route_data)
@@ -1187,24 +1156,15 @@ module Wrappers
       [route_start, route_end, final_travel_time, final_travel_distance]
     end
 
-    def get_activities(day, route_data, vrp, vehicle)
-      computed_activities = []
-      route_start, route_end, final_travel_time, final_travel_distance = get_route_data(route_data)
+    def get_activities(day, route_data, vehicle)
+      computed_stops = []
+      route_start, route_end, _final_travel_time, _final_travel_distance = get_route_data(route_data)
 
-      if route_data[:start_point_id]
-        computed_activities <<
-          get_stop(day, vrp, 'depot', vehicle,
-                   point_id: route_data[:start_point_id], arrival: route_start, travel_time: 0, travel_distance: 0)
-      end
-      computed_activities += collect_route_stops(route_data, day, vrp, vehicle)
-      if route_data[:end_point_id]
-        computed_activities <<
-          get_stop(day, vrp, 'depot', vehicle,
-                   point_id: route_data[:end_point_id], arrival: route_end,
-                   travel_time: final_travel_time, travel_distance: final_travel_distance)
-      end
+      computed_stops << get_stop(day, 'start', vehicle, arrival: route_start) if route_data[:start_point_id]
+      computed_stops += route_data[:stops].map{ |stop| get_stop(day, 'service', vehicle, stop) }
+      computed_stops << get_stop(day, 'end', vehicle, arrival: route_end) if route_data[:end_point_id]
 
-      [computed_activities, route_start, route_end]
+      [computed_stops, route_start, route_end]
     end
 
     # At the end of algorithm, deduces which visit number is assigned
@@ -1232,8 +1192,8 @@ module Wrappers
     end
 
     def prepare_output_and_collect_routes(vrp)
-      routes = []
-      solution = []
+      vrp_routes = []
+      solution_routes = []
 
       compute_visits_number
 
@@ -1244,35 +1204,27 @@ module Wrappers
               # in case two vehicles have same global_day_index :
               v.timewindow.start % 86400 == route_data[:tw_start] && v.timewindow.end % 86400 == route_data[:tw_end]
           }
-          computed_activities, start_time, end_time = get_activities(day, route_data, vrp, vrp_vehicle)
+          computed_stops, _start_time, _end_time = get_activities(day, route_data, vrp_vehicle)
 
-          routes << {
+          vrp_routes << {
             vehicle_id: vrp_vehicle.id,
-            mission_ids: computed_activities.collect{ |stop| stop[:service_id] }.compact
+            mission_ids: computed_stops.collect{ |stop| stop[:service_id] }.compact
           }
 
-          solution << {
-            vehicle_id: vrp_vehicle.id,
-            original_vehicle_id: original_vehicle_id,
-            start_time: start_time,
-            end_time: end_time,
-            activities: computed_activities
-          }
+          solution_routes << Models::Solution::Route.new(stops: computed_stops,
+                                                         vehicle: vrp_vehicle)
         }
       }
-
-      unassigned = collect_unassigned
-      vrp[:preprocessing_heuristic_result] = {
-        cost: @cost,
-        cost_details: Models::CostDetails.create({}), # TODO: fulfill with solution costs
-        solvers: ['heuristic'],
-        iterations: 0,
-        routes: solution,
-        unassigned: unassigned,
-        elapsed: (Time.now - @starting_time) * 1000 # ms
-      }
-
-      routes
+      unassigned_stops = collect_unassigned
+      # TODO: fulfill cost_details with solution_routes costs
+      solution = Models::Solution.new(cost: @cost,
+                                      solvers: [:heuristic],
+                                      routes: solution_routes,
+                                      unassigned_stops: unassigned_stops,
+                                      elapsed: (Time.now - @starting_time) * 1000) # ms
+      solution.parse(vrp)
+      vrp.configuration.preprocessing.heuristic_result = solution
+      vrp_routes
     end
 
     def select_point(insertion_costs, empty_route)
@@ -1363,23 +1315,23 @@ module Wrappers
       route_vrp.vehicles = [vehicle]
 
       # configuration
-      route_vrp.schedule_range_indices = nil
-      route_vrp.schedule_start_date = nil
+      route_vrp.configuration.schedule.range_indices = nil
+      route_vrp.configuration.schedule.start_date = nil
 
-      route_vrp.resolution_minimum_duration = 100
-      route_vrp.resolution_time_out_multiplier = 5
-      route_vrp.resolution_solver = true
-      route_vrp.restitution_intermediate_solutions = false
+      route_vrp.configuration.resolution.minimum_duration = 100
+      route_vrp.configuration.resolution.time_out_multiplier = 5
+      route_vrp.configuration.resolution.solver = true
+      route_vrp.configuration.restitution.intermediate_solutions = false
 
-      route_vrp.preprocessing_first_solution_strategy = nil
+      route_vrp.configuration.preprocessing.first_solution_strategy = nil
       # NOT READY YET :
-      # route_vrp.preprocessing_cluster_threshold = 0
-      # route_vrp.preprocessing_force_cluster = true
-      route_vrp.preprocessing_partitions = []
-      route_vrp.restitution_csv = false
+      # route_vrp.configuration.preprocessing.cluster_threshold = 0
+      # route_vrp.configuration.preprocessing.force_cluster = true
+      route_vrp.configuration.preprocessing.partitions = []
+      route_vrp.configuration.restitution.csv = false
 
       # TODO : write conf by hand to avoid mistakes
-      # will need load ? use route_vrp[:configuration] ... or route_vrp.preprocessing_first_sol
+      # will need load ? use route_vrp[:configuration] ... or route_vrp.configuration.preprocessing.first_sol
 
       route_vrp
     end

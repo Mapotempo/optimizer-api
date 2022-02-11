@@ -30,7 +30,8 @@ class InterpreterTest < Minitest::Test
     problem[:services].each{ |service|
       service[:visits_number] = 2
     }
-    number_of_days = problem[:configuration][:schedule][:range_indices][:end] - problem[:configuration][:schedule][:range_indices][:start] + 1
+    number_of_days = problem[:configuration][:schedule][:range_indices][:end] -
+                     problem[:configuration][:schedule][:range_indices][:start] + 1
 
     expanded_vrp = periodic_expand(problem)
     assert_equal number_of_days, expanded_vrp[:vehicles].size
@@ -59,14 +60,16 @@ class InterpreterTest < Minitest::Test
     problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200 }] }
 
     expanded_vrp = periodic_expand(problem)
-    assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 1 }, 'There are no day index so we can keep original service timewindows'
+    assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 1 },
+           'There are no day index so we can keep original service timewindows'
 
     problem = VRP.periodic
     problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200, day_index: 0 }] }
     problem[:configuration][:schedule][:range_indices][:end] = 10
 
     expanded_vrp = periodic_expand(problem)
-    assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 2 }, 'There are two mondays and service is only available on mondays so there should be two timewindows'
+    assert expanded_vrp.services.all?{ |s| s.activity.timewindows.size == 2 },
+           'There are two mondays and service is only available on mondays so there should be two timewindows'
 
     problem = VRP.periodic
     problem[:configuration][:schedule][:range_indices][:end] = 10
@@ -74,7 +77,8 @@ class InterpreterTest < Minitest::Test
     problem[:services].each{ |s| s[:activity][:timewindows] = [{ start: 0, end: 200 }] }
 
     expanded_vrp = periodic_expand(problem)
-    assert expanded_vrp.services.all?{ |s| s.activity.timewindows.uniq.size == 11 }, 'There should be one timewindow per day because vehicle has day_indices'
+    assert expanded_vrp.services.all?{ |s| s.activity.timewindows.uniq.size == 11 },
+           'There should be one timewindow per day because vehicle has day_indices'
   end
 
   def test_generated_vehicle_timewindow_after_periodic_expand
@@ -82,20 +86,26 @@ class InterpreterTest < Minitest::Test
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10 }
     expanded_vrp = periodic_expand(problem)
     assert_equal 4, expanded_vrp.vehicles.size, 'There should be as many vehicles as days in schedule'
-    assert_equal 1, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size, 'No need to expand timewindows when no day_index are provided'
+    assert_equal 1, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size,
+                 'No need to expand timewindows when no day_index are provided'
 
     problem = VRP.periodic
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10 }
     problem[:services].first[:activity][:timewindows] = [{ start: 0, end: 10, day_index: 0 }]
     expanded_vrp = periodic_expand(problem)
     assert_equal 4, expanded_vrp.vehicles.size, 'There should be as many vehicles as days in schedule'
-    assert_equal 4, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size, 'There should be as many vehicles as days in schedule because at least one day_index has been specified'
+    assert_equal 4, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size,
+                    'There should be as many vehicles as days in schedule because ' \
+                    'at least one day_index has been specified'
 
     problem = VRP.periodic
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10, day_index: 1 }
     expanded_vrp = periodic_expand(problem)
-    assert_equal 1, expanded_vrp.vehicles.size, 'There should be only one vehicle because there is only one tuesday and this vehicle is not available other days'
-    assert_equal 86400, expanded_vrp.vehicles.first.timewindow.start, 'Timewindows should be properly expanded, according to day_index'
+    assert_equal 1, expanded_vrp.vehicles.size,
+                 'There should be only one vehicle because there is only one tuesday and ' \
+                 'this vehicle is not available other days'
+    assert_equal 86400, expanded_vrp.vehicles.first.timewindow.start,
+                 'Timewindows should be properly expanded, according to day_index'
   end
 
   def test_expand_vrp_unavailable_visits
@@ -125,7 +135,8 @@ class InterpreterTest < Minitest::Test
     periodic = Interpreters::PeriodicVisits.new(vrp)
     expanded_vehicles = periodic.send(:expand, vrp, nil).vehicles
     assert_equal 14, expanded_vehicles.size
-    assert_nil expanded_vehicles.find{ |v| v.id == 'vehicle_0_7' }, 'There should be no vehicle generated for day index 7'
+    assert_nil expanded_vehicles.find{ |v| v.id == 'vehicle_0_7' },
+               'There should be no vehicle generated for day index 7'
   end
 
   def test_indices_and_unavailable_indices
@@ -142,8 +153,10 @@ class InterpreterTest < Minitest::Test
     vrp[:vehicles][0][:unavailable_work_day_indices] = [2]
     expanded_vrp = periodic_expand(vrp)
     assert_equal 15, expanded_vrp.vehicles.size
-    assert_nil expanded_vrp.vehicles.find{ |v| v.id == 'vehicle_0_2' }, 'There should be no vehicle generated for day index 2'
-    assert_nil expanded_vrp.vehicles.find{ |v| v.id == 'vehicle_0_7' }, 'There should be no vehicle generated for day index 7'
+    assert_nil expanded_vrp.vehicles.find{ |v| v.id == 'vehicle_0_2' },
+               'There should be no vehicle generated for day index 2'
+    assert_nil expanded_vrp.vehicles.find{ |v| v.id == 'vehicle_0_7' },
+               'There should be no vehicle generated for day index 7'
   end
 
   def test_multiple_reference_to_same_rests
@@ -291,7 +304,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 2,
         minimum_lapse: 14,
-        type: 'service',
         activity: {
           duration: 5400.0,
           point_id: 'point_1',
@@ -306,7 +318,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 2,
         minimum_lapse: 10,
-        type: 'service',
         activity: {
           duration: 5400.0,
           point_id: 'point_2',
@@ -321,7 +332,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 1,
         minimum_lapse: 18,
-        type: 'service',
         activity: {
           duration: 2700.0,
           point_id: 'point_3',
@@ -338,7 +348,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 1,
         minimum_lapse: 23,
-        type: 'service',
         activity: {
           duration: 1200.0,
           point_id: 'point_4',
@@ -360,7 +369,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 1,
         minimum_lapse: 23,
-        type: 'service',
         activity: {
           duration: 1800.0,
           point_id: 'point5',
@@ -396,9 +404,9 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 1, result[:routes].collect{ |route| route[:activities].count{ |activity| activity[:rest_id] } }.min
-    assert_equal 1, result[:routes].collect{ |route| route[:activities].count{ |activity| activity[:rest_id] } }.max
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 1, solutions[0].routes.collect{ |route| route.stops.count(&:rest_id) }.min
+    assert_equal 1, solutions[0].routes.collect{ |route| route.stops.count(&:rest_id) }.max
   end
 
   def test_minimum_lapse_3_visits
@@ -455,7 +463,6 @@ class InterpreterTest < Minitest::Test
         priority: 2,
         visits_number: 3,
         minimum_lapse: 10,
-        type: 'service',
         activity: {
           duration: 100.0,
           point_id: 'point_1'
@@ -481,10 +488,10 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 3, result[:routes][0][:activities].size
-    assert_equal 3, result[:routes][10][:activities].size
-    assert_equal 3, result[:routes][20][:activities].size
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 3, solutions[0].routes[0].stops.size
+    assert_equal 3, solutions[0].routes[10].stops.size
+    assert_equal 3, solutions[0].routes[20].stops.size
   end
 
   def test_minimum_and_maximum_lapse
@@ -570,7 +577,6 @@ class InterpreterTest < Minitest::Test
         visits_number: 2,
         minimum_lapse: 15,
         maximum_lapse: 32,
-        type: 'service',
         activity: {
           duration: 5400.0,
           point_id: 'point_0',
@@ -586,7 +592,6 @@ class InterpreterTest < Minitest::Test
         visits_number: 2,
         minimum_lapse: 11,
         maximum_lapse: 22,
-        type: 'service',
         activity: {
           duration: 5400.0,
           point_id: 'point_1',
@@ -599,16 +604,24 @@ class InterpreterTest < Minitest::Test
       }]
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    route_s01 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_0_1_2' } }
-    route_s02 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_0_2_2' } }
-    route_s11 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_1_1_2' } }
-    route_s12 = result[:routes].find{ |route| route[:activities].any?{ |activity| activity[:service_id] == 'service_1_2_2' } }
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    route_s01 = solutions[0].routes.find{ |route|
+      route.stops.any?{ |activity| activity.service_id == 'service_0_1_2' }
+    }
+    route_s02 = solutions[0].routes.find{ |route|
+      route.stops.any?{ |activity| activity.service_id == 'service_0_2_2' }
+    }
+    route_s11 = solutions[0].routes.find{ |route|
+      route.stops.any?{ |activity| activity.service_id == 'service_1_1_2' }
+    }
+    route_s12 = solutions[0].routes.find{ |route|
+      route.stops.any?{ |activity| activity.service_id == 'service_1_2_2' }
+    }
 
-    route_index_s01 = route_s01 && route_s01[:vehicle_id].split('_').last.to_i || -1
-    route_index_s02 = route_s02 && route_s02[:vehicle_id].split('_').last.to_i || -1
-    route_index_s11 = route_s11 && route_s11[:vehicle_id].split('_').last.to_i || 33
-    route_index_s12 = route_s12 && route_s12[:vehicle_id].split('_').last.to_i || 33
+    route_index_s01 = route_s01 && route_s01.vehicle.id.split('_').last.to_i || -1
+    route_index_s02 = route_s02 && route_s02.vehicle.id.split('_').last.to_i || -1
+    route_index_s11 = route_s11 && route_s11.vehicle.id.split('_').last.to_i || 33
+    route_index_s12 = route_s12 && route_s12.vehicle.id.split('_').last.to_i || 33
 
     assert route_index_s02 - route_index_s01 >= 15
     assert route_index_s02 - route_index_s01 <= 32
@@ -722,11 +735,12 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 5, result[:routes].size
-    assert_equal 4, result[:routes][0][:activities].size
-    assert_equal 4, result[:routes][1][:activities].size
-    assert_equal result[:routes][0][:activities][2][:begin_time], result[:routes][1][:activities][2][:begin_time]
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 5, solutions[0].routes.size
+    assert_equal 4, solutions[0].routes[0].stops.size
+    assert_equal 4, solutions[0].routes[1].stops.size
+    assert_equal solutions[0].routes[0].stops[2].info.begin_time,
+                 solutions[0].routes[1].stops[2].info.begin_time
   end
 
   def test_remove_multiple_empty_service
@@ -829,8 +843,8 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 4, result[:routes][0][:activities].size
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 4, solutions[0].routes[0].stops.size
   end
 
   def test_do_not_remove_multiple_empty_service
@@ -936,8 +950,8 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 5, result[:routes][0][:activities].size
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 5, solutions[0].routes[0].stops.size
   end
 
   def test_multi_modal_route_with_capacity
@@ -1028,8 +1042,8 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 7, result[:routes][0][:activities].size
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 7, solutions[0].routes[0].stops.size
   end
 
   def test_multi_modal_route_with_skills
@@ -1111,11 +1125,11 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 5, result[:routes][0][:activities].size
-    assert_equal 'service_0', result[:routes][0][:activities][2][:service_id]
-    assert_equal 5, result[:routes][1][:activities].size
-    assert_equal 'service_1', result[:routes][1][:activities][2][:service_id]
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 5, solutions[0].routes[0].stops.size
+    assert_equal 'service_0', solutions[0].routes[0].stops[2].service_id
+    assert_equal 5, solutions[0].routes[1].stops.size
+    assert_equal 'service_1', solutions[0].routes[1].stops[2].service_id
   end
 
   def test_multi_modal_route_with_skills_intersection
@@ -1198,9 +1212,9 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 1, result[:routes].size
-    assert_equal 6, result[:routes][0][:activities].size
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 1, solutions[0].routes.size
+    assert_equal 6, solutions[0].routes[0].stops.size
   end
 
   def test_multi_modal_route_with_restrained_capacity
@@ -1291,10 +1305,14 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 11, result[:routes][0][:activities].size
-    assert_equal 9.9, (result[:routes][0][:activities].sum{ |activity| (activity[:service_id] == 'service_1') ? activity[:detail][:quantities].first[:value] : 0 })
-    assert_equal 10, (result[:routes][0][:activities].sum{ |activity| (activity[:service_id] == 'service_0') ? activity[:detail][:quantities].first[:value] : 0 })
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 11, solutions[0].routes[0].stops.size
+    assert_equal 9.9, (solutions[0].routes[0].stops.sum{ |activity|
+                         activity.service_id == 'service_1' ? activity.loads.first.quantity.value : 0
+                       })
+    assert_equal 10, (solutions[0].routes[0].stops.sum{ |activity|
+                        activity.service_id == 'service_0' ? activity.loads.first.quantity.value : 0
+                      })
   end
 
   def test_multi_modal_route_with_complementary_partial_quantities
@@ -1385,10 +1403,14 @@ class InterpreterTest < Minitest::Test
       }
     }
     vrp = TestHelper.create(problem)
-    result = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    assert_equal 10, result[:routes][0][:activities].size
-    assert_equal 7.5, (result[:routes][0][:activities].sum{ |activity| (activity[:service_id] == 'service_1') ? activity[:detail][:quantities].first[:value] : 0 })
-    assert_equal 7.5, (result[:routes][0][:activities].sum{ |activity| (activity[:service_id] == 'service_0') ? activity[:detail][:quantities].first[:value] : 0 })
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 10, solutions[0].routes[0].stops.size
+    assert_equal 7.5, (solutions[0].routes[0].stops.sum{ |activity|
+                         activity.service_id == 'service_1' ? activity.loads.first.quantity.value : 0
+                       })
+    assert_equal 7.5, (solutions[0].routes[0].stops.sum{ |activity|
+                         activity.service_id == 'service_0' ? activity.loads.first.quantity.value : 0
+                       })
   end
 
   def test_overall_duration_several_vehicles
@@ -1417,7 +1439,7 @@ class InterpreterTest < Minitest::Test
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
     vrp = TestHelper.create(problem)
-    refute_empty vrp.schedule_months_indices
+    refute_empty vrp.configuration.schedule.months_indices
     expanded_vrp = periodic_expand(problem)
     assert_equal 2, expanded_vrp.relations.size
   end
@@ -1442,7 +1464,7 @@ class InterpreterTest < Minitest::Test
       range_date: { start: Date.new(2020, 1, 31), end: Date.new(2020, 2, 1) }
     }
     vrp = TestHelper.create(problem)
-    refute_empty vrp.schedule_months_indices
+    refute_empty vrp.configuration.schedule.months_indices
     expanded_vrp = periodic_expand(problem)
     assert_equal 1, expanded_vrp.relations.size
   end
@@ -1508,15 +1530,18 @@ class InterpreterTest < Minitest::Test
     vrp[:vehicles].first[:rest_ids] = ['rest']
 
     expanded_vrp = periodic_expand(vrp)
-    assert_equal 1, expanded_vrp.rests.size, 'We are expecting one rest because vehicle has rests on mondays and there is one in schedule'
+    assert_equal 1, expanded_vrp.rests.size,
+                 'We are expecting one rest because vehicle has rests on mondays and there is one in schedule'
 
     vrp[:configuration][:schedule][:range_indices][:end] = 9
     expanded_vrp = periodic_expand(vrp)
-    assert_equal 2, expanded_vrp.rests.size, 'We are expecting two rests because vehicle has rests on mondays and there are two in schedule'
+    assert_equal 2, expanded_vrp.rests.size,
+                 'We are expecting two rests because vehicle has rests on mondays and there are two in schedule'
 
     vrp[:rests].first[:timewindows].each{ |tw| tw.delete(:day_index) }
     expanded_vrp = periodic_expand(vrp)
-    assert_equal 10, expanded_vrp.rests.size, 'We are expecting ten rests because vehicle has rests everyday and there are ten days in schedule'
+    assert_equal 10, expanded_vrp.rests.size,
+                 'We are expecting ten rests because vehicle has rests everyday and there are ten days in schedule'
   end
 
   def test_first_last_possible_days

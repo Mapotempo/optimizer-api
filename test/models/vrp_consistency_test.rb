@@ -575,17 +575,17 @@ module Models
       problem[:shipments].first[:pickup][:timewindows] = [{ start: 6, end: 9}]
       problem[:shipments].first[:delivery][:timewindows] = [{ start: 1, end: 5}]
 
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
 
-      reasons = result[:unassigned].flat_map{ |u| u[:reason].split(' && ') }
+      reasons = solutions[0].unassigned_stops.flat_map{ |u| u[:reason].split(' && ') }
 
       assert_includes reasons, 'Inconsistent timewindows within relations of service', 'Expected an unfeasible shipment'
 
       problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.create(start: 1, end: 9)]
 
-      result = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
 
-      assert_empty result[:unassigned], 'There should be no unassigned services'
+      assert_empty solutions[0].unassigned_stops, 'There should be no unassigned services'
     end
 
     def test_uniqueness_of_provided_services_or_vehicles_in_relation

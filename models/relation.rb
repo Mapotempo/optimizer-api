@@ -31,7 +31,7 @@ module Models
     field :type, default: :same_route
     field :lapses, default: nil
     field :linked_ids, default: []
-    has_many :linked_services, class_name: 'Models::Service'
+    has_many :linked_services, class_name: 'Models::Service', as_json: :none # FIXME: remove as_json: :ids when linked_ids becomes linked_services
     field :linked_vehicle_ids, default: []
     field :periodicity, default: 1
 

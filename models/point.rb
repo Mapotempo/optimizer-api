@@ -19,6 +19,7 @@ require './models/base'
 
 module Models
   class Point < Base
+    field :id
     field :matrix_index
     field :associated_stops, default: []
 

@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2020
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -15,30 +15,29 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './models/base'
+module VrpAsJson
+  extend ActiveSupport::Concern
 
-module Models
-  class CostDetails < Base
-    field :fixed, default: 0
-    field :time, default: 0
-    field :distance, default: 0
-    field :value, default: 0
-    field :lateness, default: 0
-    field :overload, default: 0
+  def empty_json(options = nil)
+    vrp = {
+      'name' => self.name,
+      'configuration' => self.configuration.as_json(options),
+      'points' => [], 'services' => [], 'vehicles' => []
+    }
 
-    def total
-      fixed + time + distance + value + lateness + overload
-    end
+    vrp.to_json
+  end
+end
 
-    def +(other)
-      CostDetails.create(
-        fixed: fixed + other.fixed,
-        time: time + other.time,
-        distance: distance + other.distance,
-        value: value + other.value,
-        lateness: lateness + other.lateness,
-        overload: overload + other.overload,
-      )
-    end
+module SolutionStopAsJson
+  extend ActiveSupport::Concern
+
+  def as_json(options = nil)
+    stop = super
+
+    return stop unless self.is_a? Models::Solution::Stop
+
+    stop.delete('id') if self.type == :depot
+    stop
   end
 end

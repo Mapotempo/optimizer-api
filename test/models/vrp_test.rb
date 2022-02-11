@@ -31,7 +31,7 @@ module Models
       }
 
       new_vrp = TestHelper.create(vrp)
-      assert_equal({ start: 2, end: 7 }, new_vrp.schedule_range_indices)
+      assert_equal({ start: 2, end: 7 }, new_vrp.configuration.schedule.range_indices)
 
       vrp[:configuration][:schedule] = {
         range_date: {
@@ -40,7 +40,7 @@ module Models
         }
       }
       new_vrp = TestHelper.create(vrp)
-      assert_equal({ start: 0, end: 7 }, new_vrp.schedule_range_indices)
+      assert_equal({ start: 0, end: 7 }, new_vrp.configuration.schedule.range_indices)
     end
 
     def test_visits_computation
@@ -59,11 +59,11 @@ module Models
     def test_vrp_periodic
       vrp = VRP.toy
       vrp = TestHelper.create(vrp)
-      refute vrp.schedule_range_indices
+      refute vrp.configuration.schedule&.range_indices
 
       vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
-      assert vrp.schedule_range_indices
+      assert vrp.configuration.schedule&.range_indices
     end
 
     def test_month_indice_generation
@@ -80,7 +80,7 @@ module Models
       }
 
       vrp = TestHelper.create(problem)
-      assert_equal [[4], [5]], vrp.schedule_months_indices
+      assert_equal [[4], [5]], vrp.configuration.schedule.months_indices
     end
 
     def test_unavailable_visit_day_date_transformed_into_indice
@@ -98,28 +98,30 @@ module Models
       vrp[:routes] = [{ mission_ids: ['service_1', 'service_3'], vehicle_id: 'vehicle_0' }]
       vrp[:configuration][:preprocessing] = { partitions: [{ entity: :vehicle }] }
       generated_vrp = TestHelper.create(vrp)
-      refute_empty generated_vrp.services[0].sticky_vehicles
-      assert_empty generated_vrp.services[1].sticky_vehicles
-      refute_empty generated_vrp.services[2].sticky_vehicles
+
+      assert(generated_vrp.services[0].sticky_vehicle_ids.any?)
+      assert(generated_vrp.services[2].sticky_vehicle_ids.any?)
+
+      assert(generated_vrp.services[1].sticky_vehicle_ids.empty?)
     end
 
     def test_solver_parameter_retrocompatibility
       vrp = VRP.basic
       generated_vrp = TestHelper.create(vrp)
-      assert generated_vrp.resolution_solver
-      assert_empty generated_vrp.preprocessing_first_solution_strategy, 'first_solution_strategy'
+      assert generated_vrp.configuration.resolution.solver
+      assert_empty generated_vrp.configuration.preprocessing.first_solution_strategy, 'first_solution_strategy'
 
       vrp[:configuration][:resolution][:solver_parameter] = -1
       generated_vrp = TestHelper.create(vrp)
-      refute generated_vrp.resolution_solver
-      assert_empty generated_vrp.preprocessing_first_solution_strategy, 'first_solution_strategy'
+      refute generated_vrp.configuration.resolution.solver
+      assert_empty generated_vrp.configuration.preprocessing.first_solution_strategy, 'first_solution_strategy'
 
       ['path_cheapest_arc', 'global_cheapest_arc', 'local_cheapest_insertion', 'savings', 'parallel_cheapest_insertion', 'first_unbound', 'christofides'].each_with_index{ |heuristic, heuristic_reference|
         vrp = VRP.basic
         vrp[:configuration][:resolution][:solver_parameter] = heuristic_reference
         generated_vrp = TestHelper.create(vrp)
-        assert generated_vrp.resolution_solver
-        assert_equal [heuristic], generated_vrp.preprocessing_first_solution_strategy
+        assert generated_vrp.configuration.resolution.solver
+        assert_equal [heuristic], generated_vrp.configuration.preprocessing.first_solution_strategy
       }
     end
 
@@ -250,9 +252,9 @@ module Models
       }
 
       vrp = TestHelper.create(vrp)
-      assert_equal 2, (vrp.services.count{ |s| !s.sticky_vehicles.empty? })
-      assert_equal 'vehicle_0', vrp.services.find{ |s| s.id == 'service_1' }.sticky_vehicles.first.id
-      assert_equal 'vehicle_1', vrp.services.find{ |s| s.id == 'service_7' }.sticky_vehicles.first.id
+      assert_equal 2, (vrp.services.count{ |s| s.sticky_vehicle_ids.any? })
+      assert(vrp.services.find{ |s| s.id == 'service_1' }.sticky_vehicle_ids.include?(vrp.vehicles.first.id))
+      assert(vrp.services.find{ |s| s.id == 'service_7' }.sticky_vehicle_ids.include?(vrp.vehicles.last.id))
     end
 
     def test_transform_route_indice_into_index
@@ -412,6 +414,22 @@ module Models
       assert_raises ActiveHash::RecordNotFound do
         TestHelper.create(problem)
       end
+    end
+
+    def test_to_json
+      problem = VRP.lat_lon_capacitated
+      vrp = Models::Vrp.create(problem)
+      vrp_hash = JSON.parse(vrp.to_json, symbolize_names: true)
+      # Verify that an JSON dumped vrp may be imported again
+      re_vrp = Models::Vrp.create(vrp_hash)
+
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, re_vrp, nil)
+
+      # Populate again the active hash base
+      Models::Vrp.create(vrp_hash)
+      solution_hash = JSON.parse(solutions[0].to_json, symbolize_names: true)
+      # Verify that a JSON dumped solution may be imported again
+      Models::Solution.new(solution_hash)
     end
   end
 end

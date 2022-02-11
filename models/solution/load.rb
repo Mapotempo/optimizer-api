@@ -1,4 +1,4 @@
-# Copyright © Mapotempo, 2019
+# Copyright © Mapotempo, 2021
 #
 # This file is part of Mapotempo.
 #
@@ -18,11 +18,21 @@
 require './models/base'
 
 module Models
-  class Partition < Base
-    field :method
-    field :metric
-    field :entity
-    field :threshold
-    field :restarts
+  class Solution < Base
+    class Load < Base
+      field :current, default: 0, vrp_result: :hide
+
+      belongs_to :quantity, class_name: 'Models::Quantity', vrp_result: :hide
+
+      def vrp_result(options = {})
+        hash = super(options)
+        hash['unit'] = quantity.unit_id
+        hash['label'] = quantity.unit.label
+        hash['value'] = quantity.value&.round(3)
+        hash['setup_value'] = quantity.setup_value if quantity.unit.counting
+        hash['current_load'] = current&.round(3)
+        hash
+      end
+    end
   end
 end
