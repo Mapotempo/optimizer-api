@@ -226,7 +226,7 @@ class HeuristicTest < Minitest::Test
       s.send(:clean_stops, 'service_1')
       assert_empty s.instance_variable_get(:@candidate_routes)['vehicle_0'][0][:stops]
       # service 2 can be assigned again :
-      assert(s.instance_variable_get(:@services_assignment)['service_2'][:unassigned_reasons].empty?)
+      assert_empty(s.instance_variable_get(:@services_assignment)['service_2'][:unassigned_reasons])
       assert_equal vrp.services.size - 1, s.instance_variable_get(:@candidate_services_ids).size
     end
 
