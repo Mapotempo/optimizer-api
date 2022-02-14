@@ -1,4 +1,13 @@
 GIT
+  remote: https://github.com/Mapotempo/mapotempo_rubocop.git
+  revision: d17258c53f75511d3cca64fe0872ab6af4537a99
+  specs:
+    mapotempo_rubocop (0.1.0)
+      rubocop (~> 0.81.0)
+      rubocop-minitest (~> 0.8.1)
+      rubocop-performance (~> 1.5.2)
+
+GIT
   remote: https://github.com/mapotempo/balanced_vrp_clustering.git
   revision: c537ae70519888438c965a7c3f966e38bd41582d
   branch: dev
@@ -229,9 +238,9 @@ GEM
       rexml
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 1.4.0, < 2.0)
-    rubocop-minitest (0.9.0)
+    rubocop-minitest (0.8.1)
       rubocop (>= 0.74)
-    rubocop-performance (1.6.1)
+    rubocop-performance (1.5.2)
       rubocop (>= 0.71.0)
     ruby-progressbar (1.11.0)
     ruby2_keywords (0.0.5)
@@ -305,6 +314,7 @@ DEPENDENCIES
   grape_logging
   http_accept_language
   i18n
+  mapotempo_rubocop!
   minitest
   minitest-around
   minitest-bisect
@@ -331,8 +341,6 @@ DEPENDENCIES
   rgeo
   rgeo-geojson
   rubocop (< 0.82)
-  rubocop-minitest
-  rubocop-performance
   sentry-raven
   simplecov
   solargraph
@@ -343,4 +351,4 @@ RUBY VERSION
    ruby 2.5.7p206
 
 BUNDLED WITH
-   2.2.24
+   2.2.32

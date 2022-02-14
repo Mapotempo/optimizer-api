@@ -11,8 +11,40 @@ env:
   PROJECT: optimizer
 
 jobs:
+
+  rubocop_error:
+    runs-on: ubuntu-latest
+    env:
+      OPTIONS: "APP_ENV=rubocop"
+      BUNDLE_GEMFILE: ${{ github.workspace }}/Gemfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.5.7
+          bundler-cache: true
+      - name: Run RuboCop
+        run: bundle exec rubocop --parallel -f c --config .rubocop.yml --fail-level E --display-only-fail-level-offenses
+
+  rubocop_warning:
+    runs-on: ubuntu-latest
+    env:
+      OPTIONS: "APP_ENV=rubocop"
+      BUNDLE_GEMFILE: ${{ github.workspace }}/Gemfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.5.7
+          bundler-cache: true
+      - name: Run RuboCop
+        run: bundle exec rubocop --parallel -f c --config .rubocop.yml --fail-level W --display-only-fail-level-offenses
+
   build:
     if: github.event.pull_request.draft == false
+    needs: rubocop_error
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

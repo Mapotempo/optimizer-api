@@ -10,36 +10,43 @@ gem 'rack-cors', require: 'rack/cors'
 gem 'rake'
 gem 'thin'
 
+# API
 gem 'grape', '>=1.5.3' # Important fix introduced v1.5.3 (see PR #PR2164)
 gem 'grape-entity'
 gem 'grape-swagger'
 gem 'grape-swagger-entity'
 gem 'grape_logging'
 
+# Models
 gem 'actionpack', require: 'action_dispatch'
 gem 'active_hash', github: 'senhalil/active_hash', branch: 'dev' # waiting for the following PRs to get merged and "released!" https://github.com/zilkey/active_hash/pull/231 and https://github.com/zilkey/active_hash/pull/233
 gem 'activemodel'
 gem 'activesupport', require: 'active_support'
+gem 'google-protobuf', '>=3', require: 'google/protobuf'
+gem 'oj'
 
+# Text
 gem 'charlock_holmes'
 gem 'http_accept_language'
 gem 'i18n'
 gem 'nokogiri'
+
+# Queue
 gem 'redis', '<4'
 gem 'resque', '<2'
 gem 'resque-status', '>0.4'
+
+# Web
 gem 'rest-client'
 
+# AI
 gem 'ai4r'
 gem 'balanced_vrp_clustering', github: 'mapotempo/balanced_vrp_clustering', branch: 'dev'
 
+# Geo
 gem 'polylines'
 gem 'rgeo'
 gem 'rgeo-geojson', require: 'rgeo/geo_json'
-
-gem 'google-protobuf', '>=3', require: 'google/protobuf'
-
-gem 'oj'
 
 gem 'sentry-raven'
 
@@ -47,10 +54,7 @@ group :development, :test do
   gem 'benchmark-ips' # to in-place benchmark of different implementations
   gem 'byebug'
 
-  # For linting and offline code analysis
-  gem 'rubocop', '< 0.82'
-  gem 'rubocop-minitest', require: false
-  gem 'rubocop-performance', require: false
+  # Offline code analysis
   gem 'solargraph'
 
   # For creating dependency graphs
@@ -66,6 +70,12 @@ group :development, :test do
   # gem 'psych', '<3.0.2' # TODO: Waiting Ruby 2.2
   # gem 'ruby-debug-ide'
   # gem 'debase'
+end
+
+group :rubocop do
+  # Linting
+  gem 'rubocop', '< 0.82'
+  gem 'mapotempo_rubocop', github: 'Mapotempo/mapotempo_rubocop'
 end
 
 group :test do

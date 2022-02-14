@@ -192,7 +192,7 @@ module Models
       vrp[:vehicles].first[:rests] = ['rest_0']
 
       assert_raises OptimizerWrapper::UnsupportedProblemError do
-          TestHelper.create(vrp)
+        TestHelper.create(vrp)
       end
     end
 

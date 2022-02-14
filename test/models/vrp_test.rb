@@ -102,7 +102,7 @@ module Models
       assert(generated_vrp.services[0].sticky_vehicle_ids.any?)
       assert(generated_vrp.services[2].sticky_vehicle_ids.any?)
 
-      assert(generated_vrp.services[1].sticky_vehicle_ids.empty?)
+      assert_empty(generated_vrp.services[1].sticky_vehicle_ids)
     end
 
     def test_solver_parameter_retrocompatibility
@@ -253,8 +253,8 @@ module Models
 
       vrp = TestHelper.create(vrp)
       assert_equal 2, (vrp.services.count{ |s| s.sticky_vehicle_ids.any? })
-      assert(vrp.services.find{ |s| s.id == 'service_1' }.sticky_vehicle_ids.include?(vrp.vehicles.first.id))
-      assert(vrp.services.find{ |s| s.id == 'service_7' }.sticky_vehicle_ids.include?(vrp.vehicles.last.id))
+      assert_includes(vrp.services.find{ |s| s.id == 'service_1' }.sticky_vehicle_ids, vrp.vehicles.first.id)
+      assert_includes(vrp.services.find{ |s| s.id == 'service_7' }.sticky_vehicle_ids, vrp.vehicles.last.id)
     end
 
     def test_transform_route_indice_into_index
