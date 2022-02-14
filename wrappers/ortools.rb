@@ -41,7 +41,6 @@ module Wrappers
         :assert_zones_only_size_one_alternative,
         :assert_only_empty_or_fill_quantities,
         :assert_points_same_definition,
-        :assert_vehicles_no_zero_duration,
         :assert_correctness_matrices_vehicles_and_points_definition,
         :assert_square_matrix,
         :assert_vehicle_tw_if_periodic,

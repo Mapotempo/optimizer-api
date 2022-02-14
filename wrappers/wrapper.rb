@@ -97,12 +97,6 @@ module Wrappers
       vrp.vehicles.none?(&:duration)
     end
 
-    def assert_vehicles_no_zero_duration(vrp)
-      vrp.vehicles.none?{ |vehicle|
-        vehicle.duration&.zero?
-      }
-    end
-
     def assert_services_no_late_multiplier(vrp)
       vrp.services.none?{ |service|
         if service.activity
