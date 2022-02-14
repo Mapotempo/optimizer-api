@@ -96,4 +96,4 @@ en:
         import_vehicle_file_columns: 'Your vehicles file must contain the following columns:'
         setup_multiplier: 'setup_multiplier: a coefficient associated with the vehicle which is multiplied with the pickup_setup and delivery_setup times to calculate the preparation time of the mission (e.g., pickup_setup: 00:10:00 & setup_multiplier: 1.5 -->setup_duration: 00:15:00).'
         setup_cost: 'setup_cost: cost associated with the setup time.'
-        mandatory_columns: 'Columns in bold columns are mandatory.'
+        mandatory_columns: 'Columns in bold are mandatory.'
