@@ -4,7 +4,6 @@ inherit_gem:
 
 AllCops:
   TargetRubyVersion: 2.5
-  CacheRootDirectory: rubocop_cache
   Exclude:
     - 'tmp/**/*'
     - 'vendor/bundle/**/*'
