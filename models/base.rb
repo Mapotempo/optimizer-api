@@ -78,7 +78,7 @@ module Models
       object_hash = JSON.parse(self.to_json, symbolize_names: true)
 
       options.each{ |key, value|
-        next unless object_hash.key?(key)
+        next unless object_hash.key?(key) && self.class.default_attributes[key] != value
 
         object_hash[key] = value
       }
@@ -88,7 +88,10 @@ module Models
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|
-        hash[field_name] = self.send(field_name).as_json if self.respond_to?(field_name)
+        next unless self.respond_to?(field_name) &&
+                    self.class.default_attributes[field_name] != self.send(field_name)
+
+        hash[field_name] = self.send(field_name).as_json
       }
       hash
     end
