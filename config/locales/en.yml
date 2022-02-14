@@ -54,22 +54,22 @@ en:
   views:
     shared:
       send: Send
-      csv_vehicles_label: 'Vehicles file (CSV):'
-      file_customer_label: 'Customers file (CSV):'
+      csv_vehicles_label: 'Vehicles (CSV):'
+      file_customer_label: 'Customers (CSV):'
     result:
       title: Result visualization
       show_result: View the result of the job
       back: Return to index
     scheduling:
       status_label: 'Optimization status:'
-      csv_points_label: 'Points file (CSV):'
-      csv_units_label: 'Units file (CSV):'
-      csv_capacities_label: 'Capacities file (CSV):'
-      csv_quantities_label: 'Quantities file (CSV):'
-      csv_timewindows_label: 'Timewindows file (CSV):'
-      csv_services_label: 'Services file (CSV):'
-      csv_shipments_label: 'Shipments file (CSV):'
-      json_config_label: 'Configuration file (JSON):'
+      csv_points_label: 'Points (CSV):'
+      csv_units_label: 'Units (CSV):'
+      csv_capacities_label: 'Capacities (CSV):'
+      csv_quantities_label: 'Quantities (CSV):'
+      csv_timewindows_label: 'Timewindows (CSV):'
+      csv_services_label: 'Services (CSV):'
+      csv_shipments_label: 'Shipments (CSV):'
+      json_config_label: 'Configuration (JSON):'
       waiting_submit: Waiting for the problem to be sent
     pickup_delivery:
       optim_options_legend: 'Optimization options:'
@@ -84,11 +84,11 @@ en:
         params_optim_b: '(b) (optional) The maximum duration (in seconds) of optimization after which the latest result will be returned.'
         params_optim_help: 'At least one of the stopping conditions, (a) or (b), must be set.'
         send_click: 'Click "Send"'
-        send_click_a: 'A new submission is sent to the optimization engine.'
-        send_click_b: 'Each new submission is put at the end of a process queue.'
-        send_click_c: 'Each process is divided into several steps: preprocessing, calculation of the matrices, optimization, postprocessing'
+        send_click_a: 'The files are submitted to the optimization engine in the form of a vehicle routing problem.'
+        send_click_b: 'Each new problem received is put in a queue for resolution.'
+        send_click_c: 'Each resolution is divided into several steps: pre-processing, matrix computation, optimization, post-processing'
         optim_end: 'Once the optimization is finished, the result of the current optimization appears in a block on the page (you can also download the corresponding CSV file via the link above the block)'
-        optim_end_help: 'The cost of the solution is displayed which allows you to see at a glance if the current solution is better or worse than another one (assuming the problem data stays the same)'
+        optim_end_help: 'The cost of the solution is displayed: it allows you to compare whether the current solution is better or not than another one (in case you do not change the input data)'
         import_mt_web: 'Import this csv file into Mapotempo-web (the start and end store information are not imported: remember to define them in Mapotempo-web "beforehand")'
         import_mt_web_help: 'A schedule is created during import, accessible from the Mapotempo-web "Planning" menu'
         import_customer_file_columns: 'Your customers file must contain the following columns:'
@@ -96,5 +96,4 @@ en:
         import_vehicle_file_columns: 'Your vehicles file must contain the following columns:'
         setup_multiplier: 'setup_multiplier: a coefficient associated with the vehicle which is multiplied with the pickup_setup and delivery_setup times to calculate the preparation time of the mission (e.g., pickup_setup: 00:10:00 & setup_multiplier: 1.5 -->setup_duration: 00:15:00).'
         setup_cost: 'setup_cost: cost associated with the setup time.'
-        bold_columns: 'Bold columns are mandatory.'
-
+        mandatory_columns: 'Columns in bold are mandatory.'
