@@ -47,11 +47,11 @@ module Interpreters
     def self.dichotomous_heuristic(service_vrp, job = nil, &block)
       if dichotomous_candidate?(service_vrp)
         vrp = service_vrp[:vrp]
-        message = "dicho - level(#{service_vrp[:dicho_level]}) "\
+        log_message = "dicho - level(#{service_vrp[:dicho_level]}) "\
                   "activities: #{vrp.services.size} "\
                   "vehicles (limit): #{vrp.vehicles.size}(#{vrp.configuration.resolution.vehicle_limit})"\
                   "duration [min, max]: [#{vrp.configuration.resolution.minimum_duration&.round},#{vrp.configuration.resolution.duration&.round}]"
-        log message, level: :info
+        log log_message, level: :info
 
         set_config(service_vrp)
 
@@ -101,7 +101,15 @@ module Interpreters
                 sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             end
 
-            solution = OptimizerWrapper.define_process(sub_service_vrp, job, &block)
+            solution = OptimizerWrapper.define_process(sub_service_vrp, job) { |wrapper, avancement, total, message, cost, time, sol|
+              avc = service_vrp[:dicho_denominators].map.with_index{ |lvl, idx|
+                Rational(service_vrp[:dicho_sides][idx], lvl)
+              }.sum
+
+              msg = message && "dicho #{(service_vrp[:dicho_denominators].last * avc).to_i}" \
+                    "/#{service_vrp[:dicho_denominators].last} - #{message}"
+              block&.call(wrapper, avancement, total, msg, cost, time, sol)
+            }
 
             transfer_unused_vehicles(service_vrp, solution, sub_service_vrps) if index.zero? && solution
 
@@ -514,7 +522,9 @@ module Interpreters
           split_service_vrps << {
             service: service_vrp[:service],
             vrp: sub_vrp,
-            dicho_level: service_vrp[:dicho_level] + 1
+            dicho_level: service_vrp[:dicho_level] + 1,
+            dicho_denominators: service_vrp[:dicho_denominators] + [2**(service_vrp[:dicho_level] + 1)],
+            dicho_sides: service_vrp[:dicho_sides] + [i]
           }
         }
       else
@@ -528,7 +538,9 @@ module Interpreters
         split_service_vrps << {
           service: service_vrp[:service],
           vrp: sub_vrp,
-          dicho_level: service_vrp[:dicho_level]
+          dicho_level: service_vrp[:dicho_level],
+          dicho_denominators: service_vrp[:dicho_denominators],
+          dicho_sides: service_vrp[:dicho_sides]
         }
       end
       OutputHelper::Clustering.generate_files(split_service_vrps) if OptimizerWrapper.config[:debug][:output_clusters]
