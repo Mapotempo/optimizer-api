@@ -1111,9 +1111,9 @@ module Wrappers
 
       case type
       when 'start'
-        Models::Solution::Stop.new(vehicle.start_point, info: times)
+        Models::Solution::StopDepot.new(vehicle.start_point, info: times)
       when 'end'
-        Models::Solution::Stop.new(vehicle.end_point, info: times)
+        Models::Solution::StopDepot.new(vehicle.end_point, info: times)
       when 'service'
         service = @services_data[data[:id]][:raw] if type == 'service'
         loads = service.quantities.map{ |quantity|

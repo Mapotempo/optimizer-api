@@ -28,16 +28,3 @@ module VrpAsJson
     vrp.to_json
   end
 end
-
-module SolutionStopAsJson
-  extend ActiveSupport::Concern
-
-  def as_json(options = nil)
-    stop = super
-
-    return stop unless self.is_a? Models::Solution::Stop
-
-    stop.delete('id') if self.type == :depot
-    stop
-  end
-end

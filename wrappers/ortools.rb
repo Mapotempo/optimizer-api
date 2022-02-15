@@ -354,9 +354,9 @@ module Wrappers
       }
       case activity.type
       when 'start'
-        Models::Solution::Stop.new(vehicle.start_point, info: times, loads: loads) if vehicle.start_point
+        Models::Solution::StopDepot.new(vehicle.start_point, info: times, loads: loads) if vehicle.start_point
       when 'end'
-        Models::Solution::Stop.new(vehicle.end_point, info: times, loads: loads) if vehicle.end_point
+        Models::Solution::StopDepot.new(vehicle.end_point, info: times, loads: loads) if vehicle.end_point
       when 'service'
         service = vrp.services[activity.index]
         problem_services.delete(service.id)

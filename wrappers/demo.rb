@@ -25,10 +25,10 @@ module Wrappers
 
     def solve(vrp, _job = nil, _thread_proc = nil, &_block)
       routes = vrp.vehicles.map{ |vehicle|
-        stops = [vehicle.start_point && Models::Solution::Stop.new(vehicle.start_point)] +
+        stops = [vehicle.start_point && Models::Solution::StopDepot.new(vehicle.start_point)] +
                 vrp.services.map{ |service|
                   Models::Solution::Stop.new(service, index: service.activities.any? && 0)
-                } + [vehicle.end_point && Models::Solution::Stop.new(vehicle.end_point)]
+                } + [vehicle.end_point && Models::Solution::StopDepot.new(vehicle.end_point)]
         Models::Solution::Route.new(
           vehicle: vehicle,
           stops: stops.compact

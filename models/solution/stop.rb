@@ -21,8 +21,6 @@ require './models/solution/parsers/stop_parser'
 module Models
   class Solution < Base
     class Stop < Base
-      include SolutionStopAsJson
-
       field :id
       field :type
       field :alternative
@@ -91,6 +89,14 @@ module Models
         skills_to_output += self.original_skills
         skills_to_output
       end
+    end
+
+    class StopDepot < Stop
+      field :type
+
+      has_many :loads, class_name: 'Models::Solution::Load'
+      belongs_to :activity, class_name: 'Models::Activity'
+      belongs_to :info, class_name: 'Models::Solution::Stop::Info', vrp_result: :hide
     end
   end
 end

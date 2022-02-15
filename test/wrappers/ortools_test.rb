@@ -4427,10 +4427,10 @@ class Wrappers::OrtoolsTest < Minitest::Test
                                          routes: [
                                            Models::Solution::Route.new(
                                              vehicle: vrp_in.vehicles[0],
-                                             stops: [Models::Solution::Stop.new(vrp_in.vehicles.first.start_point)] +
+                                             stops: [Models::Solution::StopDepot.new(vrp_in.vehicles.first.start_point)] +
                                                vrp_in.routes.first.mission_ids.map{ |id|
                                                  Models::Solution::Stop.new(vrp_in.services.find{ |s| s.id == id })
-                                               } + [Models::Solution::Stop.new(vrp_in.vehicles.first.end_point)]
+                                               } + [Models::Solution::StopDepot.new(vrp_in.vehicles.first.end_point)]
                                            ),
                                            Models::Solution::Route.new(
                                              vehicle: vrp_in.vehicles[1]
@@ -5183,12 +5183,12 @@ class Wrappers::OrtoolsTest < Minitest::Test
                                          routes: [
                                            Models::Solution::Route.new(
                                              vehicle: vrp.vehicles[0],
-                                             stops: [Models::Solution::Stop.new(vrp.vehicles[0].start_point)]
+                                             stops: [Models::Solution::StopDepot.new(vrp.vehicles[0].start_point)]
                                            ),
                                            Models::Solution::Route.new(
                                              vehicle: vrp.vehicles[1],
                                              stops: [
-                                               Models::Solution::Stop.new(vrp.vehicles[1].start_point),
+                                               Models::Solution::StopDepot.new(vrp.vehicles[1].start_point),
                                                Models::Solution::Stop.new(vrp.services[4]),
                                                Models::Solution::Stop.new(vrp.services[2]),
                                                Models::Solution::Stop.new(vrp.services[0]),
@@ -5197,7 +5197,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
                                            ),
                                            Models::Solution::Route.new(
                                              vehicle: vrp.vehicles[2],
-                                             stops: [Models::Solution::Stop.new(vrp.vehicles[2].start_point)]
+                                             stops: [Models::Solution::StopDepot.new(vrp.vehicles[2].start_point)]
                                            )
                                         ])
         end
