@@ -12,7 +12,7 @@
 - The time horizon has been changed in optimizer-ortools which increases the performances in case of timewindows without end [#341](https://github.com/Mapotempo/optimizer-api/pull/341)
 - Partition field `method` is renamed as `technique` [#321](https://github.com/Mapotempo/optimizer-api/pull/321)
 - The resolution method called through `cluster_threshold` now use VROOM instead of `sim_annealing` gem [#321](https://github.com/Mapotempo/optimizer-api/pull/321)
-- Reduce consequently the time to separate independent vrps.This change reduces also the memory usage. [#321](https://github.com/Mapotempo/optimizer-api/pull/321)
+- Reduce consequently the time to create sub problems.This change reduces also the memory usage. [#321](https://github.com/Mapotempo/optimizer-api/pull/321) & [#353](https://github.com/Mapotempo/optimizer-api/pull/353)
 - The internal solution object now use a single model for all the resolution methods. This improve the consistency and the completness of the solutions returned. [#321](https://github.com/Mapotempo/optimizer-api/pull/321)
 - Mapotempo github wiki is now directly part of the project [#351](https://github.com/Mapotempo/optimizer-api/pull/351)
 

@@ -165,7 +165,7 @@ class RealCasesTest < Minitest::Test
 
       # or-tools performance
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},
-                                               Models::Vrp.create(JSON.parse(vrp.to_json, symbolize_names: true)), nil)
+                                               Models::Vrp.create(vrp.as_json), nil)
       assert solutions[0]
       # Check stops
       assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.stops.count(&:service_id) })
@@ -192,7 +192,7 @@ class RealCasesTest < Minitest::Test
         v.timewindow&.end += 5 * 60 * 60
       }
       solutions = OptimizerWrapper.wrapper_vrp('vroom', { services: { vrp: [:vroom] }},
-                                               Models::Vrp.create(JSON.parse(vrp.to_json, symbolize_names: true)), nil)
+                                               Models::Vrp.create(vrp.as_json), nil)
       assert solutions[0]
       # Check stops
       assert_equal check_vrp_services_size,

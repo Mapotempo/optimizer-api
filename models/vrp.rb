@@ -25,8 +25,6 @@ require './models/concerns/periodic_service'
 
 module Models
   class Vrp < Base
-    include VrpAsJson
-
     include DistanceMatrix
     include ValidateData
     include ExpandData
@@ -56,6 +54,12 @@ module Models
         preprocessing: {}, resolution: {}, restitution: {}
       }.merge(hash[:configuration] || {})
       Models.delete_all if options[:delete]
+
+      # Initialize necessary keys for filters
+      hash[:points] ||= []
+      hash[:services] ||= []
+      hash[:vehicles] ||= []
+      hash[:relations] ||= []
 
       vrp = super({})
       self.convert_shipments_to_services(hash)
@@ -162,8 +166,6 @@ module Models
     end
 
     def self.convert_shipments_to_services(hash)
-      hash[:services] ||= []
-      hash[:relations] ||= []
       @linked_ids = {}
       service_ids = hash[:services].map{ |service| service[:id] }
       hash[:shipments]&.each{ |shipment|

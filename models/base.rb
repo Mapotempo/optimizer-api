@@ -15,7 +15,6 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './models/concerns/as_json'
 require './models/concerns/vrp_result'
 
 module Models
@@ -77,7 +76,11 @@ module Models
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|
-        hash[field_name] = self.send(field_name).as_json if self.respond_to?(field_name)
+        next if !respond_to?(field_name) ||
+                send(field_name).nil? ||
+                self.class.default_attributes&.fetch(field_name, nil) == send(field_name)
+
+        hash[field_name.to_sym] = self.send(field_name).as_json
       }
       hash
     end
