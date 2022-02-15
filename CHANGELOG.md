@@ -4,6 +4,7 @@
 
 ### Added
 
+- Allow to compute geojsons for synchronous resolutions [#356](https://github.com/Mapotempo/optimizer-api/pull/356/files)
 
 ### Changed
 

@@ -197,7 +197,7 @@ module VrpConfiguration
   params :vrp_request_restitution do
     optional(:geometry, type: Array[Symbol], default: [],
                         coerce_with: ->(value) { GeometryType.type_cast(value) },
-                        desc: ENV['OPTIM_GENERATE_GEOJSON_POLYLINES'] ?
+                        desc: OptimizerWrapper.config[:restitution][:allow_polylines] ?
                         'Specifies the geometry structures to be returned. Can be a subset of `[polylines encoded_polylines partitions]` or a boolean value to output all or no geometry. Polylines and encoded_polylines are not compatible together.' :
                         'Specifies the geometry structures to be returned. Can be `partitions` to generate geometry structure for each partition or `true` for generating the geometry structure under each route.')
     optional(:geometry_polyline, type: Boolean, documentation: { hidden: true }, desc: '[DEPRECATED] Use geometry instead, with :polylines or :encoded_polylines')

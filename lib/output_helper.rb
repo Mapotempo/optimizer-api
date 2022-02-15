@@ -325,7 +325,9 @@ module OutputHelper
 
         geojson[:partitions] = generate_partitions_geometry(solution, vehicle_color_indices) if expected_geometry.include?(:partitions)
         geojson[:points] = generate_points_geometry(solution, vehicle_color_indices)
-        geojson[:polylines] = generate_polylines_geometry(solution, vehicle_color_indices) if expected_geometry.include?(:polylines) && ENV['OPTIM_GENERATE_GEOJSON_POLYLINES']
+        if expected_geometry.include?(:polylines) && OptimizerWrapper.config[:restitution][:allow_polylines]
+          geojson[:polylines] = generate_polylines_geometry(solution, vehicle_color_indices)
+        end
         geojson
       }
     end
