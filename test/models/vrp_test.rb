@@ -31,7 +31,10 @@ module Models
       }
 
       new_vrp = TestHelper.create(vrp)
-      assert_equal({ start: 2, end: 7 }, new_vrp.configuration.schedule.range_indices)
+
+      expected_range = Models::Range.create({ start: 2, end: 7 })
+      assert_equal expected_range.start, new_vrp.configuration.schedule.range_indices.start
+      assert_equal expected_range.end, new_vrp.configuration.schedule.range_indices.end
 
       vrp[:configuration][:schedule] = {
         range_date: {
@@ -40,7 +43,9 @@ module Models
         }
       }
       new_vrp = TestHelper.create(vrp)
-      assert_equal({ start: 0, end: 7 }, new_vrp.configuration.schedule.range_indices)
+      expected_range = Models::Range.create({ start: 0, end: 7 })
+      assert_equal expected_range.start, new_vrp.configuration.schedule.range_indices.start
+      assert_equal expected_range.end, new_vrp.configuration.schedule.range_indices.end
     end
 
     def test_visits_computation
@@ -419,7 +424,7 @@ module Models
     def test_to_json
       problem = VRP.lat_lon_capacitated
       vrp = Models::Vrp.create(problem)
-      vrp_hash = JSON.parse(vrp.to_json, symbolize_names: true)
+      vrp_hash = vrp.as_json
       # Verify that an JSON dumped vrp may be imported again
       re_vrp = Models::Vrp.create(vrp_hash)
 
@@ -427,7 +432,7 @@ module Models
 
       # Populate again the active hash base
       Models::Vrp.create(vrp_hash)
-      solution_hash = JSON.parse(solutions[0].to_json, symbolize_names: true)
+      solution_hash = solutions[0].as_json
       # Verify that a JSON dumped solution may be imported again
       Models::Solution.new(solution_hash)
     end

@@ -611,8 +611,7 @@ module Interpreters
       Models.delete_all
       tic = Time.now
       vrp = service_vrp[:vrp]
-      vrp_hash = JSON.parse(vrp.empty_json, symbolize_names: true)
-      sub_vrp = Models::Vrp.create(vrp_hash)
+      sub_vrp = Models::Vrp.create({ name: vrp.name, configuration: vrp.configuration.as_json }) # Create an empty vrp
       sub_vehicles = []
       if available_vehicles_indices
         sub_vrp.vehicles = vrp.vehicles.select.with_index{ |_v, v_i| available_vehicles_indices.include?(v_i) }

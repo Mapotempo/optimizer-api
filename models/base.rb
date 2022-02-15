@@ -15,7 +15,6 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-require './models/concerns/as_json'
 require './models/concerns/vrp_result'
 
 module Models
@@ -74,24 +73,14 @@ module Models
       as_json
     end
 
-    def duplicate_safe(options = {})
-      object_hash = JSON.parse(self.to_json, symbolize_names: true)
-
-      options.each{ |key, value|
-        next unless object_hash.key?(key) && self.class.default_attributes[key] != value
-
-        object_hash[key] = value
-      }
-      self.class.create(object_hash, options)
-    end
-
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|
-        next unless self.respond_to?(field_name) &&
-                    self.class.default_attributes[field_name] != self.send(field_name)
+        next if !respond_to?(field_name) ||
+                send(field_name).nil? ||
+                self.class.default_attributes&.fetch(field_name, nil) == send(field_name)
 
-        hash[field_name] = self.send(field_name).as_json
+        hash[field_name.to_sym] = self.send(field_name).as_json
       }
       hash
     end

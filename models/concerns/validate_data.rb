@@ -420,7 +420,7 @@ module ValidateData
 
     if @hash[:services].any?{ |service|
       ([service[:activity]] + service[:activities].to_a).compact.any?{ |activity|
-        activity[:late_multiplier]&.positive? && activity[:timewindows]&.any?{ |tw| tw[:maximum_lateness] }
+        activity[:late_multiplier]&.positive? && activity[:timewindows]&.any?{ |tw| tw[:maximum_lateness]&.positive? }
       }
     }
       raise "Periodic heuristic does not support maximum_lateness"

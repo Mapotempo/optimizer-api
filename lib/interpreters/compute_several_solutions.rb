@@ -19,13 +19,8 @@
 module Interpreters
   class SeveralSolutions
     def self.duplicate_service_vrp(service_vrp, vrp_hash = nil)
-      service_vrp.map{ |key, value|
-        if key == :vrp
-          vrp_hash ||= JSON.parse(value.to_json, symbolize_names: true)
-          value = Models::Vrp.create(vrp_hash)
-        end
-        [key, value]
-      }.to_h
+      vrp_hash ||= service_vrp[:vrp].as_json
+      service_vrp.dup.tap{ |hash| hash[:vrp] = Models::Vrp.create(vrp_hash) }
     end
 
     def self.check_triangle_inequality(matrix)
@@ -123,7 +118,7 @@ module Interpreters
       return [service_vrp] if service_vrp[:vrp].configuration.resolution.repetition.nil? ||
                               service_vrp[:vrp].configuration.resolution.repetition <= 1
       repeated_service_vrps = [service_vrp]
-      vrp_hash = JSON.parse(service_vrp[:vrp].to_json, symbolize_names: true)
+      vrp_hash = service_vrp[:vrp].as_json
 
       (service_vrp[:vrp].configuration.resolution.repetition - 1).times{
         sub_service_vrp = duplicate_service_vrp(service_vrp, vrp_hash)
@@ -151,7 +146,7 @@ module Interpreters
     end
 
     def self.batch_heuristic(service_vrps, custom_heuristics = nil)
-      vrp_hash = JSON.parse(service_vrp[:vrp].to_json, symbolize_names: true)
+      vrp_hash = service_vrp[:vrp].as_json
       (custom_heuristics || OptimizerWrapper::HEURISTICS).collect{ |heuristic|
         service_vrps.collect{ |service_vrp|
           edit_service_vrp(duplicate_service_vrp(service_vrp, vrp_hash), heuristic)
