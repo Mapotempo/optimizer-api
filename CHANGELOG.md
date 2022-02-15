@@ -5,6 +5,7 @@
 ### Added
 
 - Allow to compute geojsons for synchronous resolutions [#356](https://github.com/Mapotempo/optimizer-api/pull/356/files)
+- Calculate a vehicle_compatibility hash for each service and use it for unfeasible service detection [#318](https://github.com/Mapotempo/optimizer-api/pull/318)
 
 ### Changed
 
@@ -24,6 +25,7 @@
 
 - Split duration among partitions correctly [#336](https://github.com/Mapotempo/optimizer-api/pull/336)
 - Fix find_best_heuristic selection logic [#337](https://github.com/Mapotempo/optimizer-api/pull/337)
+- Prevent periodic heuristic overwriting supplied initial routes [#318](https://github.com/Mapotempo/optimizer-api/pull/318)
 
 ## [v1.8.2] - 2022-01-19
 
