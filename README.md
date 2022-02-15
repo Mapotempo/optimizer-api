@@ -106,6 +106,8 @@ http://swagger.mapotempo.com/?url=http://optimizer.mapotempo.com/0.1/swagger_doc
 curl -X POST --header "Content-Type:application/json" --data '{"vrp":{"vehicles":[]}}' http://localhost:1791/0.1/vrp/submit.json?api_key=demo
 ```
 
+Moreover, the concepts used are described in the [docs](docs/Home.md) folder.
+
 ## Test
 
 Run tests:
