@@ -928,7 +928,6 @@ module Wrappers
 
           route.cost_info.fixed = route.vehicle[:fixed_cost_before_adjustment]
         }
-        solution.update_costs
       else
         raise 'Unknown :mode option'
       end
@@ -1329,7 +1328,6 @@ module Wrappers
             cost_increase = vehicle.cost_time_multiplier.to_f * rest.duration +
                             vehicle.cost_waiting_time_multiplier.to_f * idle_time_created_by_inserted_pause
             route.cost_info&.time += cost_increase
-            solution.update_costs
           }
         }
       else

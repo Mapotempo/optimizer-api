@@ -125,7 +125,6 @@ module Wrappers
 
       solution =
       Models::Solution.new(
-        cost: cost,
         elapsed: elapsed_time,
         solvers: [:vroom],
         routes: routes,

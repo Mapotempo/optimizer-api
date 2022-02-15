@@ -418,10 +418,7 @@ module Wrappers
         [vehicle.id, vehicle.rests.map{ |rest| [rest.id, rest] }.to_h]
       }.to_h
       routes = build_routes(vrp, problem_services, problem_rests, content.routes)
-      cost_info = routes.map(&:cost_info).sum
       Models::Solution.new(
-        cost: content.cost,
-        cost_info: cost_info,
         solvers: [:ortools],
         iterations: content.iterations,
         elapsed: content.duration * 1000,

@@ -1217,8 +1217,7 @@ module Wrappers
       }
       unassigned_stops = collect_unassigned
       # TODO: fulfill cost_details with solution_routes costs
-      solution = Models::Solution.new(cost: @cost,
-                                      solvers: [:heuristic],
+      solution = Models::Solution.new(solvers: [:heuristic],
                                       routes: solution_routes,
                                       unassigned_stops: unassigned_stops,
                                       elapsed: (Time.now - @starting_time) * 1000) # ms

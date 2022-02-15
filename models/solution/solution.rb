@@ -21,7 +21,6 @@ module Models
   class Solution < Base
     field :name
     field :status
-    field :cost, default: 0
     field :elapsed, default: 0
     field :heuristic_synthesis, default: []
     field :iterations
@@ -30,13 +29,22 @@ module Models
     has_many :routes, class_name: 'Models::Solution::Route'
     has_many :unassigned_stops, class_name: 'Models::Solution::Stop'
 
-    belongs_to :cost_info, class_name: 'Models::Solution::CostInfo'
     belongs_to :info, class_name: 'Models::Solution::Info', vrp_result: :hide
     belongs_to :configuration, class_name: 'Models::Solution::Configuration'
 
     def initialize(options = {})
-      options = { info: {}, cost_info: {}, configuration: {} }.merge(options)
+      options = { info: {}, configuration: {} }.merge(options)
       super(options)
+      self.class.vrp_result_fields << 'cost'
+      self.class.vrp_result_fields << 'cost_info'
+    end
+
+    def cost
+      routes.sum{ |route| route.cost_info.total }
+    end
+
+    def cost_info
+      routes.sum(&:cost_info)
     end
 
     def vrp_result(options = {})
@@ -76,25 +84,14 @@ module Models
 
     def +(other)
       solution = Solution.new({})
-      solution.cost = self.cost + other.cost
       solution.elapsed = self.elapsed + other.elapsed
       solution.heuristic_synthesis = self.heuristic_synthesis + other.heuristic_synthesis
       solution.solvers = self.solvers + other.solvers
       solution.routes = self.routes + other.routes
       solution.unassigned_stops = self.unassigned_stops + other.unassigned_stops
-      solution.cost_info = self.cost_info + other.cost_info
       solution.info = self.info + other.info
       solution.configuration = self.configuration + other.configuration
       solution
-    end
-
-    def update_costs
-      previous_total = cost_info.total
-      # When there is only one route, the route cost_info object is shared with the solution cost_info
-      return if routes.size <= 1
-
-      cost_info = routes.map(&:cost_info).sum
-      self.cost -= (previous_total - cost_info.total).round
     end
 
     def insert_stop(vrp, route, stop, index, idle_time = 0)
