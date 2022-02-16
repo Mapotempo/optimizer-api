@@ -663,14 +663,14 @@ module Wrappers
             (vehicle.distance.nil? || dist_to_go + dist_to_return <= vehicle.distance) &&
               (
                 vehicle.duration.nil? ||
-                time_to_go + vehicle.additional_service + vehicle.coef_service * activity.duration + time_to_return <= vehicle.duration
+                time_to_go + activity.duration_on(vehicle) + time_to_return <= vehicle.duration
               ) && (
                 (activity.timewindows.empty? ? implicit_timewindow : activity.timewindows).any?{ |s_tw|
                   vehicle_timewindows.any?{ |v_tw|
                     # vehicle has a tw that can serve service in time (incl. travel if it exists)
                     (s_tw.day_index.nil? || v_tw.day_index.nil? || s_tw.day_index == v_tw.day_index) &&
                       v_tw.start + time_to_go <= s_tw.safe_end(activity.late_multiplier&.positive?) &&
-                      [s_tw.start, v_tw.start + time_to_go].max + vehicle.additional_service + vehicle.coef_service * activity.duration + time_to_return <= v_tw.safe_end(vehicle.cost_late_multiplier&.positive?) &&
+                      [s_tw.start, v_tw.start + time_to_go].max + activity.duration_on(vehicle) + time_to_return <= v_tw.safe_end(vehicle.cost_late_multiplier&.positive?) &&
                       ( # either not schedule or there should be a day in which both vehicle and service are available
                         !vrp.schedule? ||
                           vrp.configuration.schedule.range_indices[:start].upto(vrp.configuration.schedule.range_indices[:end]).any?{ |day|
@@ -1327,17 +1327,10 @@ module Wrappers
           next if service_group.any?{ |s| s.activity.setup_duration.to_i == 0 } || # no need if no setup_duration
                   service_group.uniq{ |s| s.activity.setup_duration }.size > 1 # can't if setup_durations are different
 
-          setup_duration = service_group.first.activity.setup_duration
-
-          service_group.each{ |service|
-            service.activity[:simplified_setup_duration] = service.activity.setup_duration
-            service.activity.setup_duration = nil
-          }
+          first_activity = service_group.first.activity
 
           vrp.matrices.each{ |matrix|
             vehicle = vehicles_grouped_by_matrix_id[matrix.id].first
-            coef_setup = vehicle.coef_setup || 1
-            additional_setup = vehicle.additional_setup.to_i
 
             # WARNING: Here we apply the setup_duration for the points which has non-zero
             # distance (in time!) between them because this is the case in optimizer-ortools.
@@ -1346,8 +1339,13 @@ module Wrappers
             # and apply the setup duration increment to every pair except index == point.matrix_index
             # even if they were 0 in the first place.
             matrix.time.each{ |row|
-              row[point.matrix_index] += (coef_setup * setup_duration + additional_setup).to_i if row[point.matrix_index] > 0
+              row[point.matrix_index] += first_activity.setup_duration_on(vehicle).to_i if row[point.matrix_index] > 0
             }
+          }
+
+          service_group.each{ |service|
+            service.activity[:simplified_setup_duration] = service.activity.setup_duration
+            service.activity.setup_duration = 0
           }
         }
 
@@ -1358,8 +1356,8 @@ module Wrappers
         vrp.vehicles.each{ |vehicle|
           vehicle[:simplified_coef_setup] = vehicle.coef_setup
           vehicle[:simplified_additional_setup] = vehicle.additional_setup
-          vehicle.coef_setup = nil
-          vehicle.additional_setup = nil
+          vehicle.coef_setup = 1
+          vehicle.additional_setup = 0
         }
       when :rewind
         # take it back in case in dicho and there will be re-optimization

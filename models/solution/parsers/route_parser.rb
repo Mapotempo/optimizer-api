@@ -127,11 +127,10 @@ module Parsers
           previous_departure + travel_time
         ].max || 0
       if travel_time > 0
-        earliest_arrival += stop.activity.setup_duration * @route.vehicle.coef_setup + @route.vehicle.additional_setup
+        earliest_arrival += stop.activity.setup_duration_on(@route.vehicle)
       end
       stop.info.begin_time = earliest_arrival
-      stop.info.end_time = earliest_arrival +
-        (stop.activity.duration * @route.vehicle.coef_service + @route.vehicle.additional_service)
+      stop.info.end_time = earliest_arrival + stop.activity.duration_on(@route.vehicle)
       stop.info.departure_time = stop.info.end_time
       earliest_arrival
     end
