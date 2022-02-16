@@ -4855,7 +4855,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
   end
 
   def test_ortools_performance_when_duration_limit
-    # Test agains optim-ortools model regression wrt vehicle duration limit
+    # Test against optim-ortools model regression wrt vehicle duration limit
     vrp = TestHelper.load_vrp(self)
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
