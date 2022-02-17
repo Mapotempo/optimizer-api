@@ -180,7 +180,7 @@ GEM
     path_expander (1.1.0)
     polylines (0.4.0)
     public_suffix (4.0.6)
-    puma (5.5.2)
+    puma (5.6.2)
       nio4r (~> 2.0)
     racc (1.6.0)
     rack-accept (0.4.5)
