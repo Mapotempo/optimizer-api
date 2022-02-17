@@ -104,7 +104,8 @@ module Interpreters
         when 'balanced_kmeans'
           generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
             block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
-
+            # Repopulate Models::Unit
+            s_v[:vrp].units.each{ |unit| Models::Unit.insert(unit) } if Models::Unit.all.empty?
             # TODO : global variable to know if work_day entity
             s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
                                                s_v[:vrp].vehicles, partition[:entity])
@@ -116,6 +117,8 @@ module Interpreters
         when 'hierarchical_tree'
           generated_service_vrps = current_service_vrps.collect{ |s_v|
             current_vrp = s_v[:vrp]
+            # Repopulate Models::Unit
+            current_vrp.units.each{ |unit| Models::Unit.insert(unit) } if Models::Unit.all.empty?
             current_vrp.vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
                                                  [current_vrp.vehicles.first], partition[:entity])
             split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size,
@@ -1019,10 +1022,7 @@ module Interpreters
         tw = Models::Timewindow.create(timewindow.as_json || {})
         tw.day_index = day
         provide_work_day_skill(vehicle, day)
-        vehicle_hash = vehicle.as_json.symbolize_keys
-        vehicle_hash.delete(:id)
-        vehicle_hash.delete(:start_point_id)
-        vehicle_hash.delete(:end_point_id)
+        vehicle_hash = vehicle.as_json(except: [:id, :start_point_id, :end_point_id, :sequence_timewindows])
         new_vehicle = Models::Vehicle.create(vehicle_hash)
 
         # Current depot points may not be currently in the active_hash base due to
@@ -1030,7 +1030,6 @@ module Interpreters
         new_vehicle.start_point = vehicle.start_point
         new_vehicle.end_point = vehicle.end_point
         new_vehicle.timewindow = tw
-        new_vehicle.sequence_timewindows = nil
         new_vehicle
       }.compact
     end

@@ -212,7 +212,7 @@ class HeuristicTest < Minitest::Test
 
         days_used = solutions[0].routes.select{ |r|
           r.stops.any?{ |a| a.service_id&.include? "#{s.id}_" }
-        }.collect!{ |r| r.vehicle.id.split('_').last.to_i }.sort!
+        }.collect!{ |r| r.vehicle.global_day_index }.sort!
         assert_equal s[:visits_number], days_used.size
         (1..days_used.size - 1).each{ |index|
           assert days_used[index] - days_used[index - 1] >= s[:minimum_lapse]

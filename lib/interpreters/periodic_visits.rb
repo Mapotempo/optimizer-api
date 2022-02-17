@@ -21,7 +21,7 @@ module Interpreters
   class PeriodicVisits
     def initialize(vrp)
       @periods = []
-      @equivalent_vehicles = {}
+      @equivalent_vehicles = {} # collection of [vehicle.id, vehicle.global_day_index]
       @epoch = Date.new(1970, 1, 1)
 
       if vrp.schedule?
@@ -216,6 +216,9 @@ module Interpreters
 
     def generate_vehicles(vrp)
       rests_durations = Array.new(vrp.vehicles.size, 0)
+
+      # Repopulate Models::Unit
+      vrp.units.each{ |unit| Models::Unit.insert(unit) } if Models::Unit.all.empty?
       new_vehicles = []
       vrp.vehicles.each{ |vehicle|
         @equivalent_vehicles[vehicle.id] = [] # equivalent_vehicle_ids !
@@ -245,7 +248,7 @@ module Interpreters
 
         vrp.relations << Models::Relation.create(
           type: :vehicle_group_duration,
-          linked_vehicle_ids: @equivalent_vehicles[vehicle.original_id],
+          linked_vehicle_ids: @equivalent_vehicles[vehicle.original_id].map(&:first),
           lapses: [vehicle.overall_duration + rests_durations[index]]
         )
       }
@@ -448,7 +451,7 @@ module Interpreters
 
       while periods.any?
         days_in_period = periods.slice!(0, relation.periodicity).flatten
-        relation_vehicles = vehicles_in_relation.select{ |id| days_in_period.include?(id.split('_').last.to_i) }
+        relation_vehicles = vehicles_in_relation.select{ |_id, day| days_in_period.include?(day) }.map(&:first)
         next unless relation_vehicles.any?
 
         additional_relations << Models::Relation.create(
@@ -479,7 +482,7 @@ module Interpreters
         when :vehicle_group_duration
           Models::Relation.create(
             type: :vehicle_group_duration,
-            linked_vehicle_ids: relation[:linked_vehicle_ids].flat_map{ |v| @equivalent_vehicles[v] },
+            linked_vehicle_ids: relation[:linked_vehicle_ids].flat_map{ |v| @equivalent_vehicles[v].map(&:first) },
             lapses: relation.lapses
           )
         when :vehicle_group_duration_on_weeks
