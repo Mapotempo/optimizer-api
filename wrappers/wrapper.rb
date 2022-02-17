@@ -478,6 +478,7 @@ module Wrappers
 
             add_unassigned(unfeasible, vrp, service_in, "In a relation with an unfeasible service: #{service.id}")
           }
+          vrp.relations.delete(relation)
         }
         vrp.routes.each{ |route|
           route.mission_ids.delete_if{ |mission_id| mission_id == service.id }
