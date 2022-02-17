@@ -21,9 +21,13 @@ module PeriodicService
   extend ActiveSupport::Concern
 
   def can_affect_all_visits?(service)
+    return true unless self.schedule?
+
     return true if service.visits_number == 1
 
     self.vehicles.any?{ |vehicle|
+      next unless service.vehicle_compatibility.nil? || service.vehicle_compatibility[vehicle.id] # vehicle already eliminated
+
       current_day = self.configuration.schedule.range_indices[:start]
       decimal_day = current_day
       current_visit = 0

@@ -57,8 +57,17 @@ module Interpreters
       @periods.uniq!
       generate_relations_on_periodic_vehicles(vrp, vehicles_linking_relations)
 
-      if vrp.configuration.preprocessing.first_solution_strategy.to_a.first != 'periodic' && vrp.services.any?{ |service| service.visits_number > 1 }
+      if vrp.routes.empty? && vrp.services.any?{ |service| service.visits_number > 1 }
         vrp.routes = generate_routes(vrp)
+      elsif !vrp.periodic_heuristic?
+        expanded_service_ids = @expanded_services.transform_values{ |service| service.map(&:id) }
+        vrp.routes.sort_by(&:day_index).each{ |route|
+          # Note that we sort_by day_index so we can assume that the existing routes have the visits in the correct
+          # order. That is, the first appearance of a service id will be the visit_1_X, the next will be visit_2_X,
+          # and the last will be visit_X_X.
+          route.mission_ids.collect!{ |sid| expanded_service_ids[sid].shift }
+          route.vehicle_id += "_#{route.day_index}"
+        }
       end
 
       vrp
@@ -90,14 +99,14 @@ module Interpreters
 
     def generate_relations(vrp)
       vrp.relations.flat_map{ |relation|
-        unless relation.linked_ids.uniq{ |s_id| @expanded_services[s_id].size }.size <= 1
+        unless relation.linked_ids.uniq{ |s_id| @expanded_services[s_id]&.size.to_i }.size <= 1
           raise "Cannot expand relations of #{relation.linked_ids} because they have different visits_number"
         end
 
         # keep the original relation if it is another type of relation or if it doesn't belong to an unexpanded service.
-        next relation if relation.linked_services.empty? || @expanded_services[relation.linked_ids.first].empty?
+        next relation if relation.linked_services.empty? || @expanded_services[relation.linked_ids.first]&.size.to_i == 0
 
-        Array.new(@expanded_services[relation.linked_ids.first].size){ |visit_index|
+        Array.new(@expanded_services[relation.linked_ids.first]&.size.to_i){ |visit_index|
           linked_ids = relation.linked_ids.collect{ |s_id| @expanded_services[s_id][visit_index].id }
 
           Models::Relation.create(
@@ -111,8 +120,8 @@ module Interpreters
       # TODO : need to uniformize generated relations whether mission has minimum AND maximum lapse or only one of them
       return unless mission.visits_number > 1
 
-      if mission.minimum_lapse && mission.maximum_lapse
-        (2..mission.visits_number).each{ |index|
+      if mission.minimum_lapse && mission.maximum_lapse && (mission.minimum_lapse == mission.maximum_lapse)
+        2.upto(mission.visits_number){ |index|
           current_lapse = (index - 1) * mission.minimum_lapse.to_i
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
@@ -120,7 +129,7 @@ module Interpreters
             lapses: [current_lapse]
           )
         }
-        (2..mission.visits_number).each{ |index|
+        2.upto(mission.visits_number){ |index|
           current_lapse = (index - 1) * mission.maximum_lapse.to_i
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
@@ -128,30 +137,28 @@ module Interpreters
             lapses: [current_lapse]
           )
         }
-      elsif mission.minimum_lapse
-        (2..mission.visits_number).each{ |index|
-          current_lapse = mission.minimum_lapse.to_i
+      else
+        if mission.minimum_lapse
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
-            linked_ids: ["#{mission.id}_#{index - 1}_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
-            lapses: [current_lapse]
+            linked_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
+            lapses: [mission.minimum_lapse.to_i]
           )
-        }
-      elsif mission.maximum_lapse
-        (2..mission.visits_number).each{ |index|
-          current_lapse = mission.maximum_lapse.to_i
+        end
+        if mission.maximum_lapse
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
-            linked_ids: ["#{mission.id}_#{index - 1}_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
-            lapses: [current_lapse]
+            linked_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
+            lapses: [mission.maximum_lapse.to_i]
           )
-        }
+        end
       end
     end
 
     def generate_services(vrp)
-      @expanded_services = Hash.new{ |h, k| h[k] = [] }
-      vrp.services.collect{ |service|
+      @expanded_services = {}
+      new_services = []
+      vrp.services.each{ |service|
         # transform service data into periodic data
         (service.activity ? [service.activity] : service.activities).each{ |activity|
           activity.timewindows = generate_timewindows(activity.timewindows)
@@ -161,7 +168,7 @@ module Interpreters
         # TODO : create visit in model
         @periods << service.visits_number
 
-        visits = (0..service.visits_number - 1).collect{ |visit_index|
+        0.upto(service.visits_number - 1){ |visit_index|
           next if service.unavailable_visit_indices.include?(visit_index)
 
           new_service = duplicate_safe(
@@ -174,15 +181,16 @@ module Interpreters
           )
           new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}"] if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
 
+          @expanded_services[service.id] ||= []
           @expanded_services[service.id] << new_service
 
-          new_service
-        }.compact
+          new_services << new_service
+        }
 
         generate_relations_between_visits(vrp, service)
+      }
 
-        visits
-      }.flatten
+      new_services
     end
 
     def build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
@@ -204,40 +212,39 @@ module Interpreters
 
     def generate_vehicles(vrp)
       rests_durations = Array.new(vrp.vehicles.size, 0)
-      new_vehicles = vrp.vehicles.collect{ |vehicle|
-        @equivalent_vehicles[vehicle.id] = []
+      new_vehicles = []
+      vrp.vehicles.each{ |vehicle|
+        @equivalent_vehicles[vehicle.id] = [] # equivalent_vehicle_ids !
         @equivalent_vehicles[vehicle.original_id] = []
-        vehicles = (vrp.configuration.schedule.range_indices[:start]..vrp.configuration.schedule.range_indices[:end]).collect{ |vehicle_day_index|
+        vrp.configuration.schedule.range_indices[:start].upto(vrp.configuration.schedule.range_indices[:end]){ |vehicle_day_index|
           next if vehicle.unavailable_days.include?(vehicle_day_index)
 
           timewindows = [vehicle.timewindow || vehicle.sequence_timewindows].flatten
           if timewindows.empty?
-            new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
-            new_vehicle
+            new_vehicles << build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
           else
-            timewindows.select{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == vehicle_day_index % 7 }.collect{ |associated_timewindow|
+            timewindows.each{ |associated_timewindow|
+              next unless associated_timewindow.day_index.nil? || associated_timewindow.day_index == vehicle_day_index % 7
+
               new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
               new_vehicle.timewindow = Models::Timewindow.create(start: associated_timewindow.start || 0, end: associated_timewindow.end || 86400)
               if @have_day_index
                 new_vehicle.timewindow.start += vehicle_day_index * 86400
                 new_vehicle.timewindow.end += vehicle_day_index * 86400
               end
-              new_vehicle
-            }.compact
+              new_vehicles << new_vehicle
+            }
           end
-        }.compact
+        }
 
-        if vehicle.overall_duration
-          new_relation = Models::Relation.create(
-            type: :vehicle_group_duration,
-            linked_vehicle_ids: @equivalent_vehicles[vehicle.original_id],
-            lapses: [vehicle.overall_duration + rests_durations[index]]
-          )
-          vrp.relations << new_relation
-        end
+        next unless vehicle.overall_duration
 
-        vehicles
-      }.flatten
+        vrp.relations << Models::Relation.create(
+          type: :vehicle_group_duration,
+          linked_vehicle_ids: @equivalent_vehicles[vehicle.original_id],
+          lapses: [vehicle.overall_duration + rests_durations[index]]
+        )
+      }
 
       new_vehicles
     end

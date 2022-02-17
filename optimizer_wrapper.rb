@@ -21,6 +21,8 @@ require_all 'lib'
 require_all 'util'
 
 module OptimizerWrapper
+  @zip_condition = false
+
   def self.wrapper_vrp(api_key, profile, vrp, checksum, job_id = nil)
     inapplicable_services = []
     apply_zones(vrp)
@@ -185,9 +187,13 @@ module OptimizerWrapper
     else
       unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 
+      # TODO: Eliminate the points which has no feasible vehicle or service
+
       vrp.compute_matrix(&block)
 
       config[:services][service].check_distances(vrp, unfeasible_services)
+
+      # TODO: Eliminate the vehicles which cannot serve any service vrp.services.all?{ |s| s.vehicle_compatibility[v.id] == false }
 
       # Remove infeasible services
       services_to_reinject = []

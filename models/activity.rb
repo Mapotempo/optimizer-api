@@ -47,5 +47,27 @@ module Models
       end
       hash
     end
+
+    def duration_on(vehicle = nil)
+      case vehicle
+      when nil
+        duration
+      when Models::Vehicle
+        duration * vehicle.coef_service + vehicle.additional_service
+      else
+        raise 'Unknown object type for activity duration calculation'
+      end
+    end
+
+    def setup_duration_on(vehicle = nil)
+      case vehicle
+      when nil
+        setup_duration
+      when Models::Vehicle
+        setup_duration > 0 ? setup_duration * vehicle.coef_setup + vehicle.additional_setup : 0
+      else
+        raise 'Unknown object type for activity setup_duration calculation'
+      end
+    end
   end
 end
