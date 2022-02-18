@@ -43,7 +43,8 @@ module Parsers
         reason: options[:reason],
         skills: options[:skills] || service.skills,
         original_skills: options[:original_skills] || service.original_skills,
-        visit_index: options[:visit_index] || service.visit_index
+        visit_index: options[:visit_index] || service.visit_index,
+        exclusion_cost: service.exclusion_cost
       }
     end
 

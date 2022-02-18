@@ -33,6 +33,7 @@ module Models
       field :skills, default: [], vrp_result: :hide
       field :original_skills, default: [], vrp_result: :hide
       field :visit_index
+      field :exclusion_cost
 
       has_many :loads, class_name: 'Models::Solution::Load'
       belongs_to :activity, class_name: 'Models::Activity'
