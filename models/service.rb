@@ -68,6 +68,8 @@ module Models
       hash[:skills].map!(&:to_sym)
       hash[:skills].sort!
 
+      hash[:type] = hash[:type]&.to_sym if hash.key?(:type)
+
       super(hash)
     end
   end

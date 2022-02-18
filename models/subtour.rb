@@ -29,5 +29,13 @@ module Models
 
     has_many :transmodal_stops, class_name: 'Models::Point', as_json: :ids
     has_many :capacities, class_name: 'Models::Capacity', as_json: :ids
+
+    def self.create(hash, _options = {})
+      hash[:skills] = [] if hash[:skills].to_a.empty?
+      hash[:skills].map!(&:to_sym)
+      hash[:skills].sort!
+
+      super(hash)
+    end
   end
 end

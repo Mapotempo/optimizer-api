@@ -32,6 +32,13 @@ module Models
     field :threshold
     field :restarts
     field :centroids
+
+    def self.create(hash)
+      hash[:metric] = hash[:metric]&.to_sym
+      hash[:entity] = hash[:entity]&.to_sym
+
+      super(hash)
+    end
   end
 
   class Preprocessing < Base
@@ -93,6 +100,12 @@ module Models
     field :csv, default: false
     field :use_deprecated_csv_headers, default: false
     field :allow_empty_result, default: false
+
+    def self.create(hash)
+      hash[:geometry]&.map!(&:to_sym)
+
+      super(hash)
+    end
   end
 
   class Schedule < Base

@@ -38,6 +38,11 @@ module Models
                                   # the code would continue to accept invalid time windows thorugh API because
                                   # vrp.valid? doesn't call the validator of activity
                                   # We need to implement a check inside Api::V01::Vrp and fix the ActivityTest::test_timewindows accordingly
+    def self.create(hash)
+      hash[:position] = hash[:position]&.to_sym
+
+      super(hash)
+    end
 
     def vrp_result(options = {})
       hash = super(options)

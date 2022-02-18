@@ -216,9 +216,6 @@ module Interpreters
 
     def generate_vehicles(vrp)
       rests_durations = Array.new(vrp.vehicles.size, 0)
-
-      # Repopulate Models::Unit
-      vrp.units.each{ |unit| Models::Unit.insert(unit) } if Models::Unit.all.empty?
       new_vehicles = []
       vrp.vehicles.each{ |vehicle|
         @equivalent_vehicles[vehicle.id] = [] # equivalent_vehicle_ids !

@@ -106,7 +106,7 @@ module Models
 
     def vrp_result(_options = {})
       {
-        vehicle_id: self.original_id.to_s + (self.global_day_index ? "_#{self.global_day_index}" : ''),
+        vehicle_id: [self.original_id, self.global_day_index].compact.join('_'),
         original_vehicle_id: self.original_id,
         day: self.global_day_index
       }.stringify_keys

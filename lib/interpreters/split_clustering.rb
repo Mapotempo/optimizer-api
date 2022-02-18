@@ -104,8 +104,7 @@ module Interpreters
         when 'balanced_kmeans'
           generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
             block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
-            # Repopulate Models::Unit
-            s_v[:vrp].units.each{ |unit| Models::Unit.insert(unit) } if Models::Unit.all.empty?
+
             # TODO : global variable to know if work_day entity
             s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
                                                s_v[:vrp].vehicles, partition[:entity])
@@ -117,8 +116,6 @@ module Interpreters
         when 'hierarchical_tree'
           generated_service_vrps = current_service_vrps.collect{ |s_v|
             current_vrp = s_v[:vrp]
-            # Repopulate Models::Unit
-            current_vrp.units.each{ |unit| Models::Unit.insert(unit) } if Models::Unit.all.empty?
             current_vrp.vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
                                                  [current_vrp.vehicles.first], partition[:entity])
             split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size,

@@ -901,10 +901,10 @@ class SplitClusteringTest < Minitest::Test
       visits_unassigned = []
       services_unassigned = []
       reason_unassigned = []
-      vrp = Marshal.dump(TestHelper.load_vrp(self)) # call load_vrp only once to not to dump for each restart
+      vrp_hash = TestHelper.load_vrp(self).as_json
       (1..@regularity_restarts).each{ |trial|
         OptimizerLogger.log "Regularity trial: #{trial}/#{@regularity_restarts}"
-        solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(vrp), nil) # rubocop: disable Security/MarshalLoad
+        solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Models::Vrp.create(vrp_hash), nil)
         visits_unassigned << solutions[0].unassigned_stops.size
         unassigned_service_ids = solutions[0].unassigned_stops.map(&:id)
         unassigned_service_ids.uniq!

@@ -76,12 +76,12 @@ module Models
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|
-        next if options[:except]&.include?(field_name.to_sym) ||
+        next if options[:except]&.include?(field_name) ||
                 !respond_to?(field_name) ||
                 send(field_name).nil? ||
                 self.class.default_attributes&.fetch(field_name, nil) == send(field_name)
 
-        hash[field_name.to_sym] = self.send(field_name).as_json
+        hash[field_name] = self.send(field_name).as_json
       }
       hash
     end
@@ -97,7 +97,7 @@ module Models
     def self.field(name, options = {})
       case options[:as_json]
       when nil
-        json_fields << name.to_s
+        json_fields << name.to_sym
       when :none
         json_fields
       else
@@ -125,11 +125,11 @@ module Models
 
       case options[:as_json]
       when :ids
-        json_fields << ids_function_name.to_s
+        json_fields << ids_function_name.to_sym
       when :none
         json_fields
       when nil
-        json_fields << name.to_s
+        json_fields << name.to_sym
       else
         raise 'Unknown :as_json option'
       end
@@ -181,11 +181,11 @@ module Models
 
       case options[:as_json]
       when :id
-        json_fields << id_function_name.to_s
+        json_fields << id_function_name.to_sym
       when :none
         json_fields
       when nil
-        json_fields << name.to_s
+        json_fields << name.to_sym
       else
         raise 'Unknown :as_json option'
       end

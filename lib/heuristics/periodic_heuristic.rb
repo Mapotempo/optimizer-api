@@ -444,7 +444,7 @@ module Wrappers
           next if route_data[:stops].uniq{ |s| s[:point_id] }.size <= 1
 
           corresponding_vehicle = vrp.vehicles.find{ |v| v.original_id == vehicle_id && v.global_day_index == day }
-          corresponding_vehicle ||= Models::Timewindow.create({})
+          corresponding_vehicle.timewindow ||= Models::Timewindow.create({})
           corresponding_vehicle.timewindow.start = route_data[:tw_start]
           corresponding_vehicle.timewindow.end = route_data[:tw_end]
           route_vrp = construct_sub_vrp(vrp, corresponding_vehicle, route_data[:stops])

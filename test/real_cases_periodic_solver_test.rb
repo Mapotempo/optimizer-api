@@ -23,10 +23,12 @@ class HeuristicTest < Minitest::Test
       vrps = TestHelper.load_vrps(self)
 
       vrps.each{ |vrp|
+        vrp = Models::Vrp.create(vrp.as_json)
         vrp.configuration.preprocessing.partitions = nil
         solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil) # marshal dump needed, otherwise we create relations (min/maximum lapse)
         unassigned = solutions[0].unassigned_stops.size
 
+        vrp = Models::Vrp.create(vrp.as_json)
         vrp.configuration.resolution.solver = true
         solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
         assert unassigned >= solutions[0].unassigned_stops.size, "Increased number of unassigned with ORtools : had #{unassigned}, has #{solutions[0].unassigned_stops.size} now"
