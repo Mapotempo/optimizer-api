@@ -1420,7 +1420,7 @@ module Wrappers
 
             # The vehicle adjustement is performed by vrp_result
             stop.activity.setup_duration = setup_duration
-            travel_time_correction = stop.activity.setup_duration_on(vehicle)
+            travel_time_correction = stop.activity.setup_duration_on(vehicle).to_i
 
             total_travel_time_correction += travel_time_correction
             stop.info.travel_time -= travel_time_correction
