@@ -63,7 +63,7 @@ module Models
 
       vrp = super({})
       self.convert_shipments_to_services(hash)
-      self.filter(hash) # TODO : add filters.rb here
+      self.filter(hash) if options[:check] # TODO : add filters.rb here
       # moved filter here to make sure we do have configuration.schedule.indices (not date) to do work_day check with lapses
       vrp.check_consistency(hash) if options[:check]
       self.convert_expected_string_to_symbol(hash)
