@@ -41,6 +41,12 @@ module Models
 
     def vrp_result(options = {})
       hash = super(options)
+
+      if options[:vehicle]
+        hash[:duration] = duration_on(options[:vehicle])
+        hash[:setup_duration] = options[:apply]&.include?(:setup) ? setup_duration_on(options[:vehicle]) : 0
+      end
+
       if self.point # Rest inherits from activity
         hash['lat'] = point.location&.lat
         hash['lon'] = point.location&.lon

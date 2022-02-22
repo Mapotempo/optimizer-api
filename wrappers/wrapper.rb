@@ -1410,9 +1410,6 @@ module Wrappers
         overall_total_travel_time_correction = 0
         solution.routes.each{ |route|
           vehicle = vehicles_grouped_by_vehicle_id[route[:vehicle_id]].first
-          coef_setup = vehicle[:simplified_coef_setup] || 1
-          additional_setup = vehicle[:simplified_additional_setup].to_i
-
           total_travel_time_correction = 0
           route.stops.each{ |stop|
             next if stop.service_id.nil? || stop.info.travel_time.to_i.zero? || services_grouped_by_point_id[stop.activity.point.id].nil?
@@ -1421,11 +1418,12 @@ module Wrappers
 
             next if setup_duration.zero?
 
-            time_correction = coef_setup * setup_duration + additional_setup
+            # The vehicle adjustement is performed by vrp_result
+            stop.activity.setup_duration = setup_duration
+            travel_time_correction = stop.activity.setup_duration_on(vehicle).to_i
 
-            total_travel_time_correction += time_correction
-            stop.activity.setup_duration = time_correction.round
-            stop.info.travel_time -= time_correction
+            total_travel_time_correction += travel_time_correction
+            stop.info.travel_time -= travel_time_correction
           }
 
           overall_total_travel_time_correction += total_travel_time_correction
