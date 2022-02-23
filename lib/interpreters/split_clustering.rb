@@ -703,8 +703,12 @@ module Interpreters
     end
 
     def self.adjust_independent_duration(vrp, this_sub_size, total_size)
+      return unless total_size&.positive?
+
       split_ratio = this_sub_size.to_f / total_size
-      vrp.configuration.resolution.duration = vrp.configuration.resolution.duration&.*(split_ratio)&.ceil
+
+      vrp.configuration.resolution.duration =
+        vrp.configuration.resolution.duration&.*(split_ratio)&.ceil
       vrp.configuration.resolution.minimum_duration =
         vrp.configuration.resolution.minimum_duration&.*(split_ratio)&.ceil
       vrp.configuration.resolution.iterations_without_improvment =
