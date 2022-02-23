@@ -853,8 +853,14 @@ module Interpreters
             Array.new(nb_clusters){ [] } # mimics grouped_objects
           else
             # nb_clusters == 1
-            # this is normal if there is one vehicle (or one workday) and partitioning by vehicle (or workday) is active
-            log 'Split is not possible if the cluster size is 1', level: :warn
+            log_message = 'Split is not possible if the cluster size is 1'
+
+            if vrp.vehicles.size == 1
+              # this is normal if there is one vehicle (or one workday) and partitioning by vehicle (or workday) is active
+              log log_message, level: :debug
+            else
+              log log_message, level: :warn
+            end
 
             [vrp.services.dup] # mimics grouped_objects
           end
