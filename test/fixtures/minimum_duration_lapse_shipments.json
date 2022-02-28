@@ -51,13 +51,6 @@
         }
       },
       {
-        "id": "point_7",
-        "location": {
-          "lat": 44.9093,
-          "lon": -0.639
-        }
-      },
-      {
         "id": "point_8",
         "location": {
           "lat": 44.8509,
@@ -90,13 +83,6 @@
         "location": {
           "lat": 44.9073,
           "lon": -0.669
-        }
-      },
-      {
-        "id": "point_13",
-        "location": {
-          "lat": 44.8174,
-          "lon": -0.68
         }
       },
       {
@@ -139,13 +125,6 @@
         "location": {
           "lat": 44.8404,
           "lon": -0.5823
-        }
-      },
-      {
-        "id": "point_20",
-        "location": {
-          "lat": 44.9046,
-          "lon": -0.7448
         }
       },
       {
@@ -523,7 +502,7 @@
           ]
         },
         "delivery": {
-          "point_id": "point_7",
+          "point_id": "point_59",
           "setup_duration": 300
         },
         "maximum_inroute_duration": 6300
@@ -531,11 +510,11 @@
       {
         "id": "shipment_1",
         "pickup": {
-          "point_id": "point_7",
+          "point_id": "point_59",
           "setup_duration": 300
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300,
           "timewindows": [
             {
@@ -558,7 +537,7 @@
           ]
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300,
           "timewindows": [
             {
@@ -580,7 +559,7 @@
           ]
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300
         },
         "maximum_inroute_duration": 6300
@@ -598,7 +577,7 @@
           ]
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300
         },
         "maximum_inroute_duration": 6300
@@ -616,7 +595,7 @@
           ]
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300
         },
         "maximum_inroute_duration": 6300
@@ -646,7 +625,7 @@
           "setup_duration": 300
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300,
           "timewindows": [
             {
@@ -681,7 +660,7 @@
           "setup_duration": 300
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300,
           "timewindows": [
             {
@@ -716,7 +695,7 @@
           "setup_duration": 300
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300,
           "timewindows": [
             {
@@ -751,7 +730,7 @@
           "setup_duration": 300
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300,
           "timewindows": [
             {
@@ -774,7 +753,7 @@
           ]
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300
         },
         "maximum_inroute_duration": 6300
@@ -804,7 +783,7 @@
           "setup_duration": 300
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300,
           "timewindows": [
             {
@@ -839,7 +818,7 @@
           "setup_duration": 300
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300,
           "timewindows": [
             {
@@ -874,7 +853,7 @@
           "setup_duration": 300
         },
         "delivery": {
-          "point_id": "point_13",
+          "point_id": "point_61",
           "setup_duration": 300,
           "timewindows": [
             {
