@@ -485,11 +485,14 @@ module OptimizerWrapper
           stop.info.departure_time && (stop.info.departure_time - stop.info.begin_time)
         }.compact
       }
+      previous_point_id = nil
       setup_durations = solution.routes.map{ |route|
         route.stops.map{ |stop|
           next if stop.type == :rest
 
-          (stop.info.travel_time.nil? || stop.info.travel_time&.positive?) && stop.activity.setup_duration || 0
+          setup = (previous_point_id.nil? || previous_point_id != stop.activity.point_id) && stop.activity.setup_duration_on(route.vehicle) || 0
+          previous_point_id = stop.activity.point_id
+          setup
         }.compact
       }
       total_time = solution.info.total_time || 0

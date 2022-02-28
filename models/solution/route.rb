@@ -60,14 +60,20 @@ module Models
 
         raise 'Cannot shift the route, there are not enough stops' if shift_start_index > self.stops.size
 
+        current_shift = shift_amount
         self.info.start_time += shift_amount if shift_start_index == 0
         self.stops.each_with_index{ |stop, index|
           next if index <= shift_start_index
 
-          stop.info.begin_time += shift_amount
-          stop.info.end_time += shift_amount if stop.info.end_time
-          stop.info.departure_time += shift_amount if stop.info.departure_time
-          stop.info.waiting_time = [stop.info.waiting_time - shift_amount, 0].max
+          if stop.info.waiting_time > 0
+            waiting_resorb = [stop.info.waiting_time - current_shift, 0].max
+            current_shift = [current_shift - waiting_resorb, 0].max
+            stop.info.waiting_time -= waiting_resorb
+          end
+
+          stop.info.begin_time += current_shift
+          stop.info.end_time += current_shift if stop.info.end_time
+          stop.info.departure_time += current_shift if stop.info.departure_time
         }
         self.info.end_time += shift_amount if self.info.end_time
       end

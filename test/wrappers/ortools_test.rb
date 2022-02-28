@@ -2001,80 +2001,29 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_setup_duration
     ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 5],
-          [5, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        timewindow: {
-          start: 3,
-          end: 16
-        }
-      }, {
-        id: 'vehicle_1',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        timewindow: {
-          start: 3,
-          end: 16
-        }
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          setup_duration: 2,
-          duration: 1,
-          point_id: 'point_1',
-          timewindows: [{
-            start: 10,
-            end: 15
-          }],
-          late_multiplier: 0,
-        }
-      }, {
-        id: 'service_2',
-        activity: {
-          setup_duration: 2,
-          duration: 1,
-          point_id: 'point_1',
-          timewindows: [{
-            start: 10,
-            end: 15
-          }],
-          late_multiplier: 0,
-        }
-      }],
-      configuration: {
-        resolution: {
-          duration: 20,
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
+    problem = VRP.basic
+
+    problem[:matrices].first[:time] = [
+      [0, 4, 0, 5],
+      [6, 0, 0, 5],
+      [1, 0, 0, 5],
+      [5, 5, 5, 0]
+    ]
+
+    problem[:services] << problem[:services].first.dup.tap{ |s| s[:id] = 'service_4' }
+    problem[:services].each{ |service|
+      service[:activity][:setup_duration] = 1
     }
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
-    assert solution
-    assert_equal 2, solution.routes.size
+    assert_equal 8, solution.routes.first.info.end_time
+    act_s_one = solution.routes.first.stops.find{ |act| act.service_id == 'service_1' }
+    act_s_two = solution.routes.first.stops.find{ |act| act.service_id == 'service_2'}
+    act_s_four = solution.routes.first.stops.find{ |act| act.service_id == 'service_4'}
+
+    assert_equal act_s_one.info.begin_time, act_s_four.info.begin_time
+    assert_equal 1, (act_s_two.info.begin_time - act_s_one.info.begin_time).abs
     assert_equal problem[:services].size, solution.routes.first.stops.size - 1
-    assert_equal problem[:services].size, solution.routes[1].stops.size - 1
   end
 
   def test_route_duration

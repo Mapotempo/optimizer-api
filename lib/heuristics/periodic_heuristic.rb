@@ -324,7 +324,7 @@ module Wrappers
       (first_index..route.size - 1).each{ |position|
         stop = route[position]
         route_time = matrix(route_data, previous_point_id, stop[:point_id])
-        stop[:considered_setup_duration] = route_time.zero? ? 0 : @services_data[stop[:id]][:setup_durations][stop[:activity]]
+        stop[:considered_setup_duration] = previous_point_id == stop[:point_id] ? 0 : @services_data[stop[:id]][:setup_durations][stop[:activity]]
 
         if can_ignore_tw(previous_id, stop[:id])
           stop[:start] = previous_end
@@ -615,7 +615,7 @@ module Wrappers
         else
           next_service[:tw] = @services_data[next_service[:id]][:tws_sets][next_service[:activity]]
           next_service[:duration] = @services_data[next_service[:id]][:durations][next_service[:activity]]
-          next_end = compute_tw_for_next(inserted_final_time, next_service, time_to_next, route_data[:day])
+          next_end = compute_tw_for_next(inserted_final_time, service_inserted, next_service, time_to_next, route_data[:day])
           shift += next_end - next_service[:end]
         end
 
@@ -625,10 +625,10 @@ module Wrappers
       end
     end
 
-    def compute_tw_for_next(inserted_final_time, route_next, dist_from_inserted, current_day)
+    def compute_tw_for_next(inserted_final_time, service_inserted, route_next, dist_from_inserted, current_day)
       ### compute new start and end times for the service just after inserted point ###
       sooner_start = inserted_final_time
-      setup_duration = dist_from_inserted.zero? ? 0 : @services_data[route_next[:id]][:setup_durations][route_next[:activity]]
+      setup_duration = service_inserted[:point_id] == route_next[:point_id] ? 0 : @services_data[route_next[:id]][:setup_durations][route_next[:activity]]
       if !route_next[:tw].empty?
         tw = find_corresponding_timewindow(current_day, route_next[:arrival], @services_data[route_next[:id]][:tws_sets][route_next[:activity]], route_next[:end] - route_next[:arrival])
         sooner_start = tw[:start] - dist_from_inserted - setup_duration if tw
@@ -1014,7 +1014,7 @@ module Wrappers
       ### find [inserted_service] timewindow which allows to insert it in [route_data] ###
       list = []
       route_time = matrix(route_data, previous[:point_id], inserted_service[:point_id])
-      setup_duration = route_time.zero? ? 0 : inserted_service[:setup_duration]
+      setup_duration = previous[:point_id] == inserted_service[:point_id] ? 0 : inserted_service[:setup_duration]
 
       if inserted_service[:tw].empty?
         start = previous[:end]
