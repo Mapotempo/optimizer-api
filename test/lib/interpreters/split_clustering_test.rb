@@ -1104,6 +1104,11 @@ class SplitClusteringTest < Minitest::Test
       assert_equal 'Cannot use balanced kmeans if there are vehicles with alternative skills', error.message
     end
 
+    def test_adjust_independent_duration
+      empty_vrp = TestHelper.create(services: [], vehicles: [])
+      assert_nil Interpreters::SplitClustering.adjust_independent_duration(empty_vrp, 0, 0)
+    end
+
     def test_select_existing_relations
       problem = VRP.basic
       problem[:relations] = [

@@ -703,8 +703,12 @@ module Interpreters
     end
 
     def self.adjust_independent_duration(vrp, this_sub_size, total_size)
+      return unless total_size&.positive?
+
       split_ratio = this_sub_size.to_f / total_size
-      vrp.configuration.resolution.duration = vrp.configuration.resolution.duration&.*(split_ratio)&.ceil
+
+      vrp.configuration.resolution.duration =
+        vrp.configuration.resolution.duration&.*(split_ratio)&.ceil
       vrp.configuration.resolution.minimum_duration =
         vrp.configuration.resolution.minimum_duration&.*(split_ratio)&.ceil
       vrp.configuration.resolution.iterations_without_improvment =
@@ -849,8 +853,14 @@ module Interpreters
             Array.new(nb_clusters){ [] } # mimics grouped_objects
           else
             # nb_clusters == 1
-            # this is normal if there is one vehicle (or one workday) and partitioning by vehicle (or workday) is active
-            log 'Split is not possible if the cluster size is 1', level: :warn
+            log_message = 'Split is not possible if the cluster size is 1'
+
+            if vrp.vehicles.size == 1
+              # this is normal if there is one vehicle (or one workday) and partitioning by vehicle (or workday) is active
+              log log_message, level: :debug
+            else
+              log log_message, level: :warn
+            end
 
             [vrp.services.dup] # mimics grouped_objects
           end

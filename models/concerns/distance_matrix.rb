@@ -64,7 +64,7 @@ module DistanceMatrix
           value: (router_matrices[dimensions.index(:value)] if dimensions.index(:value))
         )
         if [m.time, m.distance, m.value].any?{ |matrix| matrix&.any?{ |row| row.any?(&:negative?) } }
-          log 'Negative value provided by router', level: :warn
+          log 'Negative value provided by router' # TODO: fix this on the router-api side and turn this into an error
           [m.time, m.distance, m.value].each{ |matrix| matrix&.each{ |row| row.collect!(&:abs) } }
         end
 
