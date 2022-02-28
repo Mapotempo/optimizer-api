@@ -1410,11 +1410,14 @@ module Wrappers
                 end
               else
                 # there is a clear position to insert
+                activity_before_rest = route[:activities][insert_rest_at - 1]
                 activity_after_rest = route[:activities][insert_rest_at]
 
                 rest_start = activity_after_rest[:begin_time]
                 # if this the first service of this location then we need to consider the setup_duration
-                rest_start -= activity_after_rest[:detail][:setup_duration].to_i if activity_after_rest[:travel_time] > 0
+                if activity_before_rest[:point_id] != activity_after_rest[:point_id]
+                  rest_start -= activity_after_rest[:detail][:setup_duration].to_i
+                end
                 if rest.timewindows&.last&.end && rest_start > rest.timewindows.last.end
                   rest_start -= activity_after_rest[:travel_time]
                   rest_start = [rest_start, rest.timewindows&.first&.start.to_i].max # don't induce idle_time if within travel_time
@@ -1481,7 +1484,10 @@ module Wrappers
                       } || vrp.services.any?{ |s| s.activity.nil? }
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
-        vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
+        grouped_services = vrp.services.group_by{ |s| s.activity.point }
+        return nil if grouped_services.map{ |point, _s_g| point.matrix_index }.uniq.size != grouped_services.size
+
+        grouped_services.each{ |point, service_group|
           next if service_group.any?{ |s| s.activity.setup_duration.to_i == 0 } || # no need if no setup_duration
                   service_group.uniq{ |s| s.activity.setup_duration }.size > 1 # can't if setup_durations are different
 
@@ -1503,8 +1509,8 @@ module Wrappers
             # then the following logic needs to be updated. Basically we need to do each_with_index
             # and apply the setup duration increment to every pair except index == point.matrix_index
             # even if they were 0 in the first place.
-            matrix.time.each{ |row|
-              row[point.matrix_index] += (coef_setup * setup_duration + additional_setup).to_i if row[point.matrix_index] > 0
+            matrix.time.each_with_index{ |row, row_index|
+              row[point.matrix_index] += (coef_setup * setup_duration + additional_setup).to_i if point.matrix_index != row_index
             }
           }
         }
@@ -1537,8 +1543,8 @@ module Wrappers
             coef_setup = vehicle[:simplified_coef_setup] || 1
             additional_setup = vehicle[:simplified_additional_setup].to_i
 
-            matrix.time.each{ |row|
-              row[point.matrix_index] -= (coef_setup * setup_duration + additional_setup).to_i  if row[point.matrix_index] > 0
+            matrix.time.each_with_index{ |row, row_index|
+              row[point.matrix_index] -= (coef_setup * setup_duration + additional_setup).to_i if point.matrix_index != row_index
             }
           }
 
@@ -1557,7 +1563,7 @@ module Wrappers
       when :patch_result
         # patches the result
         # the travel_times need to be decreased and setup_duration need to be increased by
-        # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and travel_time > 0
+        # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and matrix_indices are different
         return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
@@ -1572,8 +1578,12 @@ module Wrappers
           additional_setup = vehicle[:simplified_additional_setup].to_i
 
           total_travel_time_correction = 0
+          previous_point_id = nil
           route[:activities].each{ |activity|
-            next if activity[:service_id].nil? || activity[:travel_time].to_i.zero?
+            next if activity[:point_id].nil? || previous_point_id == activity[:point_id]
+
+            previous_point_id = activity[:point_id]
+            next if activity[:service_id].nil?
 
             setup_duration = services_grouped_by_point_id[activity[:point_id]].first.activity[:simplified_setup_duration].to_i
 
@@ -1583,7 +1593,7 @@ module Wrappers
 
             total_travel_time_correction += time_correction
             activity[:detail][:setup_duration] = time_correction.round
-            activity[:travel_time] -= activity[:detail][:setup_duration]
+            activity[:travel_time] -= time_correction.round
           }
 
           overall_total_travel_time_correction += total_travel_time_correction
@@ -1608,16 +1618,22 @@ module Wrappers
       raise 'Cannot shift the route, there are not enough activities' if shift_start_index > route[:activities].size
 
       route[:start_time] += shift_amount if shift_start_index == 0
+      current_shift = shift_amount
       route[:activities].each_with_index{ |activity, index|
         next if index < shift_start_index
 
-        activity[:begin_time] += shift_amount
-        activity[:end_time] += shift_amount if activity[:end_time]
-        activity[:waiting_time] -= [shift_amount, activity[:waiting_time]].min if activity[:waiting_time]
-        activity[:departure_time] += shift_amount if activity[:departure_time]
+        if activity[:waiting_time]
+          waiting_resorb = [activity[:waiting_time] - current_shift, 0].max
+          current_shift = [current_shift - waiting_resorb, 0].max
+          activity[:waiting_time] -= waiting_resorb
+        end
+
+        activity[:begin_time] += current_shift
+        activity[:end_time] += current_shift if activity[:end_time]
+        activity[:departure_time] += current_shift if activity[:departure_time]
       }
-      route[:total_time] += shift_amount if route[:total_time]
-      route[:end_time] += shift_amount if route[:end_time]
+      route[:total_time] += current_shift if route[:total_time]
+      route[:end_time] += current_shift if route[:end_time]
     end
 
     def unassigned_services(vrp, unassigned_reason)

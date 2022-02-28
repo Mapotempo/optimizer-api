@@ -497,10 +497,13 @@ module OptimizerWrapper
         route[:activities].map{ |act| act[:departure_time] && (act[:departure_time] - act[:begin_time]) }.compact
       }
       setup_durations = result[:routes].map{ |route|
+        previous_point_id = nil
         route[:activities].map{ |act|
           next if act[:type] == 'rest'
 
-          (act[:travel_time].nil? || act[:travel_time]&.positive?) && act[:detail][:setup_duration] || 0
+          setup = (previous_point_id.nil? || previous_point_id != act[:point_id]) && act[:detail][:setup_duration] || 0
+          previous_point_id = act[:point_id]
+          setup
         }.compact
       }
       total_time = result[:total_time] || 0
@@ -610,9 +613,11 @@ module OptimizerWrapper
 
   def self.compute_route_waiting_times(route)
     previous_end = route[:activities].first[:begin_time]
+    previous_point_id = nil
     loc_index = nil
     consumed_travel_time = 0
     consumed_setup_time = 0
+    considered_setup = 0
     route[:activities].each.with_index{ |act, index|
       used_travel_time = 0
       if act[:type] == 'rest'
@@ -621,23 +626,34 @@ module OptimizerWrapper
           loc_index = index + next_index if next_index
           consumed_travel_time = 0
         end
-        shared_travel_time = loc_index && route[:activities][loc_index][:travel_time] || 0
-        potential_setup = shared_travel_time > 0 && route[:activities][loc_index][:detail][:setup_duration] || 0
+        loc_activity = route[:activities][loc_index] if loc_index
+        shared_travel_time = loc_index && loc_activity[:travel_time] || 0
+        potential_setup = loc_index && previous_point_id != loc_activity[:point_id] &&
+                          loc_activity[:detail][:setup_duration] || 0
         left_travel_time = shared_travel_time - consumed_travel_time
         used_travel_time = [act[:begin_time] - previous_end, left_travel_time].min
         consumed_travel_time += used_travel_time
         # As setup is considered as a transit value, it may be performed before a rest
-        consumed_setup_time  += [act[:begin_time] - previous_end - used_travel_time, potential_setup].min
+        extra_time = act[:begin_time] - previous_end - used_travel_time
+         # setup_duration consumed by the current rest is at most the next stop setup_duration or
+        # the extra_time between this stop and the previous one.
+        # In other words we try as much as possible to reduce the waiting time by performing setup durations before the rests.
+        considered_setup = [extra_time, potential_setup].min
+        consumed_setup_time += considered_setup
       else
-        used_travel_time = (act[:travel_time] || 0) - consumed_travel_time - consumed_setup_time
+        potential_setup = previous_point_id != act[:point_id] &&
+                          act[:detail][:setup_duration] || 0
+        used_travel_time = (act[:travel_time] || 0) - consumed_travel_time
         consumed_travel_time = 0
-        consumed_setup_time = 0
         loc_index = nil
+        # The current stop setup duration is the potentiel minus the setup_duration consumed by the rests
+        considered_setup = [potential_setup - consumed_setup_time, 0].max
       end
-      considered_setup = act[:travel_time]&.positive? && (act[:detail][:setup_duration].to_i - consumed_setup_time) || 0
-      arrival_time = previous_end + used_travel_time + considered_setup + consumed_setup_time
-      act[:waiting_time] = act[:begin_time] - arrival_time
+      arrival_time = previous_end + used_travel_time
+      act[:waiting_time] = [act[:begin_time] - (arrival_time + considered_setup), 0].max
+      consumed_setup_time = 0 unless act[:type] == 'rest'
       previous_end = act[:end_time] || act[:begin_time]
+      previous_point_id = act[:point_id] unless act[:type] == 'rest'
     }
   end
 
