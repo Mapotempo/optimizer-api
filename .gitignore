@@ -41,3 +41,4 @@ build/
 .ruby-version
 .byebug_history
 *.aof
+*.code-workspace
