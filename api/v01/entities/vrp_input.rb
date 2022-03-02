@@ -452,7 +452,7 @@ module VrpShared
   params :vrp_request_capacity do
     optional(:id, type: String)
     requires(:unit_id, type: String, allow_blank: false, desc: 'Unit of the capacity')
-    requires(:limit, type: Float, allow_blank: false, desc: 'Maximum capacity that can be carried')
+    requires(:limit, type: Float, values: ->(v) { !v.negative? }, allow_blank: false, desc: 'Maximum capacity that can be carried')
     optional(:initial, type: Float, desc: 'Initial quantity value loaded in the vehicle')
     optional(:overload_multiplier, type: Float, desc: 'Allows to exceed the limit against this cost (ORtools only)')
   end
