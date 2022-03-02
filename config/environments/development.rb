@@ -90,7 +90,7 @@ module OptimizerWrapper
       batch_heuristic: ENV['OPTIM_DBG_BATCH_HEURISTIC'] == 'true'
     },
     restitution: {
-      allow_polylines: ENV['OPTIM_GENERATE_GEOJSON_POLYLINES'] == 'true'
+      allow_polylines: ENV['OPTIM_GENERATE_GEOJSON_POLYLINES'] != 'false'
     },
     redis_count: REDIS_COUNT,
   }
