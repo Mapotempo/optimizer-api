@@ -24,18 +24,10 @@ module Models
     field :router_mode, default: :pedestrian
     field :router_dimension, default: :time
     field :speed_multiplier, default: 1
-    field :skills, default: []
+    field :skills, default: [], type: Array[Symbol]
     field :duration, default: nil
 
     has_many :transmodal_stops, class_name: 'Models::Point', as_json: :ids
     has_many :capacities, class_name: 'Models::Capacity', as_json: :ids
-
-    def self.create(hash, _options = {})
-      hash[:skills] = [] if hash[:skills].to_a.empty?
-      hash[:skills].map!(&:to_sym)
-      hash[:skills].sort!
-
-      super(hash)
-    end
   end
 end

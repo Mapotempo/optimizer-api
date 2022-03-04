@@ -23,7 +23,7 @@ module Models
     field :setup_duration, default: 0
     field :additional_value, default: 0
     field :late_multiplier, default: nil, vrp_result: :hide
-    field :position, default: :neutral, vrp_result: :hide
+    field :position, default: :neutral, vrp_result: :hide, type: Symbol
 
     # FIXME: ActiveHash doesn't validate the validator of the associated objects
     # Forced to do the validation in Grape params
@@ -38,11 +38,6 @@ module Models
                                   # the code would continue to accept invalid time windows thorugh API because
                                   # vrp.valid? doesn't call the validator of activity
                                   # We need to implement a check inside Api::V01::Vrp and fix the ActivityTest::test_timewindows accordingly
-    def self.create(hash)
-      hash[:position] = hash[:position]&.to_sym
-
-      super(hash)
-    end
 
     def vrp_result(options = {})
       hash = super(options)

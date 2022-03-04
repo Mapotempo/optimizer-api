@@ -27,18 +27,11 @@ module Models
 
   class Partition < Base
     field :technique
-    field :metric
-    field :entity
+    field :metric, type: Symbol
+    field :entity, type: Symbol
     field :threshold
     field :restarts
     field :centroids
-
-    def self.create(hash)
-      hash[:metric] = hash[:metric]&.to_sym
-      hash[:entity] = hash[:entity]&.to_sym
-
-      super(hash)
-    end
   end
 
   class Preprocessing < Base
@@ -95,22 +88,16 @@ module Models
   end
 
   class Restitution < Base
-    field :geometry, default: []
+    field :geometry, default: [], type: Array[Symbol]
     field :intermediate_solutions, default: true
     field :csv, default: false
     field :use_deprecated_csv_headers, default: false
     field :allow_empty_result, default: false
-
-    def self.create(hash)
-      hash[:geometry]&.map!(&:to_sym)
-
-      super(hash)
-    end
   end
 
   class Schedule < Base
     belongs_to :range_indices, class_name: 'Models::Range'
-    field :start_date, default: nil
+    field :start_date, default: nil, type: Date
     field :unavailable_days, default: Set[] # extends unavailable_date
     field :months_indices, default: []
   end

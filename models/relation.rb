@@ -28,7 +28,7 @@ module Models
 
     POSITION_TYPES = %i[order sequence shipment].freeze
 
-    field :type, default: :same_route
+    field :type, default: :same_route, type: Symbol
     field :lapses, default: nil
     field :linked_ids, default: []
     has_many :linked_services, class_name: 'Models::Service', as_json: :none # FIXME: remove as_json: :ids when linked_ids becomes linked_services
@@ -55,7 +55,6 @@ module Models
         hash[:linked_ids] = hash[:linked_services].map(&:id)
       end
 
-      hash[:type] = hash[:type]&.to_sym if hash.key?(:type)
       super(hash)
     end
 

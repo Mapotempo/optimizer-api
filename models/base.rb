@@ -32,7 +32,7 @@ module Models
 
     def initialize(hash)
       super(hash.each_with_object({}){ |(k, v), memo|
-        memo[k.to_sym] = v
+        memo[k.to_sym] = convert(k, v)
       })
 
       # Make sure default values are not the same object for all
@@ -58,6 +58,10 @@ module Models
 
       def vrp_result_fields
         @vrp_result_fields ||= []
+      end
+
+      def types
+        @types ||= {}
       end
     end
 
@@ -94,6 +98,23 @@ module Models
       hash
     end
 
+    def convert(key, value)
+      case self.class.types[key].to_s
+      when ''
+        value
+      when '[Symbol]'
+        value = [] if value.to_a.empty?
+        value.map!(&:to_sym)
+        value.sort!
+      when 'Symbol'
+        value&.to_sym
+      when 'Date'
+        value&.to_date
+      else
+        raise "Unknown type #{self.class.types[key]} for key #{key} with value #{value}"
+      end
+    end
+
     def self.field(name, options = {})
       case options[:as_json]
       when nil
@@ -113,6 +134,9 @@ module Models
         raise 'Unknown :vrp_result option'
       end
 
+      if options[:type]
+        types[name] = options[:type]
+      end
       super(name, options)
     end
 
