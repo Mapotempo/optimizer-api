@@ -151,9 +151,17 @@ module Wrappers
               OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647, maximum_lateness: tw.maximum_lateness)
             },
             quantities: vrp.units.collect{ |unit|
+              is_fill_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:fill]
               is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
               q = service.quantities.find{ |quantity| quantity.unit == unit }
-              q&.value.to_f * (is_empty_unit ? -1 : 1)
+              # make sure that if it is
+              #   - an empty unit then the amount is negative for the empty service and positive for the proper services
+              #   - a fill unit then the amount is positive for the fill service and negative for the proper services
+              if is_empty_unit || is_fill_unit
+                q&.value.to_f.abs * (((is_empty_unit && q&.empty) || (is_fill_unit && !q&.fill)) ? -1 : 1)
+              else
+                q&.value.to_f
+              end
             },
             duration: service.activity.duration,
             additional_value: service.activity.additional_value,
@@ -183,9 +191,17 @@ module Wrappers
                 OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647, maximum_lateness: tw.maximum_lateness)
               },
               quantities: vrp.units.collect{ |unit|
+                is_fill_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:fill]
                 is_empty_unit = problem_units.find{ |unit_status| unit_status[:unit_id] == unit.id }[:empty]
                 q = service.quantities.find{ |quantity| quantity.unit == unit }
-                q&.value.to_f * (is_empty_unit ? -1 : 1)
+                # make sure that if it is
+                #   - an empty unit then the amount is negative for the empty service and positive for the proper services
+                #   - a fill unit then the amount is positive for the fill service and negative for the proper services
+                if is_empty_unit || is_fill_unit
+                  q&.value.to_f.abs * (((is_empty_unit && q&.empty) || (is_fill_unit && !q&.fill)) ? -1 : 1)
+                else
+                  q&.value.to_f
+                end
               },
               duration: possible_activity.duration,
               additional_value: possible_activity.additional_value,

@@ -452,7 +452,7 @@ module VrpShared
   params :vrp_request_capacity do
     optional(:id, type: String)
     requires(:unit_id, type: String, allow_blank: false, desc: 'Unit of the capacity')
-    requires(:limit, type: Float, allow_blank: false, desc: 'Maximum capacity that can be carried')
+    requires(:limit, type: Float, values: ->(v) { !v.negative? }, allow_blank: false, desc: 'Maximum capacity that can be carried')
     optional(:initial, type: Float, desc: 'Initial quantity value loaded in the vehicle')
     optional(:overload_multiplier, type: Float, desc: 'Allows to exceed the limit against this cost (ORtools only)')
   end
@@ -470,8 +470,8 @@ module VrpShared
   params :vrp_request_quantity do
     optional(:id, type: String)
     requires(:unit_id, type: String, allow_blank: false, desc: 'Unit related to this quantity')
-    optional(:fill, type: Boolean, desc: 'Allows to fill with quantity, until this unit vehicle capacity is full')
-    optional(:empty, type: Boolean, desc: 'Allows to empty this quantity, until this unit vehicle capacity reaches zero')
+    optional(:fill, type: Boolean, desc: 'Allows to fill this quantity, increases the current load of the vehicle up to value amount')
+    optional(:empty, type: Boolean, desc: 'Allows to empty this quantity, decreases the current load of the vehicle up to value amount')
     mutually_exclusive :fill, :empty
     optional(:value, type: Float, desc: 'Value of current quantity')
     optional(:setup_value, type: Integer, desc: 'If the associated unit is a counting one, defines the default value to count for this stop (additional quantities for this specific service are to define with the value tag)')

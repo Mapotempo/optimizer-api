@@ -16,6 +16,7 @@
 - Reduce consequently the time to create sub problems.This change reduces also the memory usage. [#321](https://github.com/Mapotempo/optimizer-api/pull/321) & [#353](https://github.com/Mapotempo/optimizer-api/pull/353)
 - The internal solution object now use a single model for all the resolution methods. This improve the consistency and the completness of the solutions returned. [#321](https://github.com/Mapotempo/optimizer-api/pull/321)
 - Mapotempo github wiki is now directly part of the project [#351](https://github.com/Mapotempo/optimizer-api/pull/351)
+- Empty/Fill behavior changed so that the loads are naturally managed within optimizer-ortools [#370](https://github.com/Mapotempo/optimizer-api/pull/370)
 
 ### Removed
 
