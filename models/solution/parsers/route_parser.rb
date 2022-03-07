@@ -94,6 +94,7 @@ module Parsers
         }
 
         previous_departure = dimension == :time ? @route.stops.first.info.begin_time : 0
+        previous_activity = nil
         previous_index = nil
         @route.stops.each{ |stop|
           current_index = stop.activity.point&.matrix_index
@@ -104,6 +105,7 @@ module Parsers
           case dimension
           when :time
             previous_departure = compute_time_info(
+              previous_activity,
               stop,
               previous_departure,
               previous_index && current_index && matrix.send(dimension)[previous_index][current_index] || 0
@@ -114,19 +116,21 @@ module Parsers
               previous_departure += matrix.send(dimension)[previous_index][current_index]
             end
           end
-
-          previous_index = current_index unless stop.type == :rest
+          unless stop.type == :rest
+            previous_activity = stop.activity
+            previous_index = current_index
+          end
         }
       }
     end
 
-    def self.compute_time_info(stop, previous_departure, travel_time)
+    def self.compute_time_info(previous_activity, stop, previous_departure, travel_time)
       earliest_arrival =
         [
           stop.activity.timewindows&.find{ |tw| (tw.end || 2**32) > previous_departure }&.start || 0,
           previous_departure + travel_time
         ].max || 0
-      if travel_time > 0
+      if previous_activity&.point_id != stop.activity.point_id
         earliest_arrival += stop.activity.setup_duration_on(@route.vehicle)
       end
       stop.info.begin_time = earliest_arrival
@@ -138,10 +142,12 @@ module Parsers
     def self.compute_route_waiting_times
       return if @route.stops.empty?
 
-      previous_end = @route.stops.first.info.begin_time
+      previous_activity = nil
+      previous_end = @route.info.start_time
       loc_index = nil
       consumed_travel_time = 0
       consumed_setup_time = 0
+      considered_setup = 0
       @route.stops.each.with_index{ |stop, index|
         used_travel_time = 0
         if stop.type == :rest
@@ -150,24 +156,36 @@ module Parsers
             loc_index = index + next_index if next_index
             consumed_travel_time = 0
           end
-          shared_travel_time = loc_index && @route.stops[loc_index].info.travel_time || 0
-          potential_setup = shared_travel_time > 0 && @route.stops[loc_index].activity.setup_duration || 0
+          loc_stop = @route.stops[loc_index] if loc_index
+          shared_travel_time = loc_stop&.info&.travel_time || 0
+          potential_setup = previous_activity&.point_id != loc_stop&.activity&.point_id &&
+                            loc_stop&.activity&.setup_duration_on(@route.vehicle) || 0
           left_travel_time = shared_travel_time - consumed_travel_time
           used_travel_time = [stop.info.begin_time - previous_end, left_travel_time].min
           consumed_travel_time += used_travel_time
           # As setup is considered as a transit value, it may be performed before a rest
-          consumed_setup_time  += [stop.info.begin_time - previous_end - used_travel_time, potential_setup].min
+          extra_time = stop.info.begin_time - previous_end - used_travel_time
+          # setup_duration consumed by the current rest is at most the next stop setup_duration or
+          # the extra_time between this stop and the previous one.
+          # In other words we try as much as possible to reduce the waiting time by performing setup durations before the rests.
+          considered_setup = [extra_time, potential_setup].min
+          consumed_setup_time += considered_setup
         else
-          used_travel_time = (stop.info.travel_time || 0) - consumed_travel_time - consumed_setup_time
+          potential_setup = previous_activity&.point_id != stop.activity.point_id &&
+                            stop.activity.setup_duration_on(@route.vehicle) || 0
+          used_travel_time = (stop.info.travel_time || 0) - consumed_travel_time
           consumed_travel_time = 0
-          consumed_setup_time = 0
           loc_index = nil
+          # The current stop setup duration is the potentiel minus the setup_duration consumed by the rests
+          considered_setup = [potential_setup - consumed_setup_time, 0].max
         end
-        considered_setup = stop.info.travel_time&.positive? &&
-                           (stop.activity.setup_duration.to_i - consumed_setup_time) || 0
-        arrival_time = previous_end + used_travel_time + considered_setup + consumed_setup_time
-        stop.info.waiting_time = stop.info.begin_time - arrival_time
+        arrival_time = previous_end + used_travel_time
+        stop.info.waiting_time = [stop.info.begin_time - (arrival_time + considered_setup), 0].max
+
+        consumed_setup_time = 0 unless stop.type == :rest
+
         previous_end = stop.info.end_time || stop.info.begin_time
+        previous_activity = stop.activity unless stop.type == :rest
       }
     end
 

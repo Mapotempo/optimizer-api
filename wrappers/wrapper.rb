@@ -1229,7 +1229,7 @@ module Wrappers
           # the vehicle TW.start so that it is easier to do the insertions since there is no TW on
           # services, we can do this even if force_start is false
           shift_amount = vehicle.timewindow&.start.to_i - (route.info.start_time || vehicle.timewindow&.start).to_i
-          shift_route_times(route, shift_amount) if shift_amount < 0
+          route.shift_route_times(shift_amount) if shift_amount < 0
 
           # insert the rests back into the route and adjust the info of the stops coming after the pause
           vehicle[:simplified_rests].each{ |rest|
@@ -1260,10 +1260,13 @@ module Wrappers
               else
                 # there is a clear position to insert
                 stop_after_rest = route.stops[insert_rest_at]
+                stop_before_rest = route.stops[insert_rest_at - 1]
 
                 rest_start = stop_after_rest.info.begin_time
                 # if this the first service of this location then we need to consider the setup_duration
-                rest_start -= stop_after_rest.activity.setup_duration.to_i if stop_after_rest.info.travel_time > 0
+                if stop_before_rest.activity.point_id != stop_after_rest.activity.point_id
+                  rest_start -= stop_after_rest.activity.setup_duration.to_i
+                end
                 if rest.timewindows&.last&.end && rest_start > rest.timewindows.last.end
                   rest_start -= stop_after_rest.info.travel_time
                   rest_start = [rest_start, rest.timewindows&.first&.start.to_i].max # don't induce idle_time if within travel_time
@@ -1283,13 +1286,12 @@ module Wrappers
 
             if !vehicle.force_start && vehicle.shift_preference != 'force_start'
               # if no force_start, shift everything to the right so that inserting pause wouldn't create any idle time
-              shift_route_times(route, idle_time_created_by_inserted_pause)
+              route.shift_route_times(idle_time_created_by_inserted_pause)
               idle_time_created_by_inserted_pause = 0
             end
             times = { begin_time: rest_start, end_time: rest_start + rest.duration, departure_time: rest_start + rest.duration }
             rest_stop = Models::Solution::Stop.new(rest, info: Models::Solution::Stop::Info.new(times))
             solution.insert_stop(vrp, route, rest_stop, insert_rest_at, idle_time_created_by_inserted_pause)
-            # shift_route_times(route, idle_time_created_by_inserted_pause + rest.duration, insert_rest_at + 1)
 
             next if no_cost
 
@@ -1323,7 +1325,10 @@ module Wrappers
                       } || vrp.services.any?{ |s| s.activity.nil? }
 
         vehicles_grouped_by_matrix_id = vrp.vehicles.group_by(&:matrix_id)
-        vrp.services.group_by{ |s| s.activity.point }.each{ |point, service_group|
+        grouped_services = vrp.services.group_by{ |s| s.activity.point }
+        return nil if grouped_services.map{ |point, _s_g| point.matrix_index }.uniq.size != grouped_services.size
+
+        grouped_services.each{ |point, service_group|
           next if service_group.any?{ |s| s.activity.setup_duration.to_i == 0 } || # no need if no setup_duration
                   service_group.uniq{ |s| s.activity.setup_duration }.size > 1 # can't if setup_durations are different
 
@@ -1332,14 +1337,10 @@ module Wrappers
           vrp.matrices.each{ |matrix|
             vehicle = vehicles_grouped_by_matrix_id[matrix.id].first
 
-            # WARNING: Here we apply the setup_duration for the points which has non-zero
-            # distance (in time!) between them because this is the case in optimizer-ortools.
-            # If this is changed to per "destination" (i.e., point.id) based setup duration
-            # then the following logic needs to be updated. Basically we need to do each_with_index
-            # and apply the setup duration increment to every pair except index == point.matrix_index
-            # even if they were 0 in the first place.
-            matrix.time.each{ |row|
-              row[point.matrix_index] += first_activity.setup_duration_on(vehicle).to_i if row[point.matrix_index] > 0
+            # WARNING: In the following logic we assume that matrix indices are unique.
+            # This follows the logic setup within optimizer-ortools until we indroduce the point_id in protobuf model
+            matrix.time.each.with_index{ |row, row_index|
+              row[point.matrix_index] += first_activity.setup_duration_on(vehicle).to_i if point.matrix_index != row_index
             }
           }
 
@@ -1377,8 +1378,10 @@ module Wrappers
             coef_setup = vehicle[:simplified_coef_setup] || 1
             additional_setup = vehicle[:simplified_additional_setup].to_i
 
-            matrix.time.each{ |row|
-              row[point.matrix_index] -= (coef_setup * setup_duration + additional_setup).to_i  if row[point.matrix_index] > 0
+            # WARNING: In this revert logic we still assume that matrix indices are unique.
+            # This follows the logic setup within optimizer-ortools until we indroduce the point_id in protobuf model
+            matrix.time.each_with_index{ |row, row_index|
+              row[point.matrix_index] -= (coef_setup * setup_duration + additional_setup).to_i if point.matrix_index != row_index
             }
           }
 
@@ -1397,7 +1400,7 @@ module Wrappers
       when :patch_solution
         # patches the solution
         # the travel_times need to be decreased and setup_duration need to be increased by
-        # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and travel_time > 0
+        # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and matrix_indices are different
         return nil unless solution.routes.any?{ |route|
           route.stops.any?{ |stop| stop.activity[:simplified_setup_duration] }
         }
@@ -1411,8 +1414,13 @@ module Wrappers
         solution.routes.each{ |route|
           vehicle = vehicles_grouped_by_vehicle_id[route[:vehicle_id]].first
           total_travel_time_correction = 0
+          previous_point_id = nil
           route.stops.each{ |stop|
-            next if stop.service_id.nil? || stop.info.travel_time.to_i.zero? || services_grouped_by_point_id[stop.activity.point.id].nil?
+            next if previous_point_id == stop.activity.point_id
+
+            previous_point_id = stop.activity.point_id
+
+            next if stop.service_id.nil? || services_grouped_by_point_id[stop.activity.point.id].nil?
 
             setup_duration = stop.activity[:simplified_setup_duration].to_i
 
@@ -1424,6 +1432,7 @@ module Wrappers
 
             total_travel_time_correction += travel_time_correction
             stop.info.travel_time -= travel_time_correction
+            previous_point_id = stop.activity.point_id
           }
 
           overall_total_travel_time_correction += total_travel_time_correction
@@ -1440,22 +1449,6 @@ module Wrappers
         raise 'Unknown :mode option'
       end
       simplification_active
-    end
-
-    def shift_route_times(route, shift_amount, shift_start_index = 0)
-      return if shift_amount == 0
-
-      raise 'Cannot shift the route, there are not enough stops' if shift_start_index > route.stops.size
-
-      route.info.start_time += shift_amount if shift_start_index == 0
-      route.stops.each_with_index{ |activity, index|
-        next if index < shift_start_index
-
-        activity.info.begin_time += shift_amount
-        activity.info.end_time += shift_amount if activity.info.end_time
-        activity.info.departure_time += shift_amount if activity.info.departure_time
-      }
-      route.info.end_time += shift_amount if route.info.end_time
     end
 
     def kill; end
