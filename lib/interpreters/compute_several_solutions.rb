@@ -269,7 +269,7 @@ module Interpreters
       elsif vehicles.any?{ |vehicle|
               vehicle.force_start ||
               vehicle.shift_preference && vehicle.shift_preference == 'force_start'
-            } && vrp.relations.none?{ |r| r.type == :shipment } # It may generate infeasible first solution
+            } && vrp.relations.none?{ |r| r.type == :shipment } # It may generate infeasible first solution if there is an infeasible P&D in the instance
         verified('path_cheapest_arc')
       elsif loop_route && unique_configuration &&
             (vehicles.any?(&:duration) && vehicles.size == 1 ||
