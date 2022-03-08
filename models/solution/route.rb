@@ -46,6 +46,15 @@ module Models
         hash
       end
 
+      def stops=(stops)
+        stops.map!{ |stop|
+          stop = Models::Solution::Stop.new(stop) if stop.is_a? Hash
+          stop.info.router_mode ||= vehicle&.router_mode
+          stop.info.speed_multiplier ||= vehicle&.speed_multiplier
+          stop
+        }
+      end
+
       def count_services
         stops.count(&:service_id)
       end

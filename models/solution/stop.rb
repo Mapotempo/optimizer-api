@@ -72,6 +72,8 @@ module Models
         hash['detail']['skills'] = build_skills
         hash['detail']['internal_skills'] = self.skills
         hash['detail']['quantities'] = loads.vrp_result(options)
+        hash['detail']['router_mode'] = hash.delete('router_mode')
+        hash['detail']['speed_multiplier'] = hash.delete('speed_multiplier')
         hash.delete_if{ |_k, v| v.nil? }
         hash
       end
