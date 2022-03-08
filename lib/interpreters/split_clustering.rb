@@ -34,7 +34,8 @@ module Interpreters
         split_solutions = splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
           cluster_ref = i + 1
           solution = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
-            msg = message && "split partition process #{cluster_ref}/#{splited_service_vrps.size} - #{message}"
+            add = "split partition process #{cluster_ref}/#{splited_service_vrps.size}"
+            msg = OptimizerWrapper.concat_avancement(add, message)
             block&.call(wrapper, avancement, total, msg, cost, time, solution)
           }
 

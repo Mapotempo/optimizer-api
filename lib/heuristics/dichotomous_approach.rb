@@ -106,8 +106,8 @@ module Interpreters
                 Rational(service_vrp[:dicho_sides][idx], lvl)
               }.sum
 
-              msg = message && "dicho #{(service_vrp[:dicho_denominators].last * avc).to_i}" \
-                    "/#{service_vrp[:dicho_denominators].last} - #{message}"
+              add = "dicho #{(service_vrp[:dicho_denominators].last * avc).to_i}/#{service_vrp[:dicho_denominators].last}"
+              msg = OptimizerWrapper.concat_avancement(add, message)
               block&.call(wrapper, avancement, total, msg, cost, time, sol)
             }
 

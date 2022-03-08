@@ -103,8 +103,8 @@ module OptimizerWrapper
     several_service_vrps = Interpreters::SeveralSolutions.expand_similar_resolutions(services_vrps)
     several_solutions = several_service_vrps.collect.with_index{ |current_service_vrps, solution_index|
       callback_main = lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
-        msg = message && several_service_vrps.size > 1 && "solution: #{solution_index + 1}\
-                                                          /#{several_service_vrps.size} - #{message}" || message
+        add = "solution #{solution_index + 1}/#{several_service_vrps.size}"
+        msg = several_service_vrps.size > 1 && concat_avancement(add, message) || message
         block&.call(wrapper, avancement, total, msg, cost, time, solution)
       }
 
@@ -115,8 +115,8 @@ module OptimizerWrapper
 
         service_vrp_repeats.each_with_index{ |repeated_service_vrp, repetition_index|
           repeated_results << define_process(repeated_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
-            msg = message && service_vrp_repeats.size > 1 && "repetition #{repetition_index + 1}" \
-                                                             "/#{service_vrp_repeats.size} - #{message}" || message
+            add = "repetition #{repetition_index + 1}/#{service_vrp_repeats.size}"
+            msg = service_vrp_repeats.size > 1 && concat_avancement(add, message) || message
             callback_join&.call(wrapper, avancement, total, msg, cost, time, solution)
           }
           Models.delete_all # needed to prevent duplicate ids because expand_repeat uses Marshal.load/dump
@@ -459,7 +459,8 @@ module OptimizerWrapper
     solutions = services_vrps.each_with_index.map{ |service_vrp, i|
       block = if services_vrps.size > 1 && !callback.nil?
                 proc { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
-                  msg = message && "split independent process #{i + 1}/#{services_vrps.size} - #{message}"
+                  add = "split independent process #{i + 1}/#{services_vrps.size}"
+                  msg = concat_avancement(message, add) || message
                   callback&.call(wrapper, avancement, total, msg, cost, time, solution)
                 }
               else
@@ -469,6 +470,12 @@ module OptimizerWrapper
     }
 
     solutions.reduce(&:+)
+  end
+
+  def self.concat_avancement(addition, message)
+    return unless message
+
+    addition + ' - ' + message
   end
 
   def self.job_list(api_key)
