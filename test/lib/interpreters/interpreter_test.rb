@@ -618,10 +618,10 @@ class InterpreterTest < Minitest::Test
       route.stops.any?{ |activity| activity.service_id == 'service_1_2_2' }
     }
 
-    route_index_s01 = route_s01 && route_s01.vehicle.id.split('_').last.to_i || -1
-    route_index_s02 = route_s02 && route_s02.vehicle.id.split('_').last.to_i || -1
-    route_index_s11 = route_s11 && route_s11.vehicle.id.split('_').last.to_i || 33
-    route_index_s12 = route_s12 && route_s12.vehicle.id.split('_').last.to_i || 33
+    route_index_s01 = route_s01&.vehicle&.global_day_index || -1
+    route_index_s02 = route_s02&.vehicle&.global_day_index || -1
+    route_index_s11 = route_s11&.vehicle&.global_day_index || 33
+    route_index_s12 = route_s12&.vehicle&.global_day_index || 33
 
     assert route_index_s02 - route_index_s01 >= 15
     assert route_index_s02 - route_index_s01 <= 32

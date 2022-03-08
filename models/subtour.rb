@@ -24,7 +24,7 @@ module Models
     field :router_mode, default: :pedestrian
     field :router_dimension, default: :time
     field :speed_multiplier, default: 1
-    field :skills, default: []
+    field :skills, default: [], type: Array[Symbol]
     field :duration, default: nil
 
     has_many :transmodal_stops, class_name: 'Models::Point', as_json: :ids

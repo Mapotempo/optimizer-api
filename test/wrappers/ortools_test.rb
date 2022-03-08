@@ -4831,7 +4831,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:services].first[:unavailable_visit_day_date] = [Date.new(2020, 1, 1)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 2) }}
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal 2, solutions[0].routes.find{ |r| r.vehicle_id == 'vehicle_0_3' }.stops.size
+    assert_equal 2, solutions[0].routes.find{ |r| r.vehicle.original_id == 'vehicle_0' && r.vehicle.global_day_index == 3 }.stops.size
 
     vrp = VRP.basic
     vrp[:services] = [vrp[:services].first]
@@ -4839,7 +4839,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp[:services].first[:unavailable_visit_day_date] = [Date.new(2020, 1, 2)]
     vrp[:configuration][:schedule] = { range_date: { start: Date.new(2020, 1, 1), end: Date.new(2020, 1, 2) }}
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal 2, solutions[0].routes.find{ |r| r.vehicle.id == 'vehicle_0_2' }.stops.size
+    assert_equal 2, solutions[0].routes.find{ |r| r.vehicle.original_id == 'vehicle_0' && r.vehicle.global_day_index == 2 }.stops.size
   end
 
   def test_minimum_duration_lapse

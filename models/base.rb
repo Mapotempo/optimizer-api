@@ -32,7 +32,7 @@ module Models
 
     def initialize(hash)
       super(hash.each_with_object({}){ |(k, v), memo|
-        memo[k.to_sym] = v
+        memo[k.to_sym] = convert(k, v)
       })
 
       # Make sure default values are not the same object for all
@@ -59,6 +59,10 @@ module Models
       def vrp_result_fields
         @vrp_result_fields ||= []
       end
+
+      def types
+        @types ||= {}
+      end
     end
 
     def to_hash
@@ -76,11 +80,12 @@ module Models
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|
-        next if !respond_to?(field_name) ||
+        next if options[:except]&.include?(field_name) ||
+                !respond_to?(field_name) ||
                 send(field_name).nil? ||
                 self.class.default_attributes&.fetch(field_name, nil) == send(field_name)
 
-        hash[field_name.to_sym] = self.send(field_name).as_json
+        hash[field_name] = self.send(field_name).as_json
       }
       hash
     end
@@ -93,10 +98,27 @@ module Models
       hash
     end
 
+    def convert(key, value)
+      case self.class.types[key].to_s
+      when ''
+        value
+      when '[Symbol]'
+        value = [] if value.to_a.empty?
+        value.map!(&:to_sym)
+        value.sort!
+      when 'Symbol'
+        value&.to_sym
+      when 'Date'
+        value&.to_date
+      else
+        raise "Unknown type #{self.class.types[key]} for key #{key} with value #{value}"
+      end
+    end
+
     def self.field(name, options = {})
       case options[:as_json]
       when nil
-        json_fields << name.to_s
+        json_fields << name.to_sym
       when :none
         json_fields
       else
@@ -112,6 +134,9 @@ module Models
         raise 'Unknown :vrp_result option'
       end
 
+      if options[:type]
+        types[name] = options[:type]
+      end
       super(name, options)
     end
 
@@ -124,11 +149,11 @@ module Models
 
       case options[:as_json]
       when :ids
-        json_fields << ids_function_name.to_s
+        json_fields << ids_function_name.to_sym
       when :none
         json_fields
       when nil
-        json_fields << name.to_s
+        json_fields << name.to_sym
       else
         raise 'Unknown :as_json option'
       end
@@ -180,11 +205,11 @@ module Models
 
       case options[:as_json]
       when :id
-        json_fields << id_function_name.to_s
+        json_fields << id_function_name.to_sym
       when :none
         json_fields
       when nil
-        json_fields << name.to_s
+        json_fields << name.to_sym
       else
         raise 'Unknown :as_json option'
       end

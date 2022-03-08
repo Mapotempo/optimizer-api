@@ -28,7 +28,7 @@ module Models
     # Forced to do the validation in Grape params
     # validates_numericality_of :priority
     # validates_numericality_of :exclusion_cost, allow_nil: true
-    field :type, default: :service
+    field :type, default: :service, type: Symbol
 
     # this should be a VISIT attribute
     # for each visit, first possible day to assign it
@@ -51,8 +51,8 @@ module Models
 
     # validates_inclusion_of :type, :in => %i(service pickup delivery)
 
-    field :skills
-    field :original_skills
+    field :skills, type: Array[Symbol]
+    field :original_skills, type: Array[Symbol]
 
     field :vehicle_compatibility, as_json: :none # vehicle_compatibility[v_id] == {true -> compatible, false -> incompatible, nil -> not checked yet}
 
@@ -62,12 +62,5 @@ module Models
     has_many :sticky_vehicles, class_name: 'Models::Vehicle', as_json: :ids
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation', as_json: :none
-
-    def self.create(hash, _options = {})
-      hash[:skills] = [] if hash[:skills].to_a.empty?
-      hash[:skills].sort!
-
-      super(hash)
-    end
   end
 end

@@ -122,7 +122,7 @@ module OptimizerWrapper
       check_solutions_consistency(expected_activity_count, several_solutions)
     end
 
-    nb_routes = several_solutions.sum(&:count_assigned_services)
+    nb_routes = several_solutions.sum(&:count_used_routes)
     nb_unassigned = several_solutions.sum(&:count_unassigned_services)
     percent_unassigned = (100.0 * nb_unassigned / expected_activity_count).round(1)
 
@@ -140,6 +140,11 @@ module OptimizerWrapper
     dicho_level = service_vrp[:dicho_level].to_i
     split_level = service_vrp[:split_level].to_i
     shipment_size = vrp.relations.count{ |r| r.type == :shipment }
+
+    # Repopulate Objects which are referenced by others using ids but deleted by the multiple sub problem creations
+    vrp.units.each{ |unit| Models::Unit.insert(unit) } if Models::Unit.all.empty?
+    vrp.points.each{ |point| Models::Point.insert(point) } if Models::Point.all.empty?
+
     log "--> define_process VRP (service: #{vrp.services.size} including #{shipment_size} shipment relations, " \
         "vehicle: #{vrp.vehicles.size}, v_limit: #{vrp.configuration.resolution.vehicle_limit}) " \
         "with levels (dicho: #{dicho_level}, split: #{split_level})", level: :info

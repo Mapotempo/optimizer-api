@@ -367,7 +367,7 @@ class Api::V01::VrpTest < Minitest::Test
           when 0
             assert_empty services_vrps.first[:vrp].configuration.restitution.geometry
           when 1 || 5 || 8
-            assert_equal %i[polylines partitions], services_vrps.first[:vrp].configuration.restitution.geometry
+            assert_equal %i[partitions polylines], services_vrps.first[:vrp].configuration.restitution.geometry
           when 2
             assert_equal %i[encoded_polylines partitions], services_vrps.first[:vrp].configuration.restitution.geometry
           when 3 || 4

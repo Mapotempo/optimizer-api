@@ -297,14 +297,14 @@ module Wrappers
       vrp.relations.each{ |relation|
         relation.split_regarding_lapses.each{ |portion_linked_ids, portion_vehicle_ids, portion_lapse|
           current_linked_ids = (portion_linked_ids.map!(&:to_s) & services.map(&:id)).uniq if portion_linked_ids
-          current_linked_vehicles = (portion_vehicle_ids.map!(&:to_s) & vehicles.map(&:id)).uniq if portion_vehicle_ids
+          current_linked_vehicles = vrp.vehicles.select{ |v| portion_vehicle_ids.include?(v.id) }.map(&:id) if portion_vehicle_ids
           next if current_linked_ids.to_a.empty? && current_linked_vehicles.to_a.empty?
 
           # NOTE: we collect lapse because optimizer-ortools expects one lapse per relation for now
           relations << OrtoolsVrp::Relation.new(
             type: relation.type,
             linked_ids: current_linked_ids,
-            linked_vehicle_ids: current_linked_vehicles,
+            linked_vehicle_ids: current_linked_vehicles&.map!(&:to_s),
             lapse: portion_lapse
           )
         }

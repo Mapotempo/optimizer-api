@@ -243,13 +243,14 @@ class HeuristicTest < Minitest::Test
       problem[:configuration][:preprocessing][:partitions] = TestHelper.vehicle_and_days_partitions
       problem[:configuration][:schedule] = { range_indices: { start: 0, end: 83 } }
 
-      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }},
-                                               TestHelper.load_vrp(self, problem: problem), nil)
+      solutions = OptimizerWrapper.wrapper_vrp(
+        'demo', { services: { vrp: [:demo] }}, TestHelper.load_vrp(self, problem: problem), nil
+      )
       assert solutions[0]
-      route_vehicle_ids = solutions[0].routes.collect{ |route| route.vehicle.id }
+      route_vehicle_ids = solutions[0].routes.collect{ |route| [route.vehicle.original_id, route.vehicle.global_day_index] }
       route_uniq_vehicle_ids = route_vehicle_ids.uniq
-      assert_includes route_uniq_vehicle_ids, 'vehicle_0_0'
-      assert_includes route_uniq_vehicle_ids, 'vehicle_1_0'
+      assert_includes route_uniq_vehicle_ids, ['vehicle_0', 0]
+      assert_includes route_uniq_vehicle_ids, ['vehicle_1', 0]
       assert_equal route_uniq_vehicle_ids.size, route_vehicle_ids.size
     end
 
@@ -335,12 +336,12 @@ class HeuristicTest < Minitest::Test
       assert_equal 1, solutions[0].unassigned_stops.size
       assert_equal expected_nb_visits, solutions[0].routes.sum{ |r| r.stops.size - 2 } + solutions[0].unassigned_stops.size
       assert_equal expecting.size,
-                   (solutions[0].routes.find{ |r| r.vehicle.id == 'ANDALUCIA 1_2' }.stops.collect{ |a|
+                   (solutions[0].routes.find{ |r| r.vehicle.original_id == 'ANDALUCIA 1' && r.vehicle.global_day_index == 2 }.stops.collect{ |a|
                      a.service_id.to_s.split('_')[0..-3].join('_')
                    } & expecting).size
 
       # providing different solution (compared to solution without initial routes)
-      vehicle_id, day = vrp.routes.first.vehicle.id.split('_')
+      vehicle_id, day = vrp.routes.first.vehicle.original_id, vrp.routes.first.vehicle.global_day_index
       OptimizerLogger.log "On vehicle #{vehicle_id}_#{day}, expecting #{expecting}"
       vrp = TestHelper.load_vrp(self, fixture_file: 'instance_andalucia1_two_vehicles')
       vrp.routes = routes
@@ -350,7 +351,7 @@ class HeuristicTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal expected_nb_visits, solutions[0].routes.sum{ |r| r.stops.size - 2 } + solutions[0].unassigned_stops.size
       assert_equal expecting.size,
-                   (solutions[0].routes.find{ |r| r.vehicle.id == "#{vehicle_id}_#{day}" }.stops.collect{ |a|
+                   (solutions[0].routes.find{ |r| r.vehicle.original_id == vehicle_id && r.vehicle.global_day_index == day }.stops.collect{ |a|
                      a.service_id.to_s.split('_')[0..-3].join('_')
                    } & expecting).size
     end
@@ -387,28 +388,28 @@ class HeuristicTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_includes solutions[0].routes.find{ |r|
                         r.stops.any?{ |stop| stop.service_id == 'service_6_1_1' }
-                      }.vehicle.id, 'vehicle_0_' # default result
+                      }.vehicle.original_id, 'vehicle_0' # default result
 
       vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:services].find{ |s| s[:id] == 'service_6' }[:sticky_vehicle_ids] = ['vehicle_1']
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       refute_includes solutions[0].routes.find{ |r|
                         r.stops.any?{ |stop| stop.service_id == 'service_6_1_1' }
-                      }.vehicle.id, 'vehicle_0_'
+                      }.vehicle.original_id, 'vehicle_0'
     end
 
     def test_skills_in_periodic_heuristic
       vrp = VRP.lat_lon_periodic_two_vehicles
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assigned_route = solutions[0].routes.find{ |r| r.stops.any?{ |stop| stop.service_id == 'service_6_1_1' } }
-      assert_includes assigned_route.vehicle.id, 'vehicle_0_' # default result
+      assert_includes assigned_route.vehicle.original_id, 'vehicle_0' # default result
 
       vrp = VRP.lat_lon_periodic_two_vehicles
       vrp[:vehicles][1][:skills] = [[:compatible]]
       vrp[:services].find{ |s| s[:id] == 'service_6' }[:skills] = [:compatible]
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assigned_route = solutions[0].routes.find{ |r| r.stops.any?{ |stop| stop.service_id == 'service_6_1_1' } }
-      refute_includes assigned_route.vehicle.id, 'vehicle_0_'
+      refute_includes assigned_route.vehicle.original_id, 'vehicle_0'
     end
 
     def test_with_activities
@@ -438,7 +439,7 @@ class HeuristicTest < Minitest::Test
         r.stops.map(&:id).any?{ |id| id&.include?('service_with_activities') }
       }
       assert_equal 4, routes_with_stops.size # all stops scheduled (high priority)
-      assert_equal 1, routes_with_stops.collect{ |r| r.vehicle.id.split('_').slice(0, 2) }.uniq!&.size # every activity on same vehicle
+      assert_equal 1, routes_with_stops.collect{ |r| r.vehicle.original_id }.uniq!&.size # every activity on same vehicle
       assert_equal 2, solutions[0].routes.collect{ |r|
         r.stops.collect{ |a| a.service_id&.include?('service_with_activities') ? a.activity.point.id : nil }.compact!
       }.flatten!&.uniq!&.size
@@ -452,7 +453,7 @@ class HeuristicTest < Minitest::Test
       vrp[:configuration][:schedule][:unavailable_indices] = [2]
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 3, solutions[0].routes.size
-      assert(solutions[0].routes.collect{ |r| r.vehicle.id }.none?{ |id| id.split.last == 2 })
+      assert(solutions[0].routes.collect{ |r| r.vehicle.global_day_index }.none?{ |day| day == 2 })
 
       # with date :
       vrp = VRP.periodic
@@ -475,7 +476,7 @@ class HeuristicTest < Minitest::Test
       vrp[:configuration][:schedule][:unavailable_date] = [Date.new(2017, 1, 4)]
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
       assert_equal 3, solutions[0].routes.size
-      assert(solutions[0].routes.collect{ |r| r.vehicle.id }.none?{ |id| id.split.last == 3 })
+      assert(solutions[0].routes.collect{ |r| r.vehicle.global_day_index }.none?{ |day| day == 2 })
     end
 
     def test_make_start_tuesday
@@ -496,7 +497,7 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.create(problem)
 
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
-      assert_equal(['vehicle_1', 'vehicle_2', 'vehicle_3'], vrp.vehicles.collect(&:id))
+      assert_equal(['vehicle', 'vehicle', 'vehicle'], vrp.vehicles.collect(&:original_id))
       assert_equal([1, 2, 3], vrp.vehicles.collect(&:global_day_index))
 
       s = Wrappers::PeriodicHeuristic.new(vrp)
@@ -505,7 +506,7 @@ class HeuristicTest < Minitest::Test
       assert_equal([200, 300, 400], generated_starting_routes['vehicle'].collect{ |_day, route_data| route_data[:tw_end] }) # correct timewindow was provided
 
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-      assert_equal(['vehicle_1', 'vehicle_2', 'vehicle_3'], solutions[0].routes.collect{ |r| r.vehicle.id })
+      assert_equal(['vehicle', 'vehicle', 'vehicle'], solutions[0].routes.collect{ |r| r.vehicle.original_id })
       solutions[0].routes.each{ |route|
         assert_equal 2, route.stops.size
       }
@@ -716,7 +717,7 @@ class HeuristicTest < Minitest::Test
                                                  TestHelper.create(vrp), nil)
         days_with_service =
           solutions[0].routes.collect{ |r|
-            r.vehicle.id.split('_').last.to_i if r.stops.any?{ |a| a.id == 'service_1' }
+            r.vehicle.global_day_index if r.stops.any?{ |a| a.id == 'service_1' }
           }.compact
         assert_equal expectation, days_with_service, 'Service was not planned at expected days'
       }
@@ -744,7 +745,7 @@ class HeuristicTest < Minitest::Test
       vrp[:services][1][:visits_number] = 2
       vrp[:services][1][:minimum_lapse] = 1
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-      second_route = solutions[0].routes.find{ |r| r.vehicle_id == 'vehicle_0_1' }
+      second_route = solutions[0].routes.find{ |r| r.vehicle.original_id == 'vehicle_0' && r.vehicle.global_day_index == 1 }
       assert second_route.stops.any?{ |a| a.service_id == 'service_2_2_2' },
              'This test is not consistent if this fails'
       assert solutions[0].routes[-1].stops.any?{ |a| a.service_id == 'service_1_1_1' },
