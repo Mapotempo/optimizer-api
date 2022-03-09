@@ -168,7 +168,7 @@ module ValidateData
 
   def check_relation_consistent_ids
     @hash[:relations].each{ |relation|
-      unless relation[:linked_ids]&.uniq&.size == relation[:linked_ids]&.size
+      unless relation[:linked_service_ids]&.uniq&.size == relation[:linked_service_ids]&.size
         raise OptimizerWrapper::DiscordantProblemError.new('Same ID is provided multiple times in one relation.')
       end
 
@@ -199,7 +199,7 @@ module ValidateData
     @hash[:relations].each{ |relation|
       next unless Models::Relation::POSITION_TYPES.include?(relation[:type])
 
-      services = relation[:linked_ids].map{ |linked_id|
+      services = relation[:linked_service_ids].map{ |linked_id|
         @hash[:services].find{ |service| service[:id] == linked_id }
       }
       previous_service = nil
@@ -295,15 +295,15 @@ module ValidateData
   def check_consistent_ids_provided(relation)
     case relation[:type]
     when *Models::Relation::ON_VEHICLES_TYPES
-      if relation[:linked_ids].to_a.any? || relation[:linked_vehicle_ids].to_a.empty?
+      if relation[:linked_service_ids].to_a.any? || relation[:linked_vehicle_ids].to_a.empty?
         raise OptimizerWrapper::DiscordantProblemError.new(
-          "#{relation[:type]} relations do not support linked_ids and expect linked_vehicle_ids"
+          "#{relation[:type]} relations do not support linked_service_ids and expect linked_vehicle_ids"
         )
       end
     when *Models::Relation::ON_SERVICES_TYPES
-      if relation[:linked_vehicle_ids].to_a.any? || relation[:linked_ids].to_a.empty?
+      if relation[:linked_vehicle_ids].to_a.any? || relation[:linked_service_ids].to_a.empty?
         raise OptimizerWrapper::DiscordantProblemError.new(
-          "#{relation[:type]} relations do not support linked_vehicle_ids and expect linked_ids"
+          "#{relation[:type]} relations do not support linked_vehicle_ids and expect linked_service_ids"
         )
       end
     else
@@ -328,7 +328,7 @@ module ValidateData
     when *Models::Relation::SEVERAL_LAPSE_TYPES
       relation[:lapses] = [0] if relation[:type] == :vehicle_trips && relation[:lapse].nil? && relation[:lapses].nil?
       if relation[:lapse].nil? && relation[:lapses].to_a.size != 1
-        exp_lapse_count = (relation[:linked_ids]&.size || relation[:linked_vehicle_ids]&.size) - 1
+        exp_lapse_count = (relation[:linked_service_ids]&.size || relation[:linked_vehicle_ids]&.size) - 1
         if relation[:lapses].to_a.size != exp_lapse_count
           raise OptimizerWrapper::DiscordantProblemError.new(
             "#{relation[:type]} relations expect at least one lapse"
@@ -345,7 +345,7 @@ module ValidateData
 
     @hash[:relations].each{ |relation|
       relation_services =
-        relation[:linked_ids].to_a.collect{ |s_id| @hash[:services].find{ |s| s[:id] == s_id } }
+        relation[:linked_service_ids].to_a.collect{ |s_id| @hash[:services].find{ |s| s[:id] == s_id } }
       relation_vehicles =
         relation[:linked_vehicle_ids].to_a.collect{ |v_id| @hash[:vehicles].find{ |v| v[:id] == v_id } }
 
@@ -371,26 +371,26 @@ module ValidateData
       shipment_relations = @hash[:relations].select{ |r| r[:type] == :shipment }
       service_ids = @hash[:services].map{ |s| s[:id] }
 
-      shipments_with_invalid_linked_ids = shipment_relations.reject{ |r| r[:linked_ids].all?{ |s_id| service_ids.include?(s_id) } }
+      shipments_with_invalid_linked_ids = shipment_relations.reject{ |r| r[:linked_service_ids].all?{ |s_id| service_ids.include?(s_id) } }
       unless shipments_with_invalid_linked_ids.empty?
         raise OptimizerWrapper::DiscordantProblemError.new(
           'Shipment relations need to have two valid services -- a pickup and a delivery. ' \
           'The following services of shipment relations are invalid: ' \
-          "#{shipments_with_invalid_linked_ids.flat_map{ |r| r[:linked_ids].select{ |s_id| service_ids.exclude?(s_id) } }.uniq.sort.join(', ')}"
+          "#{shipments_with_invalid_linked_ids.flat_map{ |r| r[:linked_service_ids].select{ |s_id| service_ids.exclude?(s_id) } }.uniq.sort.join(', ')}"
         )
       end
 
-      shipments_not_having_exactly_two_linked_ids = shipment_relations.reject{ |r| r[:linked_ids].uniq.size == 2 }
+      shipments_not_having_exactly_two_linked_ids = shipment_relations.reject{ |r| r[:linked_service_ids].uniq.size == 2 }
       unless shipments_not_having_exactly_two_linked_ids.empty?
         raise OptimizerWrapper::DiscordantProblemError.new(
           'Shipment relations need to have two services -- a pickup and a delivery. ' \
           'Relations of following services does not have exactly two linked_ids: ' \
-          "#{shipments_not_having_exactly_two_linked_ids.flat_map{ |r| r[:linked_ids] }.uniq.sort.join(', ')}"
+          "#{shipments_not_having_exactly_two_linked_ids.flat_map{ |r| r[:linked_service_ids] }.uniq.sort.join(', ')}"
         )
       end
 
-      pickups = shipment_relations.map{ |r| r[:linked_ids].first }
-      deliveries = shipment_relations.map{ |r| r[:linked_ids].last }
+      pickups = shipment_relations.map{ |r| r[:linked_service_ids].first }
+      deliveries = shipment_relations.map{ |r| r[:linked_service_ids].last }
       services_that_are_both_pickup_and_delivery = pickups & deliveries
       unless services_that_are_both_pickup_and_delivery.empty?
         raise OptimizerWrapper::UnsupportedProblemError.new(
@@ -444,18 +444,18 @@ module ValidateData
     @hash[:relations]&.each{ |relation|
       next if relations_not_needing_matching_visits_number_and_lapses.include?(relation[:type].to_sym)
 
-      services_in_relation = relation[:linked_ids]&.collect{ |s_id| @hash[:services].find{ |s| s[:id] == s_id } } || []
+      services_in_relation = relation[:linked_service_ids]&.collect{ |s_id| @hash[:services].find{ |s| s[:id] == s_id } } || []
       if services_in_relation.uniq{ |s| s[:visits_number] || 1 }.size > 1
         raise OptimizerWrapper::UnsupportedProblemError.new(
           'Services in relations should have the same visits_number. '\
           'Following services in relation but they have different visits_number values: ',
-          [relation[:linked_ids]]
+          [relation[:linked_service_ids]]
         )
       elsif services_in_relation.uniq{ |s| [s[:minimum_lapse] || 1, s[:maximum_lapse].to_i] }.size > 1
         raise OptimizerWrapper::UnsupportedProblemError.new(
           'Services in relations should have the same minimum_lapse and maximum_lapse. '\
           'Following services in relation but they have different lapse values: ',
-          [relation[:linked_ids]]
+          [relation[:linked_service_ids]]
         )
       end
     }
@@ -465,7 +465,7 @@ module ValidateData
     inconsistent_stickies = []
     @hash[:relations].none?{ |relation|
       relation_sticky_ids = []
-      services = @hash[:services].select{ |service| relation[:linked_ids]&.include?(service[:id]) }
+      services = @hash[:services].select{ |service| relation[:linked_service_ids]&.include?(service[:id]) }
       services.none?{ |service|
         sticky_ids = service[:sticky_vehicle_ids] || []
 

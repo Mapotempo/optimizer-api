@@ -41,8 +41,7 @@ module Models
 
     field :type, default: :same_route, type: Symbol
     field :lapses, default: nil
-    field :linked_ids, default: []
-    has_many :linked_services, class_name: 'Models::Service', as_json: :none # FIXME: remove as_json: :ids when linked_ids becomes linked_services
+    has_many :linked_services, class_name: 'Models::Service', as_json: :ids
     field :linked_vehicle_ids, default: []
     field :periodicity, default: 1
 
@@ -51,39 +50,21 @@ module Models
     # validates_numericality_of :lapse, allow_nil: true
     # validates_numericality_of :periodicity, greater_than_or_equal_to: 1
     # validates_inclusion_of :type, :in => %i(same_vehicle same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months vehicle_trips)
-
-    def self.create(hash)
-      # TODO: remove it after the linked_ids is replaced with linked_service_ids in the api definition
-      exclusive = [:linked_service_ids, :linked_ids, :linked_services].freeze
-      raise "#{exclusive} fields are mutually exclusive" if hash.keys.count{ |k| exclusive.include? k } > 1
-
-      # TODO: remove it after the linked_ids is replaced with linked_service_ids in the api definition
-      if hash.key?(:linked_ids)
-        hash[:linked_service_ids] = hash[:linked_ids]
-      elsif hash.key?(:linked_service_ids)
-        hash[:linked_ids] = hash[:linked_service_ids]
-      elsif hash.key?(:linked_services)
-        hash[:linked_ids] = hash[:linked_services].map(&:id)
-      end
-
-      super(hash)
-    end
-
     def split_regarding_lapses
       # TODO : can we create relations from here ?
       # remove self.linked_ids
       if Models::Relation::SEVERAL_LAPSE_TYPES.include?(self.type)
         if self.lapses.uniq.size == 1
-          [[self.linked_ids, self.linked_vehicle_ids, self.lapses.first]]
+          [[self.linked_service_ids, self.linked_vehicle_ids, self.lapses.first]]
         else
           self.lapses.collect.with_index{ |lapse, index|
-            [self.linked_ids && self.linked_ids[index..index+1],
+            [self.linked_service_ids && self.linked_service_ids[index..index+1],
              self.linked_vehicle_ids && self.linked_vehicle_ids[index..index+1],
              lapse]
           }
         end
       else
-        [[self.linked_ids, self.linked_vehicle_ids, self.lapses&.first]]
+        [[self.linked_service_ids, self.linked_vehicle_ids, self.lapses&.first]]
       end
     end
   end

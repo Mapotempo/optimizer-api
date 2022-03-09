@@ -30,7 +30,7 @@ module Models
       vrp[:relations] = [{
           id: 'force_first',
           type: :force_first,
-          linked_ids: [vrp[:services].first[:id]]
+          linked_service_ids: [vrp[:services].first[:id]]
       }]
 
       assert_raises OptimizerWrapper::DiscordantProblemError do
@@ -339,8 +339,8 @@ module Models
       vrp = VRP.basic
 
       # complex shipment should be refused
-      vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
-                         { type: 'shipment', linked_ids: ['service_2', 'service_1'] }]
+      vrp[:relations] = [{ type: 'shipment', linked_service_ids: ['service_1', 'service_3'] },
+                         { type: 'shipment', linked_service_ids: ['service_2', 'service_1'] }]
       error = assert_raises OptimizerWrapper::UnsupportedProblemError do
         check_consistency(TestHelper.coerce(vrp))
       end
@@ -352,9 +352,9 @@ module Models
     def test_shipments_should_have_a_pickup_and_a_delivery
       vrp = VRP.basic
       # invalid shipments should be refused
-      vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_1'] },
-                         { type: 'shipment', linked_ids: ['service_2'] },
-                         { type: 'shipment', linked_ids: ['service_1', 'service_3'] }]
+      vrp[:relations] = [{ type: 'shipment', linked_service_ids: ['service_1', 'service_1'] },
+                         { type: 'shipment', linked_service_ids: ['service_2'] },
+                         { type: 'shipment', linked_service_ids: ['service_1', 'service_3'] }]
       error = assert_raises OptimizerWrapper::DiscordantProblemError do
         TestHelper.create(TestHelper.coerce(vrp))
       end
@@ -368,13 +368,13 @@ module Models
       vrp = VRP.basic
 
       # multi-pickup single delivery
-      vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
-                         { type: 'shipment', linked_ids: ['service_2', 'service_3'] }]
+      vrp[:relations] = [{ type: 'shipment', linked_service_ids: ['service_1', 'service_3'] },
+                         { type: 'shipment', linked_service_ids: ['service_2', 'service_3'] }]
       assert TestHelper.create(TestHelper.coerce(vrp)), 'Multi-pickup shipment should not be rejected'
 
       # single pickup multi-delivery
-      vrp[:relations] = [{ type: 'shipment', linked_ids: ['service_1', 'service_3'] },
-                         { type: 'shipment', linked_ids: ['service_1', 'service_2'] }]
+      vrp[:relations] = [{ type: 'shipment', linked_service_ids: ['service_1', 'service_3'] },
+                         { type: 'shipment', linked_service_ids: ['service_1', 'service_2'] }]
       assert TestHelper.create(TestHelper.coerce(vrp)), 'Multi-delivery shipment should not be rejected'
     end
 
@@ -615,7 +615,7 @@ module Models
       Models::Relation::NO_LAPSE_TYPES.each{ |type|
         problem[:relations] = [{ type: type, lapse: 3 }]
         Models::Relation::ON_SERVICES_TYPES.include?(type) ?
-          problem[:relations].first[:linked_ids] = service_ids :
+          problem[:relations].first[:linked_service_ids] = service_ids :
           problem[:relations].first[:linked_vehicle_ids] = vehicle_ids
         assert_raises OptimizerWrapper::DiscordantProblemError do
           check_consistency(problem)
@@ -623,7 +623,7 @@ module Models
 
         problem[:relations] = [{ type: type, lapses: [3, 4] }]
         Models::Relation::ON_SERVICES_TYPES.include?(type) ?
-          problem[:relations].first[:linked_ids] = service_ids :
+          problem[:relations].first[:linked_service_ids] = service_ids :
           problem[:relations].first[:linked_vehicle_ids] = vehicle_ids
         assert_raises OptimizerWrapper::DiscordantProblemError do
           check_consistency(problem)
@@ -633,13 +633,13 @@ module Models
       Models::Relation::ONE_LAPSE_TYPES.each{ |type|
         problem[:relations] = [{ type: type, lapse: 3 }]
         Models::Relation::ON_SERVICES_TYPES.include?(type) ?
-          problem[:relations].first[:linked_ids] = service_ids :
+          problem[:relations].first[:linked_service_ids] = service_ids :
           problem[:relations].first[:linked_vehicle_ids] = vehicle_ids
         check_consistency(problem)
 
         problem[:relations] = [{ type: type, lapses: [3, 4] }]
         Models::Relation::ON_SERVICES_TYPES.include?(type) ?
-          problem[:relations].first[:linked_ids] = service_ids :
+          problem[:relations].first[:linked_service_ids] = service_ids :
           problem[:relations].first[:linked_vehicle_ids] = vehicle_ids
         assert_raises OptimizerWrapper::DiscordantProblemError do
           check_consistency(problem)
@@ -653,7 +653,7 @@ module Models
       Models::Relation::SEVERAL_LAPSE_TYPES.each{ |type|
         problem[:relations] = [{ type: type, lapse: 3 }]
         if Models::Relation::ON_SERVICES_TYPES.include?(type)
-          problem[:relations].first[:linked_ids] = problem[:services].map{ |s| s[:id] }
+          problem[:relations].first[:linked_service_ids] = problem[:services].map{ |s| s[:id] }
         else
           problem[:relations].first[:linked_vehicle_ids] = [problem[:vehicles].first[:id]]
         end
@@ -667,7 +667,7 @@ module Models
 
           problem[:relations].first[:lapses] = [2, 4]
         else
-          problem[:relations] = [{ type: type, linked_ids: problem[:services][0..2].collect{ |s| s[:id] } }]
+          problem[:relations] = [{ type: type, linked_service_ids: problem[:services][0..2].collect{ |s| s[:id] } }]
           problem[:relations].first[:lapses] = [2]
           check_consistency(problem)
 

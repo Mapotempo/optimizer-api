@@ -137,8 +137,8 @@ module Wrappers
 
     def assert_no_relations_except_simple_shipments(vrp)
       vrp.relations.all?{ |r|
-        next true if r.linked_ids.empty? && r.linked_vehicle_ids.empty?
-        next false unless r.type == :shipment && r.linked_ids.size == 2
+        next true if r.linked_service_ids.empty? && r.linked_vehicle_ids.empty?
+        next false unless r.type == :shipment && r.linked_service_ids.size == 2
 
         quantities = Hash.new {}
         vrp.units.each{ |unit| quantities[unit.id] = [] }
@@ -980,13 +980,9 @@ module Wrappers
               quantity.value = -shipment_quantity + extra_per_quantity[q_index]
             }
 
-            new_shipment_relation = Helper.deep_copy(
-              relation,
-              override: {
-                linked_ids: nil, # this line can be removed when linked_ids is replaced with linked_service_ids
-                linked_services: relation.linked_services.map{ |s| s.id == service.id ? new_service : s }
-              }
-            )
+            relation_hash = relation.as_json
+            relation_hash[:linked_service_ids] = relation.linked_services.map{ |s| s.id == service.id ? new_service.id : s.id }
+            new_shipment_relation = Models::Relation.create(relation_hash)
 
             new_service.relations << new_shipment_relation
 
@@ -996,7 +992,7 @@ module Wrappers
 
           # For some reason, or-tools performance is better when the sequence relation is defined in the inverse order.
           # Note that, activity.duration's are set to zero except the last duplicated service (so we model exactly same constraint).
-          sequence_relations << Models::Relation.create(type: :sequence, linked_ids: sequence_relation_ids.reverse)
+          sequence_relations << Models::Relation.create(type: :sequence, linked_service_ids: sequence_relation_ids.reverse)
         }
 
         vrp[:simplified_complex_shipments] = {

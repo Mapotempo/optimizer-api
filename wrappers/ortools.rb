@@ -73,15 +73,15 @@ module Wrappers
     def solve(vrp, job, thread_proc = nil, &block)
       tic = Time.now
       order_relations = vrp.relations.select{ |relation| relation.type == :order }
-      already_begin = order_relations.collect{ |relation| relation.linked_ids[0..-2] }.flatten
+      already_begin = order_relations.collect{ |relation| relation.linked_service_ids[0..-2] }.flatten
       duplicated_begins = already_begin.uniq.select{ |linked_id| already_begin.select{ |link| link == linked_id }.size > 1 }
-      already_end = order_relations.collect{ |relation| relation.linked_ids[1..-1] }.flatten
+      already_end = order_relations.collect{ |relation| relation.linked_service_ids[1..-1] }.flatten
       duplicated_ends = already_end.uniq.select{ |linked_id| already_end.select{ |link| link == linked_id }.size > 1 }
       if vrp.routes.empty? && order_relations.size == 1
-        order_relations.select{ |relation| (relation.linked_ids[0..-2] & duplicated_begins).size == 0 && (relation.linked_ids[1..-1] & duplicated_ends).size == 0 }.each{ |relation|
+        order_relations.select{ |relation| (relation.linked_service_ids[0..-2] & duplicated_begins).size == 0 && (relation.linked_service_ids[1..-1] & duplicated_ends).size == 0 }.each{ |relation|
           order_route = {
             vehicle: (vrp.vehicles.size == 1) ? vrp.vehicles.first : nil,
-            mission_ids: relation.linked_ids
+            mission_ids: relation.linked_service_ids
           }
           vrp.routes += [order_route]
         }

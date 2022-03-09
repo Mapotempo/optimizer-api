@@ -62,12 +62,11 @@ module Models
       hash[:relations] ||= []
 
       vrp = super({})
-      self.convert_shipments_to_services(hash)
-      self.filter(hash) if options[:check] # TODO : add filters.rb here
       # moved filter here to make sure we do have configuration.schedule.indices (not date) to do work_day check with lapses
-      vrp.check_consistency(hash) if options[:check]
       self.convert_expected_string_to_symbol(hash)
       self.ensure_retrocompatibility(hash)
+      self.filter(hash) if options[:check] # TODO : add filters.rb here
+      vrp.check_consistency(hash) if options[:check]
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
        :vehicles, :services, :relations, :subtours, :routes, :configuration].each{ |key|
         vrp.send("#{key}=", hash[key]) if hash[key]
@@ -147,6 +146,14 @@ module Models
       }
     end
 
+    def self.convert_linked_ids_into_linked_service_ids(hash)
+      hash[:relations].each{ |relation|
+        next unless relation.key?(:linked_ids)
+
+        relation[:linked_service_ids] = relation.delete(:linked_ids)
+      }
+    end
+
     def self.convert_old_partition(hash)
       # method is an already reserved method name. It was generating conflicts during as_json conversion
       return if hash[:configuration].nil? || hash[:configuration][:preprocessing].nil? ||
@@ -192,12 +199,12 @@ module Models
                                                   shipment[:id],
                                                   @linked_ids[shipment[:id]][0],
                                                   @linked_ids[shipment[:id]][1])
-        hash[:relations] << { type: :shipment, linked_ids: @linked_ids[shipment[:id]] }
-        hash[:relations] << { type: :sequence, linked_ids: @linked_ids[shipment[:id]] } if shipment[:direct]
+        hash[:relations] << { type: :shipment, linked_service_ids: @linked_ids[shipment[:id]] }
+        hash[:relations] << { type: :sequence, linked_service_ids: @linked_ids[shipment[:id]] } if shipment[:direct]
         max_lapse = shipment[:maximum_inroute_duration]
         next unless max_lapse
 
-        hash[:relations] << { type: :maximum_duration_lapse, linked_ids: @linked_ids[shipment[:id]], lapses: [max_lapse] }
+        hash[:relations] << { type: :maximum_duration_lapse, linked_service_ids: @linked_ids[shipment[:id]], lapses: [max_lapse] }
       }
       convert_shipment_within_routes(hash)
       hash.delete(:shipments)
@@ -207,23 +214,23 @@ module Models
       hash[:relations].each{ |relation|
         case relation[:type]
         when :minimum_duration_lapse, :maximum_duration_lapse
-          relation[:linked_ids][0] = delivery_service_id if relation[:linked_ids][0] == shipment_id
-          relation[:linked_ids][1] = pickup_service_id if relation[:linked_ids][1] == shipment_id
+          relation[:linked_service_ids][0] = delivery_service_id if relation[:linked_service_ids][0] == shipment_id
+          relation[:linked_service_ids][1] = pickup_service_id if relation[:linked_service_ids][1] == shipment_id
           relation[:lapses] ||= relation[:lapse] ? [relation[:lapse]] : [0]
           relation.delete(:lapse)
         when :same_route, :same_vehicle
-          relation[:linked_ids].each_with_index{ |id, id_i|
+          relation[:linked_service_ids].each_with_index{ |id, id_i|
             next unless id == shipment_id
 
-            relation[:linked_ids][id_i] = pickup_service_id # which will be in same_route as delivery
+            relation[:linked_service_ids][id_i] = pickup_service_id # which will be in same_route as delivery
           }
         when :sequence, :order
-          if relation[:linked_ids].any?{ |id| id == shipment_id }
+          if relation[:linked_service_ids].any?{ |id| id == shipment_id }
             msg = 'Relation between shipment pickup and delivery should be explicitly specified for `:sequence` and `:order` relations.'
             raise OptimizerWrapper::DiscordantProblemError.new(msg)
           end
         else
-          if relation[:linked_ids].any?{ |id| id == shipment_id }
+          if relation[:linked_service_ids].any?{ |id| id == shipment_id }
             msg = "Relations of type #{relation[:type]} cannot be linked using the shipment object."
             raise OptimizerWrapper::DiscordantProblemError.new(msg)
           end
@@ -269,7 +276,7 @@ module Models
       hash[:relations]&.each_with_index{ |r, r_i|
         case r[:type]
         when :force_first
-          r[:linked_ids].each{ |id|
+          r[:linked_service_ids].each{ |id|
             to_modify = hash[:services].find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force first relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
@@ -277,7 +284,7 @@ module Models
           }
           relations_to_remove << r_i
         when :never_first
-          r[:linked_ids].each{ |id|
+          r[:linked_service_ids].each{ |id|
             to_modify = hash[:services].find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Never first relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
@@ -285,7 +292,7 @@ module Models
           }
           relations_to_remove << r_i
         when :force_end
-          r[:linked_ids].each{ |id|
+          r[:linked_service_ids].each{ |id|
             to_modify = hash[:services].find{ |s| s[:id] == id }
             raise OptimizerWrapper::DiscordantProblemError, 'Force end relation with service with activities. Use position field instead.' unless to_modify[:activity]
 
@@ -362,7 +369,7 @@ module Models
           end
         elsif Models::Relation::SEVERAL_LAPSE_TYPES.include?(relation[:type])
           if relation[:lapse]
-            expected_size = relation[:linked_vehicle_ids].to_a.size + relation[:linked_ids].to_a.size - 1
+            expected_size = relation[:linked_vehicle_ids].to_a.size + relation[:linked_service_ids].to_a.size - 1
             relation[:lapses] = Array.new(expected_size, relation[:lapse]) if expected_size > 0
           end
         end
@@ -396,6 +403,8 @@ module Models
     end
 
     def self.ensure_retrocompatibility(hash)
+      self.convert_linked_ids_into_linked_service_ids(hash)
+      self.convert_shipments_to_services(hash)
       self.convert_position_relations(hash)
       self.deduce_first_solution_strategy(hash)
       self.deduce_minimum_duration(hash)

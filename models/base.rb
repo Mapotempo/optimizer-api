@@ -99,23 +99,6 @@ module Models
       hash
     end
 
-    def convert(key, value)
-      case self.class.types[key].to_s
-      when ''
-        value
-      when '[Symbol]'
-        value = [] if value.to_a.empty?
-        value.map!(&:to_sym)
-        value.sort!
-      when 'Symbol'
-        value&.to_sym
-      when 'Date'
-        value&.to_date
-      else
-        raise "Unknown type #{self.class.types[key]} for key #{key} with value #{value}"
-      end
-    end
-
     def self.field(name, options = {})
       case options[:as_json]
       when nil
@@ -148,8 +131,8 @@ module Models
       # vehicles -> vehicle_ids | capacities -> capacity_ids | matrices -> matrix_ids
       ids_function_name = "#{ActiveSupport::Inflector.singularize(name.to_s)}_ids".to_sym
 
-      add_default_value(name, options[:options] || [])
-      add_default_value(ids_function_name, options[:options] || [])
+      add_default_value(name, options[:default] || [])
+      add_default_value(ids_function_name, options[:default] || [])
 
       case options[:as_json]
       when :ids
@@ -172,7 +155,7 @@ module Models
       end
 
       redefine_method(name) do
-        self[name] ||= self.class.default_attributes[field_name]
+        self[name] ||= self.class.default_attributes[name]
       end
 
       redefine_method("#{name}=") do |vals|
@@ -253,6 +236,23 @@ module Models
     end
 
     private
+
+    def convert(key, value)
+      case self.class.types[key].to_s
+      when ''
+        value
+      when '[Symbol]'
+        value = [] if value.to_a.empty?
+        value.map!(&:to_sym)
+        value.sort!
+      when 'Symbol'
+        value&.to_sym
+      when 'Date'
+        value&.to_date
+      else
+        raise "Unknown type #{self.class.types[key]} for key #{key} with value #{value}"
+      end
+    end
 
     def class_from_string(str)
       str.split('::').inject(Object) do |mod, class_name|
