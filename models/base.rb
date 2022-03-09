@@ -80,12 +80,13 @@ module Models
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|
+        field_sym = field_name.to_sym
         next if options[:except]&.include?(field_name) ||
                 !respond_to?(field_name) ||
                 send(field_name).nil? ||
-                self.class.default_attributes&.fetch(field_name.to_sym, nil) == send(field_name)
+                self.class.default_attributes&.fetch(field_sym, nil) == send(field_name)
 
-        hash[field_name] = self.send(field_name).as_json
+        hash[field_sym] = convert(field_sym, self.send(field_name).as_json)
       }
       hash
     end
@@ -171,7 +172,7 @@ module Models
       end
 
       redefine_method(name) do
-        self[name] ||= []
+        self[name] ||= self.class.default_attributes[field_name]
       end
 
       redefine_method("#{name}=") do |vals|
