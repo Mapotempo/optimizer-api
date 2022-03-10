@@ -355,13 +355,13 @@ module VrpMissions
                       desc: 'Particular abilities required by a vehicle to perform this service. Not available with periodic heuristic.')
 
     optional(:type, type: Symbol, desc: '`service`, `pickup` or `delivery`. Only service type is available with periodic heuristic.')
-    optional(:activity, type: Hash, desc: 'Details of the activity performed to accomplish the current service') do
+    optional(:activity, type: Hash, allow_blank: false, desc: 'Details of the activity performed to accomplish the current service') do
       use :vrp_request_activity
     end
-    optional(:activities, type: Array, desc: 'Define other possible activities for the service. This allows to assign different timewindows and/or points to a single service.') do
+    optional(:activities, type: Array, allow_blank: false, desc: 'Define other possible activities for the service. This allows to assign different timewindows and/or points to a single service.') do
       use :vrp_request_activity
     end
-    mutually_exclusive :activity, :activities
+    exactly_one_of :activity, :activities
     optional(:quantity_ids, type: String, documentation: { hidden: true }, desc: 'Quantities to consider, CSV front only')
     optional(:quantities, type: Array, desc: 'Define the entities which are taken or dropped. The maximum precision supported is 1e-3.') do
       use :vrp_request_quantity
