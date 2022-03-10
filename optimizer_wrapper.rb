@@ -460,7 +460,7 @@ module OptimizerWrapper
       block = if services_vrps.size > 1 && !callback.nil?
                 proc { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
                   add = "split independent process #{i + 1}/#{services_vrps.size}"
-                  msg = concat_avancement(message, add) || message
+                  msg = concat_avancement(add, message) || message
                   callback&.call(wrapper, avancement, total, msg, cost, time, solution)
                 }
               else

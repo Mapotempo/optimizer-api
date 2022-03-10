@@ -222,13 +222,17 @@ module Interpreters
           enum_current_vehicles.select{ |v| side.any?{ |s| s.id == "0_representative_vrp_s_#{v.id}" } }
         }
 
-        unless sides.size == 2 && sides.none?(&:empty?)
+        if sides.size != 2 || sides.any?(&:empty?)
           # this might happen under certain cases (skills etc can force all points to be on one side)
           # and not necessarily a problem but it should happen very rarely (in real instances)
           # it might also happen because the vehicles are in a linking relation (like vehicle_trips)
           # which forces them to be stay on one side.
           log 'There should be exactly two clusters in split_solve_core!', level: :warn
           ss_data[:cannot_split_further] = true
+        else
+          service_vrp[:split_level] = split_level + 1
+          service_vrp[:split_denominators] << 2**service_vrp[:split_level]
+          service_vrp[:split_sides] << 0
         end
 
         # TODO: In some case one side might be significantly smaller than the other side.
@@ -242,9 +246,7 @@ module Interpreters
 
         # RECURSIVELY CALL split_solve_core AND MERGE SOLUTIONS
         solutions = sides.collect.with_index{ |side, index|
-          service_vrp[:split_level] = split_level + 1
-          service_vrp[:split_denominators] << 2**service_vrp[:split_level]
-          service_vrp[:split_sides] << index
+          service_vrp[:split_sides][split_level + 1] = index
 
           ss_data[:current_vehicles] = side
 
@@ -257,7 +259,13 @@ module Interpreters
               Rational(service_vrp[:split_sides][idx], lvl)
             }.sum
 
-            msg = message && "max split #{(service_vrp[:split_denominators].last * avc).to_i}/#{service_vrp[:split_denominators].last} - #{message}"
+            msg =
+              if message.include?('max split')
+                message
+              else
+                add = "max split #{(service_vrp[:split_denominators].last * avc).to_i}/#{service_vrp[:split_denominators].last}"
+                OptimizerWrapper.concat_avancement(add, message)
+              end
             block&.call(wrapper, avancement, total, msg, cost, time, solution)
           }
         }
@@ -690,10 +698,7 @@ module Interpreters
       end
 
       log "<--- build_partial_service_vrp takes #{Time.now - tic}", level: :debug
-      {
-        vrp: sub_vrp,
-        service: service_vrp[:service]
-      }
+      service_vrp.dup.tap{ |s_v| s_v[:vrp] = sub_vrp }
     end
 
     def self.adjust_independent_duration(vrp, this_sub_size, total_size)

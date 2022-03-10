@@ -717,6 +717,7 @@ class SplitClusteringTest < Minitest::Test
 
     def test_max_split_can_handle_empty_vehicles
       # Due to initial solutions, 4 services are on 2 vehicles which leaves 2 services to the remaining 3 vehicles.
+      # [x] means related services. We split 6 services to be split into [2]+2 vs [2], then [2]+2 -> [2] vs 2, and 2 into 1 vs 1
       problem = VRP.lat_lon
       4.times{ |i|
         problem[:vehicles] << problem[:vehicles].first.dup
@@ -731,8 +732,8 @@ class SplitClusteringTest < Minitest::Test
       called = false
       Interpreters::SplitClustering.stub(:split_solve_core, lambda{ |service_vrp, _job|
         refute_nil service_vrp[:split_level], 'split_level should have been defined before split_solve_core'
-        assert_operator service_vrp[:split_level], :<, 3,
-                        'Infinite loop?: split_level should not reach 3. Grouping of vehicle points might be the reason'
+        assert_operator service_vrp[:split_level], :<, 4,
+                        'Infinite loop?: split_level should not reach 4. Grouping of vehicle points might be the reason'
         assert service_vrp[:split_solve_data][:representative_vrp].points.none?{ |p| p.location.lat.nan? },
                'Empty vehicles should not reach split_solve_core'
         called = true
