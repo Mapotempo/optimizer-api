@@ -2693,83 +2693,18 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_shipments_quantities
     ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 3, 3],
-          [3, 0, 3],
-          [3, 3, 0]
-        ]
-      }],
-      units: [{
-        id: 'unit_0',
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        cost_time_multiplier: 1,
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        capacities: [{
-          unit_id: 'unit_0',
-          limit: 2
-        }]
-      }],
-      shipments: [{
-        id: 'shipment_0',
-        pickup: {
-          point_id: 'point_1',
-          duration: 3,
-          late_multiplier: 0,
-        },
-        delivery: {
-          point_id: 'point_2',
-          duration: 3,
-          late_multiplier: 0,
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 2
-        }]
-      }, {
-        id: 'shipment_1',
-        pickup: {
-          point_id: 'point_1',
-          duration: 3,
-          late_multiplier: 0,
-        },
-        delivery: {
-          point_id: 'point_2',
-          duration: 3,
-          late_multiplier: 0,
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          value: 2
-        }]
-      }],
-      configuration: {
-        preprocessing: {
-          prefer_short_segment: true
-        },
-        resolution: {
-          duration: 100
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
+    problem = VRP.pud
+    problem[:shipments].each{ |shipment|
+      shipment[:quantities] = [{
+        unit_id: 'unit_0',
+        value: 2
+      }]
+    }
+    problem[:vehicles].each{ |vehicle|
+      vehicle[:capacities] = [{
+        unit_id: 'unit_0',
+        limit: 2
+      }]
     }
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
@@ -2839,79 +2774,28 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_mixed_shipments_and_services
     ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 1, 1],
-          [1, 0, 1, 1],
-          [1, 1, 0, 1],
-          [1, 1, 1, 0]
-        ]
-      }],
-      units: [{
-        id: 'unit_0',
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }, {
-        id: 'point_3',
-        matrix_index: 3
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        cost_time_multiplier: 1,
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0'
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1',
-        },
-        quantities: [{
-          unit_id: 'unit_0',
-          setup_value: 1,
-        }]
-      }],
-      shipments: [{
-        id: 'shipment_1',
-        pickup: {
-          point_id: 'point_2',
-          duration: 1,
-          late_multiplier: 0,
-        },
-        delivery: {
-          point_id: 'point_3',
-          duration: 1,
-          late_multiplier: 0,
-        }
-      }],
-      configuration: {
-        preprocessing: {
-          prefer_short_segment: true
-        },
-        resolution: {
-          duration: 100
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
+    problem = VRP.basic
+    problem[:services] = [{
+      id: 'service_1',
+      activity: {
+        point_id: 'point_1'
       }
-    }
+    }]
+
+    problem[:shipments] = [{
+      id: 'shipment_1',
+      pickup: {
+        point_id: 'point_2'
+      },
+      delivery: {
+        point_id: 'point_3'
+      }
+    }]
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
     assert solution
     assert_equal 0, solution.unassigned_stops.size
-    assert_equal 5, solution.routes.first.stops.size
+    assert_equal 4, solution.routes.first.stops.size
     assert solution.routes.first.stops.index{ |activity| activity[:pickup_shipment_id] == 'shipment_1' } <
            solution.routes.first.stops.index{ |activity| activity[:delivery_shipment_id] == 'shipment_1' }
   end
@@ -2969,6 +2853,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
     # pickup and delivery at not at same location so it is impossible to assign with lapse 0
     # we could use direct shipment instead
     assert_equal 4, solution.unassigned_stops.size
+  end
+
+  def test_shipment_relation_multiple_timewindows_lateness
+    vrp = TestHelper.load_vrp(self, fixture_file: 'shipment_relation_multiple_timewindows_lateness')
+
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 0, solutions[0].unassigned_stops.size
   end
 
   def test_value_matrix
@@ -3062,74 +2953,36 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_sequence
     ortools = OptimizerWrapper.config[:services][:ortools]
-    problem = {
-      matrices: [{
-        id: 'matrix_0',
-        time: [
-          [0, 1, 2, 5],
-          [1, 0, 2, 10],
-          [1, 2, 0, 5],
-          [1, 3, 8, 0]
-        ]
-      }],
-      points: [{
-        id: 'point_0',
-        matrix_index: 0
-      }, {
-        id: 'point_1',
-        matrix_index: 1
-      }, {
-        id: 'point_2',
-        matrix_index: 2
-      }, {
-        id: 'point_3',
-        matrix_index: 3
-      }],
-      vehicles: [{
-        id: 'vehicle_0',
-        cost_time_multiplier: 1,
-        matrix_id: 'matrix_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0'
-      }, {
-        id: 'vehicle_1',
-        cost_time_multiplier: 1,
-        matrix_id: 'matrix_0',
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        skills: [['skill1']]
-      }],
-      services: [{
-        id: 'service_1',
-        activity: {
-          point_id: 'point_1'
-        },
-        skills: ['skill1']
-      }, {
-        id: 'service_2',
-        activity: {
-          point_id: 'point_2'
-        }
-      }, {
-        id: 'service_3',
-        activity: {
-          point_id: 'point_3'
-        }
-      }],
-      relations: [{
-        id: 'sequence_1',
-        type: :sequence,
-        linked_ids: ['service_1', 'service_3', 'service_2']
-      }],
-      configuration: {
-        resolution: {
-          duration: 100
-        },
-        restitution: {
-          intermediate_solutions: false,
-        }
-      }
-    }
+    problem = VRP.basic
+    problem[:matrices] = [{
+      id: 'matrix_0',
+      time: [
+        [0, 1, 2, 5],
+        [1, 0, 2, 10],
+        [1, 2, 0, 5],
+        [1, 3, 8, 0]
+      ]
+    }]
+    problem[:relations] = [{
+      id: 'sequence_1',
+      type: :sequence,
+      linked_ids: ['service_1', 'service_3', 'service_2']
+    }]
+    problem[:services].first[:skills] = ['skill1']
+    problem[:vehicles] = [{
+      id: 'vehicle_0',
+      cost_time_multiplier: 1,
+      matrix_id: 'matrix_0',
+      start_point_id: 'point_0',
+      end_point_id: 'point_0'
+    }, {
+      id: 'vehicle_1',
+      cost_time_multiplier: 1,
+      matrix_id: 'matrix_0',
+      start_point_id: 'point_0',
+      end_point_id: 'point_0',
+      skills: [['skill1']]
+    }]
     vrp = TestHelper.create(problem)
     solution = ortools.solve(vrp, 'test')
     assert solution
