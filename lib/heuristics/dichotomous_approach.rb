@@ -87,11 +87,6 @@ module Interpreters
           raise 'dichotomous_heuristic cannot split the problem into two clusters' if sub_service_vrps.size != 2
 
           solutions = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
-            unless index.zero?
-              sub_service_vrp[:vrp].configuration.resolution.split_number = sub_service_vrps[0][:vrp].configuration.resolution.split_number + 1
-              sub_service_vrp[:vrp].configuration.resolution.total_split_number =
-                sub_service_vrps[0][:vrp].configuration.resolution.total_split_number
-            end
             if sub_service_vrp[:vrp].configuration.resolution.duration
               sub_service_vrp[:vrp].configuration.resolution.duration *=
                 sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
@@ -106,8 +101,13 @@ module Interpreters
                 Rational(service_vrp[:dicho_sides][idx], lvl)
               }.sum
 
-              add = "dicho #{(service_vrp[:dicho_denominators].last * avc).to_i}/#{service_vrp[:dicho_denominators].last}"
-              msg = OptimizerWrapper.concat_avancement(add, message)
+              msg =
+                if message.include?('dicho')
+                  message
+                else
+                  add = "dicho #{(service_vrp[:dicho_denominators].last * avc).to_i}/#{service_vrp[:dicho_denominators].last}"
+                  OptimizerWrapper.concat_avancement(add, message)
+                end
               block&.call(wrapper, avancement, total, msg, cost, time, sol)
             }
 
@@ -115,8 +115,6 @@ module Interpreters
 
             solution
           }
-          service_vrp[:vrp].configuration.resolution.split_number = sub_service_vrps[1][:vrp].configuration.resolution.split_number
-          service_vrp[:vrp].configuration.resolution.total_split_number = sub_service_vrps[1][:vrp].configuration.resolution.total_split_number
           solution = solutions.reduce(&:+)
           log "dicho - level(#{service_vrp[:dicho_level]}) before remove_bad_skills unassigned rate " \
               "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
@@ -516,8 +514,6 @@ module Interpreters
 
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
           sub_vrp.configuration.resolution.vehicle_limit = vehicle_limits_by_cluster[i]
-          sub_vrp.configuration.resolution.split_number += i
-          sub_vrp.configuration.resolution.total_split_number += 1
 
           split_service_vrps << {
             service: service_vrp[:service],

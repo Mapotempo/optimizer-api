@@ -58,7 +58,6 @@ module Models
     field :dicho_algorithm_service_limit, default: 500 # This variable is exposed in a hidden way for studies
 
     field :duration, default: nil
-    field :total_duration, default: nil
     field :iterations, default: nil
     field :iterations_without_improvment, default: nil
     field :stable_iterations, default: nil
@@ -72,16 +71,12 @@ module Models
     field :minimize_days_worked, default: false
     field :allow_partial_assignment, default: true
     field :evaluate_only, default: false
-    field :split_number, default: 1
-    field :total_split_number, default: 2
     field :several_solutions, default: 1
     field :variation_ratio, default: nil
     field :batch_heuristic, default: false
     field :repetition, default: nil
 
     def self.create(hash)
-      hash[:total_duration] = hash[:duration]
-
       super(hash)
     end
   end

@@ -274,8 +274,7 @@ module OptimizerWrapper
           OptimizerWrapper.config[:services][service].patch_and_rewind_simplified_constraints(cliqued_vrp, cliqued_solution)
 
           if cliqued_solution.is_a?(Models::Solution)
-            # cliqued_solution[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-            block&.call(nil, nil, nil, "process #{vrp.configuration.resolution.split_number}/#{vrp.configuration.resolution.total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(cliqued_solution.elapsed) / 1000).to_i}/" + "#{vrp.configuration.resolution.total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
+            block&.call(nil, nil, nil, 'run optimization', nil, nil, nil) if dicho_level&.positive?
             cliqued_solution
           elsif cliqued_solution.status == :killed
             next
