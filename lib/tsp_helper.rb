@@ -37,7 +37,7 @@ module TSPHelper
       start_point_id: start_point && "#{tsp_suffix}_#{start_point.id}",
       end_point_id: end_point && "#{tsp_suffix}_#{end_point.id}",
       matrix_id: vehicle.matrix_id,
-      timewindow: { start: options[:begin_time] || 0 }
+      timewindow: { start: options[:begin_time] || 0 },
     }
 
     problem = {

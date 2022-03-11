@@ -20,9 +20,17 @@
 require_all 'lib'
 require_all 'util'
 
-RELATION_ZIP_CLUSTER_CAN_HANDLE = %i[minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse
-                                     vehicle_trips vehicle_group_duration vehicle_group_duration_on_weeks
-                                     vehicle_group_duration_on_months vehicle_group_number].freeze
+RELATION_ZIP_CLUSTER_CAN_HANDLE = %i[
+  maximum_day_lapse
+  maximum_duration_lapse
+  minimum_day_lapse
+  minimum_duration_lapse
+  vehicle_group_duration
+  vehicle_group_duration_on_months
+  vehicle_group_duration_on_weeks
+  vehicle_group_number
+  vehicle_trips
+].freeze
 
 module OptimizerWrapper
   @zip_condition = false
