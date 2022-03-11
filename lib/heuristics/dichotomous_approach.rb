@@ -102,10 +102,10 @@ module Interpreters
               }.sum
 
               msg =
-                if message.include?('dicho')
+                if message.include?('dichotomous process')
                   message
                 else
-                  add = "dicho #{(service_vrp[:dicho_denominators].last * avc).to_i}/#{service_vrp[:dicho_denominators].last}"
+                  add = "dichotomous process #{(service_vrp[:dicho_denominators].last * avc).to_i}/#{service_vrp[:dicho_denominators].last}"
                   OptimizerWrapper.concat_avancement(add, message)
                 end
               block&.call(wrapper, avancement, total, msg, cost, time, sol)

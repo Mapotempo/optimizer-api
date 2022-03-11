@@ -260,10 +260,10 @@ module Interpreters
             }.sum
 
             msg =
-              if message.include?('max split')
+              if message.include?('max split process')
                 message
               else
-                add = "max split #{(service_vrp[:split_denominators].last * avc).to_i}/#{service_vrp[:split_denominators].last}"
+                add = "max split process #{(service_vrp[:split_denominators].last * avc).to_i}/#{service_vrp[:split_denominators].last}"
                 OptimizerWrapper.concat_avancement(add, message)
               end
             block&.call(wrapper, avancement, total, msg, cost, time, solution)
