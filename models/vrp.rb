@@ -261,6 +261,7 @@ module Models
       vrp.expand_unavailable_days
       vrp.provide_original_info # TODO: this should be done on hash in order to be sure to have the original information
       vrp.sticky_as_skills # TODO: this should be done on hash in order to completely remove sticky_vehicles from service model
+      vrp.accumulate_skills_of_services_in_linking_relations # WARN: needs to be after provide_original_info + sticky_as_skills
     end
 
     def self.convert_position_relations(hash)
