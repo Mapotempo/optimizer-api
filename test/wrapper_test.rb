@@ -2675,7 +2675,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_add_unassigned_respects_relations
-    assert_equal %i[shipment sequence meetup].sort, Wrappers::Wrapper::ALL_OR_NONE_RELATIONS.sort
+    assert_equal %i[shipment sequence meetup].sort, Models::Relation::ALL_OR_NONE_RELATIONS.sort
 
     problem = VRP.lat_lon
     service_zero = Oj.load(Oj.dump(problem[:services].first))
@@ -2688,7 +2688,7 @@ class WrapperTest < Minitest::Test
     assert_equal 1, services_demo.add_unassigned({}, vrp, vrp[:services][0], 'reason').values.flatten.size
 
     # all 7 services in one relation type become unfeasible at the same time
-    Wrappers::Wrapper::ALL_OR_NONE_RELATIONS.each{ |relation_type|
+    Models::Relation::ALL_OR_NONE_RELATIONS.each{ |relation_type|
       linked_ids_size = relation_type == :shipment ? 2 : problem[:services].size
       problem[:relations] = [{ type: relation_type, linked_ids: problem[:services][0..linked_ids_size-1].collect{ |s| s[:id] } }]
       vrp = TestHelper.create(problem)
