@@ -42,6 +42,3 @@ Layout/IndentationConsistency:
 
 Layout/IndentationWidth:
   Severity: warning
-
-# Layout/LineLength:
-#   Enabled: false
