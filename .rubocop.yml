@@ -17,8 +17,13 @@ Style/FrozenStringLiteralComment:
     - 'Gemfile'
     - 'Rakefile'
 
-# Layout/LineLength:
-#   Enabled: false
+# Disabled since it defers/pushes final verifications after a return which hides the verification logic.
+#
+# It is disabled by other tech companies with similar reasons:
+# https://github.com/airbnb/ruby/blob/12435e8136d2adf710de999bc0f6bef01215df2c/rubocop-airbnb/config/rubocop-style.yml#L363
+# https://github.com/Shopify/ruby-style-guide/blob/f604033657c54fa0dc28b5914c1e6c2641e6f361/rubocop.yml#L469
+Style/GuardClause:
+  Enabled: false
 
 Style/NumericPredicate:
   Enabled: false
@@ -32,8 +37,8 @@ Layout/EmptyLines:
 Layout/ExtraSpacing:
   Severity: warning
 
-Layout/IndentationWidth:
+Layout/IndentationConsistency:
   Severity: warning
 
-Layout/IndentationConsistency:
+Layout/IndentationWidth:
   Severity: warning

@@ -22,14 +22,6 @@ require './lib/interpreters/periodic_visits.rb'
 
 module Interpreters
   class SplitClustering
-    # Relations that link multiple services to be on the same route
-    LINKING_RELATIONS = %i[
-      order
-      same_route
-      sequence
-      shipment
-      same_vehicle
-    ].freeze
     # Relations that force multiple services/vehicles to stay in the same VRP
     FORCING_RELATIONS = %i[
       maximum_day_lapse
@@ -1146,7 +1138,7 @@ module Interpreters
           # we can group services even if they have are in linking relations if everything else is the same
           linked_relation_details =
             if options[:group_points]
-              s.relations.select{ |r| LINKING_RELATIONS.include?(r.type) }.collect{ |relation|
+              s.relations.select{ |r| Models::Relation::LINKING_RELATIONS.include?(r.type) }.collect{ |relation|
                 relation.linked_services.collect{ |service|
                   rs_location = service.activity.point.location
                   [relation.type, rs_location.lat, rs_location.lon]
@@ -1239,8 +1231,8 @@ module Interpreters
           # well, then we need to check only the relations of a single service from each sub_set but
           # we need to make sure that we are checking the same relations in different sub_set. That
           # is why we do select a single service from each sub_set with max_by logic
-          service = sub_set.max_by{ |s| s.relations.max_by{ |r| LINKING_RELATIONS.include?(r.type) ? r.id : 0 }&.id.to_i }
-          service.relations.select{ |r| LINKING_RELATIONS.include?(r.type) }.each{ |relation|
+          service = sub_set.max_by{ |s| s.relations.max_by{ |r| Models::Relation::LINKING_RELATIONS.include?(r.type) ? r.id : 0 }&.id.to_i }
+          service.relations.select{ |r| Models::Relation::LINKING_RELATIONS.include?(r.type) }.each{ |relation|
             related_item_indices[relation] << index
           }
         }
