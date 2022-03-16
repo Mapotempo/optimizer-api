@@ -17,9 +17,6 @@ Style/FrozenStringLiteralComment:
     - 'Gemfile'
     - 'Rakefile'
 
-# Layout/LineLength:
-#   Enabled: false
-
 Style/NumericPredicate:
   Enabled: false
 
@@ -32,8 +29,11 @@ Layout/EmptyLines:
 Layout/ExtraSpacing:
   Severity: warning
 
+Layout/IndentationConsistency:
+  Severity: warning
+
 Layout/IndentationWidth:
   Severity: warning
 
-Layout/IndentationConsistency:
-  Severity: warning
+# Layout/LineLength:
+#   Enabled: false
