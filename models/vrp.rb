@@ -727,7 +727,9 @@ module Models
         coeff_uniform_cost = tan_uniform / (1 - tan_variable * tan_uniform)
 
         services.each{ |service|
-          service.exclusion_cost = (coeff_variable_cost * (max_fixed_cost / exclusion_rate * service[:activity][:duration] / average_service_load) + coeff_uniform_cost * (max_fixed_cost / exclusion_rate)).ceil
+          service.exclusion_cost = (2**(4 - service.priority) * coeff_variable_cost *
+            (max_fixed_cost / exclusion_rate * service.activity.duration / average_service_load) +
+            coeff_uniform_cost * (max_fixed_cost / exclusion_rate)).ceil
         }
       when :distance
         raise 'Distance based exclusion cost calculation is not ready'
