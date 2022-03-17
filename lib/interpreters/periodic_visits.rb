@@ -73,11 +73,14 @@ module Interpreters
       vrp
     end
 
-    def generate_timewindows(timewindows_set)
+    def generate_timewindows(timewindows_set, fixed_day_index = nil)
       return nil if timewindows_set.empty?
 
       timewindows_set.flat_map{ |timewindow|
-        if @have_day_index
+        if @have_day_index && fixed_day_index
+          [Models::Timewindow.create(start: timewindow.start + fixed_day_index * 86400,
+                                    end: (timewindow.end || 86400) + fixed_day_index * 86400)]
+        elsif @have_day_index
           first_day =
             if timewindow.day_index
               (@schedule_start..@schedule_end).find{ |day| day % 7 == timewindow.day_index }
@@ -193,12 +196,12 @@ module Interpreters
       new_services
     end
 
-    def build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
+    def build_vehicle(vrp, vehicle, vehicle_day_index, vehicle_timewindow, rests_durations)
       new_vehicle_hash = vehicle.as_json(except: [:id, :start_point_id, :end_point_id, :sequence_timewindows])
       new_vehicle_hash[:global_day_index] = vehicle_day_index
       new_vehicle_hash[:skills] = associate_skills(vehicle, vehicle_day_index)
-      new_vehicle_hash[:rests] = generate_rests(vehicle, vehicle_day_index, rests_durations)
-
+      new_vehicle_hash[:rests] = generate_rests(vehicle, vehicle_day_index, vehicle_timewindow, rests_durations)
+      new_vehicle_hash[:timewindow] = vehicle_timewindow.as_json
       new_vehicle = Models::Vehicle.create(new_vehicle_hash)
 
     # Current depot points may not be currently in the active_hash base due to
@@ -225,13 +228,13 @@ module Interpreters
 
           timewindows = [vehicle.timewindow || vehicle.sequence_timewindows].flatten
           if timewindows.empty?
-            new_vehicles << build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
+            new_vehicles << build_vehicle(vrp, vehicle, vehicle_day_index, nil, rests_durations)
           else
             timewindows.each{ |associated_timewindow|
               next unless associated_timewindow.day_index.nil? || associated_timewindow.day_index == vehicle_day_index % 7
 
-              new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, rests_durations)
-              new_vehicle.timewindow = Models::Timewindow.create(start: associated_timewindow.start || 0, end: associated_timewindow.end || 86400)
+              new_timewindow = Models::Timewindow.create(start: associated_timewindow.start || 0, end: associated_timewindow.end || 86400)
+              new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, new_timewindow, rests_durations)
               if @have_day_index
                 new_vehicle.timewindow.start += vehicle_day_index * 86400
                 new_vehicle.timewindow.end += vehicle_day_index * 86400
@@ -376,15 +379,18 @@ module Interpreters
       routes
     end
 
-    def generate_rests(vehicle, day_index, rests_durations)
+    def generate_rests(vehicle, day_index, vehicle_timewindow, rests_durations)
       vehicle.rests.collect{ |rest|
-        next unless rest.timewindows.empty? || rest.timewindows.any?{ |timewindow| timewindow.day_index.nil? || timewindow.day_index == day_index % 7 }
+        # Rests can not have more than one timewindow for now
+        next if (vehicle_timewindow && rest.timewindows.first &&
+                !rest.timewindows.first.compatible_with?(vehicle_timewindow)) ||
+                (rest.timewindows.first&.day_index && rest.timewindows.first.day_index != day_index % 7)
 
-        # rest is compatible with this vehicle day
-        new_rest = Marshal.load(Marshal.dump(rest))
-        new_rest.id = "#{new_rest.id}_#{day_index + 1}"
+        # rest is compatible with this vehicle day and timewindow
+        new_rest = Models::Rest.create(rest.as_json(except: [:id]))
+        new_rest.original_id = rest.original_id || rest.id
         rests_durations[-1] += new_rest.duration
-        new_rest.timewindows = generate_timewindows(rest.timewindows)
+        new_rest.timewindows = generate_timewindows(rest.timewindows, day_index)
         new_rest
       }.compact
     end

@@ -17,6 +17,7 @@
 - The internal solution object now use a single model for all the resolution methods. This improve the consistency and the completness of the solutions returned. [#321](https://github.com/Mapotempo/optimizer-api/pull/321)
 - Mapotempo github wiki is now directly part of the project [#351](https://github.com/Mapotempo/optimizer-api/pull/351)
 - Empty/Fill behavior changed so that the loads are naturally managed within optimizer-ortools [#370](https://github.com/Mapotempo/optimizer-api/pull/370)
+- Allow multiple rests with the same day index in periodic heuristic algorithm (`first_solution_strategy='periodic'`) [#273](https://github.com/Mapotempo/optimizer-api/pull/273)
 
 ### Removed
 
@@ -27,6 +28,7 @@
 - Split duration among partitions correctly [#336](https://github.com/Mapotempo/optimizer-api/pull/336)
 - Fix find_best_heuristic selection logic [#337](https://github.com/Mapotempo/optimizer-api/pull/337)
 - Prevent periodic heuristic overwriting supplied initial routes [#318](https://github.com/Mapotempo/optimizer-api/pull/318)
+- Rests now have a correct timewindow according to the vehicle in periodic heuristic algorithm (`first_solution_strategy='periodic'`) [#273](https://github.com/Mapotempo/optimizer-api/pull/273)
 - Split independent VRP respects the skills of services in relations  [#379](https://github.com/Mapotempo/optimizer-api/pull/379)
 
 ## [v1.8.2] - 2022-01-19
