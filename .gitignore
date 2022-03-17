@@ -42,3 +42,4 @@ build/
 .byebug_history
 *.aof
 *.code-workspace
+TAGS

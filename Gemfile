@@ -56,6 +56,7 @@ group :development, :test do
   gem 'byebug'
 
   # Offline code analysis
+  gem 'ripper-tags'
   gem 'solargraph'
 
   # For creating dependency graphs

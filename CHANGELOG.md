@@ -29,6 +29,7 @@
 - Fix find_best_heuristic selection logic [#337](https://github.com/Mapotempo/optimizer-api/pull/337)
 - Prevent periodic heuristic overwriting supplied initial routes [#318](https://github.com/Mapotempo/optimizer-api/pull/318)
 - Rests now have a correct timewindow according to the vehicle in periodic heuristic algorithm (`first_solution_strategy='periodic'`) [#273](https://github.com/Mapotempo/optimizer-api/pull/273)
+- Split independent VRP respects the skills of services in relations  [#379](https://github.com/Mapotempo/optimizer-api/pull/379)
 
 ## [v1.8.2] - 2022-01-19
 

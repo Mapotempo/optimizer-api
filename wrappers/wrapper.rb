@@ -461,7 +461,6 @@ module Wrappers
       unfeasible
     end
 
-    ALL_OR_NONE_RELATIONS = %i[shipment sequence meetup].freeze
     def add_unassigned(unfeasible, vrp, service, reason)
       # calls add_unassigned_internal for every service in an "ALL_OR_NONE_RELATION" with the service
       service_already_marked_unfeasible = !!unfeasible[service.id]
@@ -472,7 +471,7 @@ module Wrappers
 
       unless service_already_marked_unfeasible
         service.relations.each{ |relation|
-          next unless ALL_OR_NONE_RELATIONS.include?(relation.type.to_sym) # TODO: remove to_sym when https://github.com/Mapotempo/optimizer-api/pull/145 is merged
+          next unless Models::Relation::ALL_OR_NONE_RELATIONS.include?(relation.type.to_sym) # TODO: remove to_sym when https://github.com/Mapotempo/optimizer-api/pull/145 is merged
 
           relation.linked_services&.each{ |service_in|
             next if service_in == service
