@@ -134,7 +134,9 @@ module OptimizerWrapper
 
     def self.set(key, value)
       OptimizerWrapper::REDIS.set key, value.to_json
-      OptimizerWrapper::REDIS.expire key, 7.days
+      OptimizerWrapper::REDIS.expire key, (
+        ENV['REDIS_RESULT_TTL_DAYS'].blank? ? 7.days : ENV['REDIS_RESULT_TTL_DAYS'].to_i.days
+      )
     end
 
     def self.get(key)
