@@ -642,8 +642,7 @@ module Interpreters
       sub_vrp.units = vrp.units
 
       sub_vrp.services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }
-      rest_ids = sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.uniq
-      sub_vrp.rests = vrp.rests.select{ |r| rest_ids.include?(r.id) }
+      sub_vrp.rests = sub_vrp.vehicles.flat_map{ |v| v.rests }.uniq
       available_vehicle_ids = sub_vrp.vehicles.map(&:id)
 
       sub_vrp.relations = vrp.relations.select{ |r|
