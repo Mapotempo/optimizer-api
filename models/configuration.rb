@@ -29,7 +29,6 @@ module Models
     field :technique
     field :metric, type: Symbol
     field :entity, type: Symbol
-    field :threshold
     field :restarts
     field :centroids
   end

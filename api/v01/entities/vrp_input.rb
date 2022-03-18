@@ -148,7 +148,6 @@ module VrpConfiguration
 
     optional(:metric, type: Symbol, desc: 'Defines partition reference metric. Values should be either duration, visits or any unit you defined in units.')
     requires(:entity, type: Symbol, values: [:vehicle, :work_day], desc: 'Describes what the partition corresponds to. Available only if method in [balanced_kmeans hierarchical_tree].', coerce_with: ->(value) { value.to_sym })
-    optional(:threshold, type: Integer, desc: 'Maximum size of partition. Available only if method in [iterative_kmean clique].')
     optional(:centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Only available through balanced_kmeans and entity vehicle as first partition.')
   end
 
