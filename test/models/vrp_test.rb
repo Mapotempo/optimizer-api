@@ -313,8 +313,8 @@ module Models
 
     def test_original_skills_and_skills_are_equal_after_create
       vrp = VRP.basic
-      vrp[:vehicles].first[:skills] = [['skill_to_output']]
-      vrp[:services].first[:skills] = ['skill_to_output']
+      vrp[:vehicles].first[:skills] = [[:skill_to_output]]
+      vrp[:services].first[:skills] = [:skill_to_output]
 
       created_vrp = TestHelper.create(vrp)
       assert_equal 1, created_vrp.services.first.skills.size

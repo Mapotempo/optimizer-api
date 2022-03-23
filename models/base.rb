@@ -154,6 +154,10 @@ module Models
         raise 'Unknown :vrp_result option'
       end
 
+      if options[:type]
+        types[name] = options[:type]
+      end
+
       redefine_method(name) do
         self[name] ||= self.class.default_attributes[name]
       end
@@ -161,7 +165,9 @@ module Models
       redefine_method("#{name}=") do |vals|
         c = class_from_string(options[:class_name])
         self[name] = vals&.collect{ |val|
-          if val.is_a?(c)
+          if c == Symbol
+            val&.to_sym
+          elsif val.is_a?(c)
             val
           else
             c.create(val) if !val.empty?
@@ -238,19 +244,23 @@ module Models
     private
 
     def convert(key, value)
-      case self.class.types[key].to_s
+      convert_type(self.class.types[key].to_s, value)
+    end
+
+    def convert_type(type, value)
+      if type.start_with?('[')
+        return value&.map{ |v| convert_type(type[1..-2], v) }&.sort
+      end
+
+      case type
       when ''
         value
-      when '[Symbol]'
-        value = [] if value.to_a.empty?
-        value.map!(&:to_sym)
-        value.sort!
       when 'Symbol'
         value&.to_sym
       when 'Date'
         value&.to_date
       else
-        raise "Unknown type #{self.class.types[key]} for key #{key} with value #{value}"
+        raise "Unknown type #{type} with value #{value}"
       end
     end
 

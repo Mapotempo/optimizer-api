@@ -564,7 +564,7 @@ module OptimizerWrapper
       next if zone.vehicles.compact.empty?
 
       zone.vehicles.each{ |vehicle|
-        vehicle.skills.each{ |skillset| skillset << zone[:id] }
+        vehicle.skills.each{ |skillset| skillset << zone[:id].to_sym }
       }
     }
 
@@ -576,7 +576,7 @@ module OptimizerWrapper
 
         next unless zone.inside(activity_loc.lat, activity_loc.lon)
 
-        service.skills += [zone[:id]]
+        service.skills += [zone[:id].to_sym]
         service.id
       }.compact
 

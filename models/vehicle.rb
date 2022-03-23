@@ -68,8 +68,8 @@ module Models
     field :unavailable_days, default: Set[] # extends unavailable_work_date and unavailable_work_day_indices
     field :global_day_index, default: nil
 
-    has_many :skills, class_name: 'Array' # Vehicles can have multiple alternative skillsets
-    has_many :original_skills, class_name: 'Array'
+    has_many :skills, class_name: 'Array', type: [[Symbol]] # Vehicles can have multiple alternative skillsets
+    has_many :original_skills, class_name: 'Array', type: [[Symbol]]
 
     field :free_approach, default: false
     field :free_return, default: false
@@ -118,11 +118,14 @@ module Models
         hash[:unavailable_days].delete_if{ |index| !work_day_indices.include?(index.modulo(7)) }
       end
 
-      hash[:skills] = [[]] if hash[:skills].to_a.empty? # If vehicle has no skills, it has the empty skillset
-      hash[:skills].map!{ |skill_set| skill_set.map!(&:to_sym) }
-      hash[:skills].each(&:sort!) # The order of skills of a skillset should not matter
+      hash[:original_id] ||= hash[:id]
+      hash[:original_skills] ||= hash[:skills]
 
-      super(hash)
+      vehicle = super(hash)
+      # Default skills make the empty skill_set to share the same object_id to every vehicle with no skills
+      vehicle.skills = [[]] if vehicle.skills.to_a.empty?
+      vehicle.skills.each(&:sort!)
+      vehicle
     end
 
     def need_matrix_time?

@@ -182,7 +182,7 @@ module Interpreters
             first_possible_days: [service.first_possible_days[visit_index]],
             last_possible_days: [service.last_possible_days[visit_index]]
           )
-          new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}"] if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
+          new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}".to_sym] if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
 
           @expanded_services[service.id] ||= []
           @expanded_services[service.id] << new_service
@@ -397,10 +397,10 @@ module Interpreters
 
     def associate_skills(new_vehicle, vehicle_day_index)
       if new_vehicle.skills.empty?
-        new_vehicle.skills = [@periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}" }]
+        new_vehicle.skills = [@periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}".to_sym }]
       else
         new_vehicle.skills.collect!{ |alternative_skill|
-          alternative_skill + @periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}" }
+          alternative_skill + @periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}".to_sym }
         }
       end
     end

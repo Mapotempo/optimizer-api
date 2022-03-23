@@ -63,7 +63,6 @@ module Models
 
       vrp = super({})
       # moved filter here to make sure we do have configuration.schedule.indices (not date) to do work_day check with lapses
-      self.convert_expected_string_to_symbol(hash)
       self.ensure_retrocompatibility(hash)
       self.filter(hash) if options[:check] # TODO : add filters.rb here
       vrp.check_consistency(hash) if options[:check]
@@ -374,31 +373,6 @@ module Models
           end
         end
         relation.delete(:lapse)
-      }
-    end
-
-    def self.convert_expected_string_to_symbol(hash)
-      hash[:relations].each{ |relation|
-        relation[:type] = relation[:type]&.to_sym
-      }
-
-      hash[:services].each{ |service|
-        service[:skills] = service[:skills]&.map(&:to_sym)
-        service[:type] = service[:type]&.to_sym
-        if service[:activity] && service[:activity][:position]&.to_sym
-          service[:activity][:position] = service[:activity][:position]&.to_sym
-        end
-
-        service[:activities]&.each{ |activity|
-          activity[:position] = activity[:position]&.to_sym
-        }
-      }
-
-      hash[:vehicles].each{ |vehicle|
-        vehicle[:router_dimension] = vehicle[:router_dimension]&.to_sym
-        vehicle[:router_mode] = vehicle[:router_mode]&.to_sym
-        vehicle[:shift_preference] = vehicle[:shift_preference]&.to_sym
-        vehicle[:skills] = vehicle[:skills]&.map{ |sk_set| sk_set.map(&:to_sym) }
       }
     end
 

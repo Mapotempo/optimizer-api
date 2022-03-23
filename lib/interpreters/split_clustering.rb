@@ -54,13 +54,13 @@ module Interpreters
             route.stops.each do |stop|
               next unless stop.service_id
 
-              stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
+              stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}".to_sym]
             end
           }
           solution.unassigned_stops.each do |stop|
             next if stop.service_id.nil?
 
-            stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
+            stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}".to_sym]
           end
           solution
         }
@@ -987,7 +987,7 @@ module Interpreters
             depot: depots[simulated_vehicle],
             capacities: vehicles[simulated_vehicle][:capacities].collect{ |key, value| [key, value * vehicles.size / nb_clusters.to_f] }.to_h, #TODO: capacities needs a better way like depots...
             skills: [],
-            day_skills: ['0_day_skill', '1_day_skill', '2_day_skill', '3_day_skill', '4_day_skill', '5_day_skill', '6_day_skill'],
+            day_skills: [:'0_day_skill', :'1_day_skill', :'2_day_skill', :'3_day_skill', :'4_day_skill', :'5_day_skill', :'6_day_skill'],
             duration: 0,
             total_work_days: 1
           }
@@ -1048,11 +1048,11 @@ module Interpreters
       def compute_day_skills(timewindows)
         if timewindows.nil? || timewindows.empty? || timewindows.any?{ |tw| tw[:day_index].nil? }
           [0, 1, 2, 3, 4, 5, 6].collect{ |avail_day|
-            "#{avail_day}_day_skill"
+            "#{avail_day}_day_skill".to_sym
           }
         else
           timewindows.collect{ |tw| tw[:day_index] }.uniq.collect{ |avail_day|
-            "#{avail_day}_day_skill"
+            "#{avail_day}_day_skill".to_sym
           }
         end
       end
