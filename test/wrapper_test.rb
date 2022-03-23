@@ -30,6 +30,19 @@ class WrapperTest < Minitest::Test
     assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
   end
 
+  def test_zip_cluster_with_routes
+    problem = VRP.basic_threshold
+    problem[:services].each{ |s|
+      s[:activity][:timewindows] = [{
+        start: 1,
+        end: 2
+      }]
+      s[:skills] = ['A']
+    }
+    problem[:routes] = [{ mission_ids: (1..4).map{ |id| "service_#{id}" }}]
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+  end
+
   def test_no_zip_cluster
     size = 5
     problem = {

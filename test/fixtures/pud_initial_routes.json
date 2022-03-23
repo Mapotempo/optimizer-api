@@ -656,10 +656,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_1",
@@ -677,10 +674,7 @@
           "point_id": "point_13",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_2",
@@ -698,10 +692,7 @@
           "point_id": "point_13",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_3",
@@ -719,10 +710,7 @@
           "point_id": "point_13",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_4",
@@ -740,10 +728,7 @@
           "point_id": "point_2",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_5",
@@ -761,10 +746,7 @@
           "point_id": "point_2",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_6",
@@ -782,10 +764,7 @@
           "point_id": "point_0",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_7",
@@ -803,10 +782,7 @@
           "point_id": "point_0",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_8",
@@ -824,10 +800,7 @@
           "point_id": "point_13",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_9",
@@ -845,10 +818,7 @@
           "point_id": "point_0",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_10",
@@ -866,10 +836,7 @@
           "point_id": "point_2",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_11",
@@ -887,10 +854,7 @@
           "point_id": "point_2",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_12",
@@ -908,10 +872,7 @@
           "point_id": "point_2",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_13",
@@ -929,10 +890,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_14",
@@ -950,10 +908,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_15",
@@ -971,10 +926,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_16",
@@ -992,10 +944,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_17",
@@ -1013,10 +962,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_18",
@@ -1034,10 +980,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_19",
@@ -1055,10 +998,7 @@
           "point_id": "point_13",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_20",
@@ -1076,10 +1016,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_21",
@@ -1097,10 +1034,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_22",
@@ -1118,10 +1052,7 @@
           "point_id": "point_13",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_23",
@@ -1139,10 +1070,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_24",
@@ -1160,10 +1088,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_25",
@@ -1181,10 +1106,7 @@
           "point_id": "point_13",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_26",
@@ -1202,10 +1124,7 @@
           "point_id": "point_6",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_27",
@@ -1223,10 +1142,7 @@
           "point_id": "point_6",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_28",
@@ -1244,10 +1160,7 @@
           "point_id": "point_6",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_29",
@@ -1265,10 +1178,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       },
       {
         "id": "shipment_30",
@@ -1286,10 +1196,7 @@
           "point_id": "point_7",
           "setup_duration": 2700
         },
-        "maximum_inroute_duration": 6300,
-        "skills": [
-          "external"
-        ]
+        "maximum_inroute_duration": 6300
       }
     ],
     "relations": [],
