@@ -350,7 +350,7 @@ class RealCasesTest < Minitest::Test
       assert solutions[0]
       # Check stops
       assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.stops.count{ |a| a[:service_id] } })
-      expected_ids = vrp.relations.first.linked_ids
+      expected_ids = vrp.relations.first.linked_service_ids
       actual_route = solutions[0].routes.first.stops.map(&:service_id).compact
 
       route_order = actual_route.select{ |service_id| expected_ids.include?(service_id) }
@@ -373,7 +373,7 @@ class RealCasesTest < Minitest::Test
       # Check stops
       assert_equal vrp.services.size, (solutions[0].routes.sum{ |r| r.stops.count(&:service_id) })
 
-      expected_ids = vrp.relations.first.linked_ids
+      expected_ids = vrp.relations.first.linked_service_ids
       actual_route = solutions[0].routes.first.stops.map(&:service_id)
 
       route_order = actual_route.select{ |service_id| expected_ids.include?(service_id) }

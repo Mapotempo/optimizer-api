@@ -162,6 +162,32 @@ module Api
           end
         end
 
+        resource :validate do
+          desc 'Validate VRP problem', {
+            nickname: 'validate_vrp',
+            success: [{
+              code: 200,
+              message: 'Vrp has been validated'
+            }],
+            failure: [{
+                code: 400,
+                message: 'Bad Request',
+                model: ::Api::V01::Status
+              }]
+          }
+          params {
+            use(:input)
+          }
+          post do
+            d_params = declared(params, include_missing: false) # Filtered in sentry if user_context
+            vrp_params = d_params[:points] ? d_params : d_params[:vrp]
+            ::Models::Vrp.create(vrp_params)
+            present(d_params)
+          end
+        ensure
+          ::Models.delete_all
+        end
+
         resource :jobs do
           desc 'Fetch vrp job status', {
             nickname: 'get_job',

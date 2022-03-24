@@ -54,13 +54,13 @@ module Interpreters
             route.stops.each do |stop|
               next unless stop.service_id
 
-              stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
+              stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}".to_sym]
             end
           }
           solution.unassigned_stops.each do |stop|
             next if stop.service_id.nil?
 
-            stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}"]
+            stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}".to_sym]
           end
           solution
         }
@@ -149,7 +149,7 @@ module Interpreters
         ss_data[:representative_vrp].relations.each{ |rel|
           raise 'There should be only :same_route relations inside the representative_vrp.' if rel.type != :same_route
 
-          current_vehicle_ids << rel.linked_ids.join if current_vehicle_ids.reject!{ |id| rel.linked_ids.include?(id) }
+          current_vehicle_ids << rel.linked_service_ids.join if current_vehicle_ids.reject!{ |id| rel.linked_service_ids.include?(id) }
         }
 
         current_vehicle_ids.size > 1 && (ss_data[:current_vehicle_limit] || Helper.fixnum_max) > 1 &&
@@ -360,7 +360,7 @@ module Interpreters
 
         vehicle_service_coordinates = vehicle_services.collect{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }
         extreme_points = Helper.approximate_quadrilateral_polygon(vehicle_service_coordinates).uniq
-        linked_ids = ["0_representative_vrp_s_#{vehicle_id}"]
+        linked_service_ids = ["0_representative_vrp_s_#{vehicle_id}"]
         extreme_points.each_with_index{ |lat_lon, index|
           points << { id: "#{index + 1}_representative_vrp_p_#{vehicle_id}", location: { lat: lat_lon[0], lon: lat_lon[1] }}
           visit_counts << 1
@@ -372,31 +372,31 @@ module Interpreters
               duration: 1
             }
           }
-          linked_ids << "#{index + 1}_representative_vrp_s_#{vehicle_id}"
+          linked_service_ids << "#{index + 1}_representative_vrp_s_#{vehicle_id}"
         }
 
-        relations << { type: :same_route, linked_ids: linked_ids }
+        relations << { type: :same_route, linked_service_ids: linked_service_ids }
       }
 
       # go through the original relations and force the services and vehicles to stay in the same sub-vrp if necessary
       split_solve_data[:original_vrp].relations.select{ |r| FORCING_RELATIONS.include?(r.type) }.each{ |relation|
         if relation.linked_vehicle_ids.any? && relation.linked_services.none?
-          linked_ids = []
+          linked_service_ids = []
           relation.linked_vehicle_ids.map{ |v_id|
             s_id = "0_representative_vrp_s_#{v_id}"
-            linked_ids << s_id if services.any?{ |s| s[:id] == s_id }
+            linked_service_ids << s_id if services.any?{ |s| s[:id] == s_id }
           }
 
-          relations << { type: :same_route, linked_ids: linked_ids } if linked_ids.size > 1
+          relations << { type: :same_route, linked_service_ids: linked_service_ids } if linked_service_ids.size > 1
         elsif relation.linked_vehicle_ids.none? && relation.linked_services.any?
-          linked_ids = []
+          linked_service_ids = []
           relation.linked_services.each{ |linked_service|
             split_solve_data[:service_vehicle_assignments].any?{ |v_id, v_services|
-              linked_ids << "0_representative_vrp_s_#{v_id}" if v_services.include?(linked_service)
+              linked_service_ids << "0_representative_vrp_s_#{v_id}" if v_services.include?(linked_service)
             }
           }
-          linked_ids.uniq!
-          relations << { type: :same_route, linked_ids: linked_ids } if linked_ids.size > 1
+          linked_service_ids.uniq!
+          relations << { type: :same_route, linked_service_ids: linked_service_ids } if linked_service_ids.size > 1
         else
           # This shouldn't be possible
           raise 'Unknown relation case in create_representative_vrp. If there is a new relation, update this function'
@@ -437,7 +437,7 @@ module Interpreters
       }
       r_sub_vrp.points = r_sub_vrp.services.map{ |s| s.activity.point }
       r_sub_vrp.relations = representative_vrp.relations.select{ |relation|
-        r_sub_vrp.services.any?{ |s| s.id == relation.linked_ids[0] }
+        r_sub_vrp.services.any?{ |s| s.id == relation.linked_service_ids[0] }
       }
       r_sub_vrp
     end
@@ -471,14 +471,14 @@ module Interpreters
 
     def self.select_existing_relations(relations, vrp)
       relations.select{ |relation|
-        next if relation.linked_vehicle_ids.empty? && relation.linked_ids.empty?
+        next if relation.linked_vehicle_ids.empty? && relation.linked_service_ids.empty?
 
         (
           relation.linked_vehicle_ids.empty? ||
             relation.linked_vehicle_ids.any?{ |id| vrp.vehicles.any?{ |v| v.id == id } }
         ) && (
-          relation.linked_ids.empty? ||
-            relation.linked_ids.any?{ |id| vrp.services.any?{ |s| s.id == id } }
+          relation.linked_service_ids.empty? ||
+            relation.linked_service_ids.any?{ |id| vrp.services.any?{ |s| s.id == id } }
         )
       }
     end
@@ -642,23 +642,22 @@ module Interpreters
       sub_vrp.units = vrp.units
 
       sub_vrp.services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }
-      rest_ids = sub_vrp.vehicles.flat_map{ |v| v.rests.map(&:id) }.uniq
-      sub_vrp.rests = vrp.rests.select{ |r| rest_ids.include?(r.id) }
+      sub_vrp.rests = sub_vrp.vehicles.flat_map{ |v| v.rests }.uniq
       available_vehicle_ids = sub_vrp.vehicles.map(&:id)
 
       sub_vrp.relations = vrp.relations.select{ |r|
         next if r.type == :same_vehicle && entity == :vehicle
 
         # Split should respect relations, it is enough to check only the first linked id --  [0..0].all? is to handle empties
-        r.linked_ids[0..0].all?{ |sid| partial_service_ids.include?(sid) } &&
+        r.linked_service_ids[0..0].all?{ |sid| partial_service_ids.include?(sid) } &&
           r.linked_vehicle_ids[0..0].all?{ |vid| available_vehicle_ids.include?(vid) }
       }
 
       split_respects_relations = sub_vrp.relations.all?{ |r|
-        non_matching_linked_ids = r.linked_ids - partial_service_ids
+        non_matching_linked_service_ids = r.linked_service_ids - partial_service_ids
         non_matching_linked_vehicle_ids = r.linked_vehicle_ids - available_vehicle_ids
 
-        (non_matching_linked_ids.empty? || non_matching_linked_ids.size == r.linked_ids.size) &&
+        (non_matching_linked_service_ids.empty? || non_matching_linked_service_ids.size == r.linked_service_ids.size) &&
           (non_matching_linked_vehicle_ids.empty? || non_matching_linked_vehicle_ids.size == r.linked_vehicle_ids.size)
       }
       unless split_respects_relations
@@ -672,10 +671,10 @@ module Interpreters
       sub_vrp.points.uniq!
       sub_vrp = add_corresponding_entity_skills(entity, sub_vrp)
 
-      sub_vrp_hash = JSON.parse(sub_vrp.to_json, symbolize_names: true)
+      sub_vrp_hash = sub_vrp.as_json
 
       vehicle_ids = sub_vrp_hash[:vehicles]&.map{ |v| v[:id] } || []
-      sub_vrp_hash[:services].each{ |service|
+      sub_vrp_hash[:services]&.each{ |service|
         service[:sticky_vehicle_ids]&.delete_if{ |stick| !vehicle_ids.include?(stick) }
       }
 
@@ -988,7 +987,7 @@ module Interpreters
             depot: depots[simulated_vehicle],
             capacities: vehicles[simulated_vehicle][:capacities].collect{ |key, value| [key, value * vehicles.size / nb_clusters.to_f] }.to_h, #TODO: capacities needs a better way like depots...
             skills: [],
-            day_skills: ['0_day_skill', '1_day_skill', '2_day_skill', '3_day_skill', '4_day_skill', '5_day_skill', '6_day_skill'],
+            day_skills: [:'0_day_skill', :'1_day_skill', :'2_day_skill', :'3_day_skill', :'4_day_skill', :'5_day_skill', :'6_day_skill'],
             duration: 0,
             total_work_days: 1
           }
@@ -1049,11 +1048,11 @@ module Interpreters
       def compute_day_skills(timewindows)
         if timewindows.nil? || timewindows.empty? || timewindows.any?{ |tw| tw[:day_index].nil? }
           [0, 1, 2, 3, 4, 5, 6].collect{ |avail_day|
-            "#{avail_day}_day_skill"
+            "#{avail_day}_day_skill".to_sym
           }
         else
           timewindows.collect{ |tw| tw[:day_index] }.uniq.collect{ |avail_day|
-            "#{avail_day}_day_skill"
+            "#{avail_day}_day_skill".to_sym
           }
         end
       end

@@ -51,8 +51,8 @@ module Models
 
     # validates_inclusion_of :type, :in => %i(service pickup delivery)
 
-    field :skills, type: Array[Symbol]
-    field :original_skills, type: Array[Symbol]
+    has_many :skills, class_name: 'Symbol', type: Array[Symbol]
+    has_many :original_skills, class_name: 'Symbol', type: Array[Symbol]
 
     field :vehicle_compatibility, as_json: :none # vehicle_compatibility[v_id] == {true -> compatible, false -> incompatible, nil -> not checked yet}
 
@@ -62,5 +62,15 @@ module Models
     has_many :sticky_vehicles, class_name: 'Models::Vehicle', as_json: :ids
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation', as_json: :none
+
+    def self.create(hash)
+      hash[:original_id] ||= hash[:id]
+      hash[:original_skills] ||= hash[:skills] if hash[:skills]&.none?{ |skill|
+        skill.to_s.include?('vehicle_partition_') ||
+        skill.to_s.include?('work_day_partition_')
+      }
+
+      super(hash)
+    end
   end
 end

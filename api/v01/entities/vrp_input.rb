@@ -274,7 +274,8 @@ module VrpMisc
              type: Array[Integer], values: ->(v) { v >= 0 },
              desc: 'For some relation types, specifies duration or number constraint. Lapse expressed in days for minimum/maximum day lapse, in seconds for minimum/maximum_duration_lapse and vehicle_trips. For consistent relation types, lapse can be specified for every consecutive elements.')
     mutually_exclusive :lapse, :lapses
-    optional(:linked_ids, type: Array[String], allow_blank: false, desc: 'List of activities involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
+    optional(:linked_ids, type: Array[String], documentation: { hidden: true }, allow_blank: false, desc: '[ DEPRECATED : use linked_service_ids ]', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
+    optional(:linked_service_ids, type: Array[String], documentation: { hidden: true }, allow_blank: false, desc: 'List of activities involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:linked_vehicle_ids, type: Array[String], allow_blank: false, desc: 'List of vehicles involved in the relation', coerce_with: ->(val) { val.is_a?(String) ? val.split(/,/) : val })
     optional(:periodicity, type: Integer, documentation: { hidden: true }, desc: 'In the case of planning optimization, number of weeks/months to consider at the same time/in each relation : vehicle group duration on weeks/months')
     at_least_one_of :linked_ids, :linked_vehicle_ids
@@ -521,7 +522,7 @@ module VrpVehicles
     optional(:shift_preference, type: String, values: ['force_start', 'force_end', 'minimize_span'], desc: 'Force the vehicle to start as soon as the vehicle timewindow is open,
       as late as possible or let vehicle start at any time. Not available with periodic heuristic, it will always leave as soon as possible.')
 
-    optional :matrix_id, type: String, desc: 'Related matrix, if already defined'
+    optional :matrix_id, allow_blank: false, type: String, desc: 'Related matrix, if already defined'
     optional :value_matrix_id, type: String, desc: 'If any value matrix defined, related matrix index'
 
     optional(:duration, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum tour duration', coerce_with: ->(value) { ScheduleType.type_cast(value) })
@@ -590,8 +591,8 @@ module VrpVehicles
   end
 
   params :router_options do
-    optional :router_mode, type: String, desc: '`car`, `truck`, `bicycle`, etc... See the Router Wrapper API doc.'
-    exactly_one_of :matrix_id, :router_mode
+    optional :router_mode, allow_blank: false, type: String, desc: '`car`, `truck`, `bicycle`, etc... See the Router Wrapper API doc.'
+    at_least_one_of :matrix_id, :router_mode
     optional :router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance'
     optional :speed_multiplier, type: Float, default: 1.0, desc: 'Multiplies the vehicle speed, default : 1.0. Specifies if this vehicle is faster or slower than average speed.'
     optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) } } : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (available only for truck mode at this time).'

@@ -4523,7 +4523,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert solutions[0]
     assert_equal 0, solutions[0].unassigned_stops.size, 'All services should be planned.'
 
-    order_in_route = vrp[:relations][0][:linked_ids].collect{ |service_id|
+    order_in_route = vrp[:relations][0][:linked_service_ids].collect{ |service_id|
       solutions[0].routes.first.stops.find_index{ |activity| activity.service_id == service_id }
     }
     assert_equal order_in_route.sort, order_in_route, 'Services with order relation should appear in correct order in route.'
@@ -4642,11 +4642,11 @@ class Wrappers::OrtoolsTest < Minitest::Test
       relations: [{
         id: 1,
         type: :order,
-        linked_ids: ['service_1', 'service_2', 'service_3']
+        linked_service_ids: ['service_1', 'service_2', 'service_3']
       }, {
         id: 2,
         type: :order,
-        linked_ids: ['service_4', 'service_5']
+        linked_service_ids: ['service_4', 'service_5']
       }],
       configuration: {
         resolution: {
@@ -4661,7 +4661,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solution = ortools.solve(vrp, 'test')
     vrp[:relations].each_with_index{ |relation, index|
       previous_index = nil
-      relation[:linked_ids].each{ |service_id|
+      relation[:linked_service_ids].each{ |service_id|
         current_index = solution.routes[index].stops.find_index{ |activity| activity.service_id == service_id }
         assert((previous_index || -1) < current_index) if current_index
         previous_index = current_index
@@ -4885,7 +4885,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     vrp = TestHelper.load_vrp(self)
     vrp.relations << Models::Relation.create(
       type: :minimum_duration_lapse,
-      linked_ids: [delivery1.id, pickup0.id],
+      linked_service_ids: [delivery1.id, pickup0.id],
       lapses: [1800]
     )
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)

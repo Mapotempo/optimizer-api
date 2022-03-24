@@ -564,7 +564,7 @@ module OptimizerWrapper
       next if zone.vehicles.compact.empty?
 
       zone.vehicles.each{ |vehicle|
-        vehicle.skills.each{ |skillset| skillset << zone[:id] }
+        vehicle.skills.each{ |skillset| skillset << zone[:id].to_sym }
       }
     }
 
@@ -576,7 +576,7 @@ module OptimizerWrapper
 
         next unless zone.inside(activity_loc.lat, activity_loc.lon)
 
-        service.skills += [zone[:id]]
+        service.skills += [zone[:id].to_sym]
         service.id
       }.compact
 
@@ -661,6 +661,26 @@ module OptimizerWrapper
     new_services = Array.new(new_size)
     clusterer.clusters.each_with_index do |cluster, i|
       new_services[i] = vrp.services[cluster.data_items[0][0]]
+      cluster_ids = cluster.data_items.map{ |arr| vrp.services[arr[0]].id }
+      route_index = vrp.routes.index{ |route| route.mission_ids & cluster_ids }
+      if route_index
+        ref_id = vrp.routes[route_index].mission_ids.find{ |mission_id|
+          cluster_ids.include?(mission_id)
+        }
+        vrp.routes.each{ |route|
+          route.mission_ids.delete_if{ |mission_id|
+            cluster_ids.include?(mission_id) unless mission_id == ref_id
+          }
+        }
+        vrp.routes[route_index].mission_ids.map!{ |mission_id|
+          if cluster_ids.include?(mission_id)
+            new_services[i].id
+          else
+            mission_id
+          end
+        }
+      end
+
       new_services[i].activity.duration =
         cluster.data_items.map{ |di| vrp.services[di[0]].activity.duration }.reduce(&:+)
       next unless force_cluster

@@ -72,5 +72,56 @@ module Models
       vrp.vehicles.first.sequence_timewindows << Models::Timewindow.create({ start: 5, end: 6, day_index: 0 })
       assert_equal 13, vrp.vehicles.first.total_work_time_in_range(0, 3)
     end
+
+    def test_skills
+      Models.delete_all
+      vehicle1 = { id: 'vehicle_1' }
+      vehicle2 = { id: 'vehicle_2' }
+
+      v1 = Models::Vehicle.create(vehicle1)
+      v2 = Models::Vehicle.create(vehicle2)
+
+      refute_equal v1.skills.object_id, v2.skills.object_id
+      refute_equal v1.skills.first.object_id, v2.skills.first.object_id
+
+      problem = { vehicles: [vehicle1, vehicle2] }
+
+      vrp = Models::Vrp.create(problem)
+
+      refute_equal vrp.vehicles.first.skills.object_id,
+                   vrp.vehicles.last.skills.object_id
+
+      refute_equal vrp.vehicles.first.skills.first.object_id,
+                   vrp.vehicles.last.skills.first.object_id
+
+      Models.delete_all
+      vehicle1[:skills] = nil
+      vehicle2[:skills] = nil
+
+      v1 = Models::Vehicle.create(vehicle1)
+      v2 = Models::Vehicle.create(vehicle2)
+
+      refute_equal v1.skills.object_id, v2.skills.object_id
+      refute_equal v1.skills.first.object_id, v2.skills.first.object_id
+
+      problem = { vehicles: [vehicle1, vehicle2] }
+
+      vrp = Models::Vrp.create(problem)
+
+      refute_equal vrp.vehicles.first.skills.object_id,
+                   vrp.vehicles.last.skills.object_id
+
+      refute_equal vrp.vehicles.first.skills.first.object_id,
+                   vrp.vehicles.last.skills.first.object_id
+    end
+
+    def test_symbol_skills
+      vehicle1 = { id: 'vehicle_1', skills: [['string']] }
+
+      v1 = Models::Vehicle.create(vehicle1)
+
+      assert v1.skills.first.first.is_a?(Symbol)
+      assert v1.as_json[:skills].first.first.is_a?(Symbol)
+    end
   end
 end

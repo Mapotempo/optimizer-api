@@ -36,8 +36,8 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(problem)
     assert_equal number_of_days, expanded_vrp[:vehicles].size
     assert_equal problem[:services].collect{ |s| s[:visits_number] }.sum, expanded_vrp[:services].size
-    assert_equal ['1_f_2'], expanded_vrp[:services][0].skills
-    assert_equal ['2_f_2'], expanded_vrp[:services][1].skills
+    assert_equal [:"1_f_2"], expanded_vrp[:services][0].skills
+    assert_equal [:"2_f_2"], expanded_vrp[:services][1].skills
   end
 
   def test_expand_vrp_schedule_range_date
@@ -51,8 +51,8 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(problem)
     assert_equal number_of_days, expanded_vrp[:vehicles].size
     assert_equal problem[:services].collect{ |s| s[:visits_number] }.sum, expanded_vrp[:services].size
-    assert_equal ['1_f_2'], expanded_vrp[:services][0].skills
-    assert_equal ['2_f_2'], expanded_vrp[:services][1].skills
+    assert_equal [:"1_f_2"], expanded_vrp[:services][0].skills
+    assert_equal [:"2_f_2"], expanded_vrp[:services][1].skills
   end
 
   def test_generated_service_timewindows_after_periodic_expand

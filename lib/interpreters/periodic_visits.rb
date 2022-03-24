@@ -102,18 +102,18 @@ module Interpreters
 
     def generate_relations(vrp)
       vrp.relations.flat_map{ |relation|
-        unless relation.linked_ids.uniq{ |s_id| @expanded_services[s_id]&.size.to_i }.size <= 1
-          raise "Cannot expand relations of #{relation.linked_ids} because they have different visits_number"
+        unless relation.linked_service_ids.uniq{ |s_id| @expanded_services[s_id]&.size.to_i }.size <= 1
+          raise "Cannot expand relations of #{relation.linked_service_ids} because they have different visits_number"
         end
 
         # keep the original relation if it is another type of relation or if it doesn't belong to an unexpanded service.
-        next relation if relation.linked_services.empty? || @expanded_services[relation.linked_ids.first]&.size.to_i == 0
+        next relation if relation.linked_services.empty? || @expanded_services[relation.linked_service_ids.first]&.size.to_i == 0
 
-        Array.new(@expanded_services[relation.linked_ids.first]&.size.to_i){ |visit_index|
-          linked_ids = relation.linked_ids.collect{ |s_id| @expanded_services[s_id][visit_index].id }
+        Array.new(@expanded_services[relation.linked_service_ids.first]&.size.to_i){ |visit_index|
+          linked_service_ids = relation.linked_service_ids.collect{ |s_id| @expanded_services[s_id][visit_index].id }
 
           Models::Relation.create(
-            type: relation.type, linked_ids: linked_ids, lapses: relation.lapses, periodicity: relation.periodicity
+            type: relation.type, linked_service_ids: linked_service_ids, lapses: relation.lapses, periodicity: relation.periodicity
           )
         }
       }
@@ -128,7 +128,7 @@ module Interpreters
           current_lapse = (index - 1) * mission.minimum_lapse.to_i
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
-            linked_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
+            linked_service_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
             lapses: [current_lapse]
           )
         }
@@ -136,7 +136,7 @@ module Interpreters
           current_lapse = (index - 1) * mission.maximum_lapse.to_i
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
-            linked_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
+            linked_service_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
             lapses: [current_lapse]
           )
         }
@@ -144,14 +144,14 @@ module Interpreters
         if mission.minimum_lapse
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
-            linked_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
+            linked_service_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
             lapses: [mission.minimum_lapse.to_i]
           )
         end
         if mission.maximum_lapse
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
-            linked_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
+            linked_service_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
             lapses: [mission.maximum_lapse.to_i]
           )
         end
@@ -182,7 +182,7 @@ module Interpreters
             first_possible_days: [service.first_possible_days[visit_index]],
             last_possible_days: [service.last_possible_days[visit_index]]
           )
-          new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}"] if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
+          new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}".to_sym] if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
 
           @expanded_services[service.id] ||= []
           @expanded_services[service.id] << new_service
@@ -397,10 +397,10 @@ module Interpreters
 
     def associate_skills(new_vehicle, vehicle_day_index)
       if new_vehicle.skills.empty?
-        new_vehicle.skills = [@periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}" }]
+        new_vehicle.skills = [@periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}".to_sym }]
       else
         new_vehicle.skills.collect!{ |alternative_skill|
-          alternative_skill + @periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}" }
+          alternative_skill + @periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}".to_sym }
         }
       end
     end

@@ -30,6 +30,19 @@ class WrapperTest < Minitest::Test
     assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
   end
 
+  def test_zip_cluster_with_routes
+    problem = VRP.basic_threshold
+    problem[:services].each{ |s|
+      s[:activity][:timewindows] = [{
+        start: 1,
+        end: 2
+      }]
+      s[:skills] = ['A']
+    }
+    problem[:routes] = [{ mission_ids: (1..4).map{ |id| "service_#{id}" }}]
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+  end
+
   def test_no_zip_cluster
     size = 5
     problem = {
@@ -2457,9 +2470,9 @@ class WrapperTest < Minitest::Test
     # -- i.e., both services of the same relation cannot be served on the same vehicle --
     # then split cannot do anything but split these services into different sub-problems.
     problem[:relations] = [
-      { type: :shipment, linked_ids: ['service_2', 'service_4'] },
-      { type: :same_route, linked_ids: ['service_3', 'service_5'] },
-      { type: :sequence, linked_ids: ['service_1', 'service_6'] },
+      { type: :shipment, linked_service_ids: ['service_2', 'service_4'] },
+      { type: :same_route, linked_service_ids: ['service_3', 'service_5'] },
+      { type: :sequence, linked_service_ids: ['service_1', 'service_6'] },
     ]
 
     vrp = TestHelper.create(problem)
@@ -2476,8 +2489,8 @@ class WrapperTest < Minitest::Test
                     vrp.configuration.resolution.duration, split_vrps.size
     assert_equal 0, (split_vrps.count{ |s| s.configuration.resolution.duration.zero? })
 
-    expected_relations = problem[:relations].map{ |r| r[:linked_ids] }.sort
-    actual_relation = split_vrps.map{ |svrp| svrp.relations.flat_map(&:linked_ids) }.sort
+    expected_relations = problem[:relations].map{ |r| r[:linked_service_ids] }.sort
+    actual_relation = split_vrps.map{ |svrp| svrp.relations.flat_map(&:linked_service_ids) }.sort
     assert_equal expected_relations, actual_relation, 'split_independent_vrp should keep relations'
   end
 

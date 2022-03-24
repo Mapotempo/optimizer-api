@@ -843,7 +843,7 @@ class SplitClusteringTest < Minitest::Test
                        vrp.relations.size,
                        'Split does not respect relations: missing/extra relations'
 
-          assert_empty vrp.relations.flat_map(&:linked_ids) - vrp.services.collect(&:id),
+          assert_empty vrp.relations.flat_map(&:linked_service_ids) - vrp.services.collect(&:id),
                        'Split does not respect relations: missing/extra services'
 
           assert needs_to_stay_in_the_same_side.all?{ |id| vrp.services.any?{ |s| s.id == id } } ||

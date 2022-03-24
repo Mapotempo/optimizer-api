@@ -179,7 +179,7 @@ module Interpreters
         custom_heuristics << 'supplied_initial_routes' if vrp.routes.any?
 
         elapsed_times = []
-        vrp_hash = JSON.parse(service_vrp[:vrp].to_json, symbolize_names: true)
+        vrp_hash = service_vrp[:vrp].as_json
         first_results = custom_heuristics.collect{ |heuristic|
           s_vrp = duplicate_service_vrp(service_vrp, vrp_hash)
           if heuristic == 'supplied_initial_routes'

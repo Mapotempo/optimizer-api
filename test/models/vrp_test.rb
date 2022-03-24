@@ -147,15 +147,15 @@ module Models
       %i[minimum_duration_lapse maximum_duration_lapse].each{ |relation_type|
         vrp[:relations] = [{
           type: relation_type,
-          linked_ids: ['shipment_0', 'shipment_1'],
+          linked_service_ids: ['shipment_0', 'shipment_1'],
           lapse: 3
         }]
 
         generated_vrp = TestHelper.create(vrp)
         assert_equal 3, generated_vrp.relations.size
-        assert_equal 2, generated_vrp.relations.first.linked_ids.size
-        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0_delivery'
-        assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
+        assert_equal 2, generated_vrp.relations.first.linked_service_ids.size
+        assert_includes generated_vrp.relations.first.linked_service_ids, 'shipment_0_delivery'
+        assert_includes generated_vrp.relations.first.linked_service_ids, 'shipment_1_pickup'
       }
 
       vrp[:services] = [{
@@ -164,31 +164,31 @@ module Models
       }]
       vrp[:relations] = [{
         type: :minimum_duration_lapse,
-        linked_ids: ['service', 'shipment_1'],
+        linked_service_ids: ['service', 'shipment_1'],
         lapse: 3
       }]
       generated_vrp = TestHelper.create(vrp)
-      assert_includes generated_vrp.relations.first.linked_ids, 'service'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
+      assert_includes generated_vrp.relations.first.linked_service_ids, 'service'
+      assert_includes generated_vrp.relations.first.linked_service_ids, 'shipment_1_pickup'
 
       vrp[:relations] = [{
         type: :same_route,
-        linked_ids: ['service', 'shipment_0', 'shipment_1']
+        linked_service_ids: ['service', 'shipment_0', 'shipment_1']
       }]
       generated_vrp = TestHelper.create(vrp)
-      assert_includes generated_vrp.relations.first.linked_ids, 'service'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_0_pickup'
-      assert_includes generated_vrp.relations.first.linked_ids, 'shipment_1_pickup'
+      assert_includes generated_vrp.relations.first.linked_service_ids, 'service'
+      assert_includes generated_vrp.relations.first.linked_service_ids, 'shipment_0_pickup'
+      assert_includes generated_vrp.relations.first.linked_service_ids, 'shipment_1_pickup'
 
       %i[sequence order].each{ |relation_type|
         vrp[:relations].first[:type] = relation_type
-        vrp[:relations].first[:linked_ids] = ['service', 'shipment_1']
+        vrp[:relations].first[:linked_service_ids] = ['service', 'shipment_1']
         assert_raises OptimizerWrapper::DiscordantProblemError do
           TestHelper.create(vrp)
         end
       }
 
-      vrp[:relations].first[:linked_ids] = ['service']
+      vrp[:relations].first[:linked_service_ids] = ['service']
       %i[sequence order].each{ |relation_type|
         vrp[:relations].first[:type] = relation_type
         TestHelper.create(vrp) # check no error provided
@@ -313,8 +313,8 @@ module Models
 
     def test_original_skills_and_skills_are_equal_after_create
       vrp = VRP.basic
-      vrp[:vehicles].first[:skills] = [['skill_to_output']]
-      vrp[:services].first[:skills] = ['skill_to_output']
+      vrp[:vehicles].first[:skills] = [[:skill_to_output]]
+      vrp[:services].first[:skills] = [:skill_to_output]
 
       created_vrp = TestHelper.create(vrp)
       assert_equal 1, created_vrp.services.first.skills.size

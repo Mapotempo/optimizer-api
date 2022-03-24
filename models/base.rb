@@ -80,12 +80,13 @@ module Models
     def as_json(options = {})
       hash = {}
       self.class.json_fields.each{ |field_name|
+        field_sym = field_name.to_sym
         next if options[:except]&.include?(field_name) ||
                 !respond_to?(field_name) ||
                 send(field_name).nil? ||
-                self.class.default_attributes&.fetch(field_name, nil) == send(field_name)
+                self.class.default_attributes&.fetch(field_sym, nil) == send(field_name)
 
-        hash[field_name] = self.send(field_name).as_json
+        hash[field_sym] = convert(field_sym, self.send(field_name).as_json)
       }
       hash
     end
@@ -96,23 +97,6 @@ module Models
         hash[field_name] = self.send(field_name).vrp_result if self.respond_to?(field_name)
       }
       hash
-    end
-
-    def convert(key, value)
-      case self.class.types[key].to_s
-      when ''
-        value
-      when '[Symbol]'
-        value = [] if value.to_a.empty?
-        value.map!(&:to_sym)
-        value.sort!
-      when 'Symbol'
-        value&.to_sym
-      when 'Date'
-        value&.to_date
-      else
-        raise "Unknown type #{self.class.types[key]} for key #{key} with value #{value}"
-      end
     end
 
     def self.field(name, options = {})
@@ -147,6 +131,9 @@ module Models
       # vehicles -> vehicle_ids | capacities -> capacity_ids | matrices -> matrix_ids
       ids_function_name = "#{ActiveSupport::Inflector.singularize(name.to_s)}_ids".to_sym
 
+      add_default_value(name, options[:default] || [])
+      add_default_value(ids_function_name, options[:default] || [])
+
       case options[:as_json]
       when :ids
         json_fields << ids_function_name.to_sym
@@ -167,14 +154,20 @@ module Models
         raise 'Unknown :vrp_result option'
       end
 
+      if options[:type]
+        types[name] = options[:type]
+      end
+
       redefine_method(name) do
-        self[name] ||= []
+        self[name] ||= self.class.default_attributes[name]
       end
 
       redefine_method("#{name}=") do |vals|
         c = class_from_string(options[:class_name])
         self[name] = vals&.collect{ |val|
-          if val.is_a?(c)
+          if c == Symbol
+            val&.to_sym
+          elsif val.is_a?(c)
             val
           else
             c.create(val) if !val.empty?
@@ -249,6 +242,27 @@ module Models
     end
 
     private
+
+    def convert(key, value)
+      convert_type(self.class.types[key].to_s, value)
+    end
+
+    def convert_type(type, value)
+      if type.start_with?('[')
+        return value&.map{ |v| convert_type(type[1..-2], v) }&.sort
+      end
+
+      case type
+      when ''
+        value
+      when 'Symbol'
+        value&.to_sym
+      when 'Date'
+        value&.to_date
+      else
+        raise "Unknown type #{type} with value #{value}"
+      end
+    end
 
     def class_from_string(str)
       str.split('::').inject(Object) do |mod, class_name|

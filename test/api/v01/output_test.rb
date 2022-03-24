@@ -144,8 +144,8 @@ class Api::V01::OutputTest < Minitest::Test
     vrp = VRP.lat_lon_two_vehicles
     vrp[:configuration][:preprocessing] = { partitions: TestHelper.vehicle_and_days_partitions }
     vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 10 }}
-    vrp[:vehicles].first[:skills] = [['skill_to_output']]
-    vrp[:services].first[:skills] = ['skill_to_output']
+    vrp[:vehicles].first[:skills] = [[:skill_to_output]]
+    vrp[:services].first[:skills] = [:skill_to_output]
 
     response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
     result = JSON.parse(response.body)['solutions'].first
@@ -173,7 +173,7 @@ class Api::V01::OutputTest < Minitest::Test
       # - exactly 1 skill corresponding to work_day entity
       assert_equal element['detail']['skills'].size - 1, (element['detail']['skills'] - %w[mon tue wed thu fri sat sun]).size
       # - exactly 1 skill corresponding to cluster number
-      assert_equal 1, (element['detail']['skills'].count{ |skill| skill.include?('cluster') })
+      assert_equal 1, (element['detail']['skills'].count{ |skill| /cluster\ [0-9]/.match?(skill) })
     }
 
     # to make it hard to find original_id back :
@@ -190,7 +190,7 @@ class Api::V01::OutputTest < Minitest::Test
       # - exactly 1 skill corresponding to vehicle_id entity
       assert(element['detail']['skills'].include?('vehicle_cluster_vehicle_0') ^ element['detail']['skills'].include?('vehicle_cluster_vehicle_1'))
       # - exactly 1 skill corresponding to cluster number
-      assert_equal 1, (element['detail']['skills'].count{ |skill| skill.include?('cluster ') })
+      assert_equal 1, (element['detail']['skills'].count{ |skill| /cluster\ [0-9]/.match?(skill) })
     }
   end
 
