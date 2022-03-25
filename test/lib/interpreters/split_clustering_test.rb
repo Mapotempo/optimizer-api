@@ -454,6 +454,33 @@ class SplitClusteringTest < Minitest::Test
       assert_equal([nil, 'service_3', 'service_4'], result[:routes][1][:activities].collect{ |activity| activity[:service_id] })
     end
 
+    def test_split_independent_vrp_respects_skills_of_services_in_linking_relations
+      vrp = VRP.basic
+
+      vrp[:vehicles] << vrp[:vehicles].first.dup.merge({ id: 'vehicle_1' })
+
+      vrp[:vehicles][0][:skills] = [['skill_1']]
+      vrp[:vehicles][1][:skills] = [['skill_2']]
+
+      vrp[:services][0][:skills] = ['skill_1'] # service_1
+      vrp[:services][1][:skills] = ['skill_2'] # service_2
+      vrp[:services].delete_at(2)
+
+      vrp[:relations] = [{ type: :shipment, linked_ids: ['service_1', 'service_2']}] # a LINKING_RELATIONS type
+
+      split_vrps = OptimizerWrapper.split_independent_vrp(TestHelper.create(vrp))
+
+      assert_equal 2, split_vrps.size, 'Infeasible services and vehicles should be grouped in to two groups'
+
+      # The shipment is infeasible -- no vehicle that can serve both service_1 and service_2
+      split_vrps.sort_by!{ |split_vrp| split_vrp.services.size }
+      assert_equal 0, split_vrps[0].services.size, 'First split_vrp should have no services'
+      assert_equal 2, split_vrps[0].vehicles.size, 'First split_vrp should have all vehicles'
+
+      assert_equal 2, split_vrps[1].services.size, 'Last split_vrp should have all services'
+      assert_equal 0, split_vrps[1].vehicles.size, 'Last split_vrp should have no vehicles'
+    end
+
     def test_correct_number_of_visits_when_concurrent_split_independent_and_max_split
       # A small instance that is split_independent by skills
       # and then max_split again during solution process
@@ -640,7 +667,7 @@ class SplitClusteringTest < Minitest::Test
         sequence
         shipment
         same_vehicle
-      ], Interpreters::SplitClustering::LINKING_RELATIONS, 'Linking relation constant has changed'
+      ].sort, Models::Relation::LINKING_RELATIONS.sort, 'Linking relation constant has changed'
 
       assert_equal %i[
         maximum_day_lapse
@@ -663,7 +690,7 @@ class SplitClusteringTest < Minitest::Test
       expected_linked_items = Hash.new{ |h, k| h[k] = [] }
       n_service_per_relation = 2
       # create all types of linking relation, all at the same location, and check if they are merged
-      Interpreters::SplitClustering::LINKING_RELATIONS.each_with_index{ |relation, index|
+      Models::Relation::LINKING_RELATIONS.each_with_index{ |relation, index|
         problem[:relations] << { type: relation, linked_ids: [] }
         n_service_per_relation.times.each{ |i|
           problem[:services] << Oj.load(Oj.dump(dummy_service))

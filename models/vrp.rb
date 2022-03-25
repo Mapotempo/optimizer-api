@@ -52,7 +52,7 @@ module Models
     field :resolution_dicho_division_service_limit, default: 100 # This variable needs to corrected using the average number of services per vehicle.
     field :resolution_dicho_division_vehicle_limit, default: 3
     field :resolution_dicho_exclusion_scaling_angle, default: 38
-    field :resolution_dicho_exclusion_rate, default: 0.6
+    field :resolution_dicho_inclusion_rate, default: 0.6
 
     field :resolution_duration, default: nil
     field :resolution_total_duration, default: nil
@@ -241,6 +241,7 @@ module Models
       vrp.expand_unavailable_days
       vrp.provide_original_info # TODO: this should be done on hash in order to be sure to have the original information
       vrp.sticky_as_skills # TODO: this should be done on hash in order to completely remove sticky_vehicles from service model
+      vrp.accumulate_skills_of_services_in_linking_relations # WARN: needs to be after provide_original_info + sticky_as_skills
     end
 
     def self.convert_position_relations(hash)
@@ -621,6 +622,7 @@ module Models
       self.resolution_batch_heuristic = resolution[:batch_heuristic]
       self.resolution_repetition = resolution[:repetition]
       self.resolution_dicho_algorithm_service_limit = resolution[:dicho_algorithm_service_limit]
+      self.resolution_dicho_inclusion_rate = resolution[:dicho_inclusion_rate]
     end
 
     def preprocessing=(preprocessing)
@@ -704,7 +706,7 @@ module Models
                                          approximate_number_of_vehicles_used * 2 * Helper.flying_distance(average_loc, [depot.location.lat, depot.location.lon])
 
                                          # TODO: Here we use flying_distance for approx_depot_time_correction; however, this value is in terms of meters
-                                         # instead of seconds. Still since all dicho paramters    -- i.e.,  resolution_dicho_exclusion_scaling_angle, resolution_dicho_exclusion_rate, etc. --
+                                         # instead of seconds. Still since all dicho parameters    -- i.e.,  resolution_dicho_exclusion_scaling_angle, resolution_dicho_inclusion_rate, etc. --
                                          # are calculated with this functionality, correcting this bug makes the calculated parameters perform less effective.
                                          # We need to calculate new parameters after correcting the bug.
                                          #
@@ -719,15 +721,20 @@ module Models
 
         average_service_load = total_time_load / services.size.to_f
         average_number_of_services_per_vehicle = average_vehicles_work_time / average_service_load
-        exclusion_rate = resolution_dicho_exclusion_rate * average_number_of_services_per_vehicle
-        angle = resolution_dicho_exclusion_scaling_angle # It needs to be in between 0 and 45 - 0 means only uniform cost is used - 45 means only variable cost is used
+        inclusion_rate = resolution_dicho_inclusion_rate * average_number_of_services_per_vehicle
+        # Angle needs to be in between 0° and 45°:
+        # - 0°  means only uniform cost is used
+        # - 45° means only variable cost is used
+        angle = resolution_dicho_exclusion_scaling_angle
         tan_variable = Math.tan(angle * Math::PI / 180)
         tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
         coeff_variable_cost = tan_variable / (1 - tan_variable * tan_uniform)
         coeff_uniform_cost = tan_uniform / (1 - tan_variable * tan_uniform)
 
         services.each{ |service|
-          service.exclusion_cost = (coeff_variable_cost * (max_fixed_cost / exclusion_rate * service[:activity][:duration] / average_service_load) + coeff_uniform_cost * (max_fixed_cost / exclusion_rate)).ceil
+          service.exclusion_cost = (2**(4 - service.priority) * coeff_variable_cost *
+            (max_fixed_cost / inclusion_rate * service.activity.duration / average_service_load) +
+            coeff_uniform_cost * (max_fixed_cost / inclusion_rate)).ceil
         }
       when :distance
         raise 'Distance based exclusion cost calculation is not ready'

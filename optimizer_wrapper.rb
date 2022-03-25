@@ -380,8 +380,12 @@ module OptimizerWrapper
   end
 
   def self.adjust_independent_duration(vrp, this_sub_size, total_size)
+    return unless total_size&.positive?
+
     split_ratio = this_sub_size.to_f / total_size
-    vrp.resolution_duration = vrp.resolution_duration&.*(split_ratio)&.ceil
+
+    vrp.resolution_duration =
+      vrp.resolution_duration&.*(split_ratio)&.ceil
     vrp.resolution_minimum_duration =
       vrp.resolution_minimum_duration&.*(split_ratio)&.ceil
     vrp.resolution_iterations_without_improvment =

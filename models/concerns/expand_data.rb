@@ -75,4 +75,61 @@ module ExpandData
       service.skills << skill
     }
   end
+
+  def accumulate_skills_of_services_in_linking_relations
+    # WARNING: this operation should come after shipment->2services+relation and sticky->skill
+    # conversions, and original_info expansion is done
+
+    # Forward accumulate the skills of the services which are in a LINKING_RELATIONS
+    # Because the tail of a linking relation can be skipped we cannot bring the skills of the tail
+    # backwards -- except for shipment we can accumulate the skills of the delivery to the pickup.
+
+    needs_another_iteration = true
+    max_repeats = 5
+    repeat = 0
+    warn_for_on_service_types = false
+
+    while needs_another_iteration && repeat < max_repeats
+      repeat += 1
+      needs_another_iteration = false
+      self.relations.each{ |relation|
+        next unless Models::Relation::LINKING_RELATIONS.include?(relation.type)
+
+        if Models::Relation::ON_SERVICES_TYPES.include?(relation.type)
+          accumulated_skills = []
+          relation.linked_services.each{ |s|
+            accumulated_skills |= s.skills
+            # there was a skill change which might affect another "linked" service
+            needs_another_iteration = true if (accumulated_skills - s.skills).any?
+            s.skills = accumulated_skills.sort!.dup
+          }
+          # except for shipments we need to make sure that all services has the same skills
+          if relation.type == :shipment
+            relation.linked_services.each{ |s| s.skills = accumulated_skills.dup }
+          end
+        else
+          warn_for_on_service_types = true
+        end
+      }
+
+    end
+
+    if repeat == max_repeats
+      err_msg = 'Either the number of repeats is not enough or there is an infinite loop in '\
+                'accumulate_skills_of_services_in_linking_relations. '\
+                'Some relations might be silently ignored during split_independent_vrp.'
+      log err_msg, level: :warn
+      raise err_msg if ENV['APP_ENV'] != 'production'
+    end
+
+    if warn_for_on_service_types
+      # either a new LINKING_RELATIONS is forgotten to included in ON_SERVICES_TYPES or
+      # this new service has ON_VEHICLES_TYPES and this check needs improvement
+      err_msg = 'Skill accumulation can only handle LINKING_RELATIONS which are ON_SERVICES_TYPES. '\
+                'Some relations might be silently ignored during split_independent_vrp.'
+      log err_msg, level: :warn
+      raise err_msg if ENV['APP_ENV'] != 'production'
+    end
+  end
+
 end
