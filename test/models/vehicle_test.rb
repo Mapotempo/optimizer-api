@@ -18,9 +18,7 @@
 require './test/test_helper'
 
 module Models
-  class VehicleTest < Minitest::Test
-    include Rack::Test::Methods
-
+  class VehicleTest < IsolatedTest
     def test_work_duration
       vrp = VRP.periodic_seq_timewindows
       vrp = TestHelper.create(vrp)
@@ -74,7 +72,6 @@ module Models
     end
 
     def test_skills
-      Models.delete_all
       vehicle1 = { id: 'vehicle_1' }
       vehicle2 = { id: 'vehicle_2' }
 
