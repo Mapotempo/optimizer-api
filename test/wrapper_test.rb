@@ -3152,4 +3152,27 @@ class WrapperTest < Minitest::Test
     assert(unfeasible_services.values.flatten.all?{ |un| un[:reason] == 'Provided possible days do not allow service to be assigned' })
     refute_includes unfeasible_services.values.flatten.collect{ |un| un[:original_service_id] }, vrp.services.first.id
   end
+
+  def test_filter_infeasible_route
+    vrp = VRP.basic
+    vrp[:vehicles].first[:timewindow] = { start: 0, end: 0}
+    vrp[:routes] = [{
+      vehicle_id: vrp[:vehicles].first[:id],
+      mission_ids: vrp[:services].map{ |s| s[:id] }
+    }]
+
+    begin
+      OptimizerWrapper.config[:services][:ortools].stub(
+        :solve, # (cluster_vrp, job, proc)
+        lambda { |cluster_vrp, _, _,|
+          assert_empty cluster_vrp.routes
+          raise OptimizerWrapper::JobKilledError
+        }
+      ) do
+        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
+      end
+    rescue OptimizerWrapper::JobKilledError
+      nil
+    end
+  end
 end
