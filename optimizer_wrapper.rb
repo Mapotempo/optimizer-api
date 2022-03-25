@@ -773,9 +773,9 @@ module OptimizerWrapper
                                        start_point: previous_stop.activity.point,
                                        end_point: next_point,
                                        begin_time: previous_stop.info.end_time)
-            solution = TSPHelper.solve(tsp)
-            previous_stop = solution.routes[0].stops.reverse.find(&:service_id)
-            service_stops = solution.routes[0].stops.select{ |a| a.type == :service }
+            tsp_solution = TSPHelper.solve(tsp)
+            previous_stop = tsp_solution.routes[0].stops.reverse.find(&:service_id)
+            service_stops = tsp_solution.routes[0].stops.select{ |a| a.type == :service }
             service_stops.map!{ |service_stop|
               original_service = original_vrp.services.find{ |service| service.id == service_stop.id }
               stop = Models::Solution::Stop.new(original_service, info: service_stop.info)
