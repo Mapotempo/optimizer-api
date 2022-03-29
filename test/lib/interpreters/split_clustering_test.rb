@@ -26,7 +26,7 @@ class SplitClusteringTest < Minitest::Test
     end
 
     def test_same_location_different_clusters
-      vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomious')
+      vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomous')
       service_vrp = { vrp: vrp, service: :demo }
       vrp.services.each{ |s| s.skills = [] } # The instance has old "Pas X" style day skills, we purposely ignore them otherwise balance is not possible
       vrp.vehicles = [vrp.vehicles.first]    # entity: `vehicle` setting only works if the number of clusters is equal to the number of vehicles.
@@ -675,7 +675,7 @@ class SplitClusteringTest < Minitest::Test
       vrp.configuration.resolution.duration = 12000
       vrp.configuration.preprocessing.first_solution_strategy = ['local_cheapest_insertion']
 
-      Interpreters::Dichotomious.stub(:dichotomious_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
+      Interpreters::Dichotomous.stub(:dichotomous_candidate?, ->(_service_vrp){ return false }) do # stub dicho so that it doesn't pass trough it
         Interpreters::SplitClustering.stub(:remove_poor_routes, ->(_vrp, _result){ return nil }) do
           error = proc{ raise 'Split_solve should not demand matrix for a problem which has the complete matrix' }
           solutions = Routers::RouterWrapper.stub_any_instance(:matrix, error) do

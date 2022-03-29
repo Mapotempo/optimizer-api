@@ -17,9 +17,9 @@
 #
 require './test/test_helper'
 
-class DichotomiousTest < Minitest::Test
+class DichotomousTest < Minitest::Test
   if !ENV['SKIP_DICHO']
-    def test_dichotomious_approach
+    def test_dichotomous_approach
       vrp = TestHelper.load_vrp(self)
       # TODO: Remove it once the dicho contions are stabilized
       vrp.configuration.resolution.dicho_algorithm_service_limit = 457 # There are 458 services in the instance.
@@ -71,7 +71,7 @@ class DichotomiousTest < Minitest::Test
              "optimization duration asked (#{max_dur})."
     end
 
-    def test_dichotomious_condition_limits
+    def test_dichotomous_condition_limits
       # Currently dicho limit is set to 500 which is less than the default max_split_size.
       # That is, one needs to manually set max_split_size to a higher value to use dicho.
       # If the dicho limits are changed the test needs to be corrected with new values.
@@ -90,22 +90,22 @@ class DichotomiousTest < Minitest::Test
         limit_vrp[:vehicles] << { id: "v#{i + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
       }
 
-      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(limit_vrp), service: :demo, dicho_level: 0)
+      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: TestHelper.create(limit_vrp), service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
       vrp[:vehicles] = limit_vrp[:vehicles].dup
       vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
-      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
+      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
       vrp[:services] = limit_vrp[:services].dup
       vrp[:services] << { id: "s#{limits[:service] + 1}", activity: { point_id: 'p1' }}
-      refute Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
+      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
       vrp[:services] << { id: "s#{limits[:service] + 1}", activity: { point_id: 'p1' }}
       vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
-      assert Interpreters::Dichotomious.dichotomious_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
+      assert Interpreters::Dichotomous.dichotomous_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
     end
 
     def test_infinite_loop_due_to_impossible_to_cluster
@@ -131,16 +131,16 @@ class DichotomiousTest < Minitest::Test
       problem.configuration.resolution.dicho_division_service_limit = 5
 
       counter = 0
-      Interpreters::Dichotomious.stub(:kmeans, lambda{ |vrpi, cut_symbol|
-        assert_operator counter, :<, 3, 'Interpreters::Dichotomious::kmeans is called too many times. Either there is an infinite loop due to imposible clustering or dicho split logic is altered.'
+      Interpreters::Dichotomous.stub(:kmeans, lambda{ |vrpi, cut_symbol|
+        assert_operator counter, :<, 3, 'Interpreters::Dichotomous::kmeans is called too many times. Either there is an infinite loop due to imposible clustering or dicho split logic is altered.'
         counter += 1
-        Interpreters::Dichotomious.send(:__minitest_stub__kmeans, vrpi, cut_symbol)
+        Interpreters::Dichotomous.send(:__minitest_stub__kmeans, vrpi, cut_symbol)
       }) do
         OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
       end
     end
 
-    def test_cluster_dichotomious_heuristic
+    def test_cluster_dichotomous_heuristic
       # Warning: This test is not enough to ensure that two services at the same point will
       # not end up in two different routes because after clustering there is tsp_simple.
       # In fact this check is too limiting because for this test to pass we disactivate
@@ -150,10 +150,10 @@ class DichotomiousTest < Minitest::Test
       # clicque like preprocessing inside clustering that way it would be impossible for
       # two very close service ending up in two different routes.
       # Moreover, it would increase the performance of clustering.
-      vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomious')
+      vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomous')
       service_vrp = { vrp: vrp, service: :demo, dicho_level: 0 }
       while service_vrp[:vrp].services.size > 100
-        services_vrps_dicho = Interpreters::Dichotomious.split(service_vrp, nil)
+        services_vrps_dicho = Interpreters::Dichotomous.split(service_vrp, nil)
         assert_equal 2, services_vrps_dicho.size
 
         locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } # clusters.first.data_items.map{ |d| [d[0], d[1]] }
@@ -180,7 +180,7 @@ class DichotomiousTest < Minitest::Test
       end
     end
 
-    def test_no_dichotomious_when_no_location
+    def test_no_dichotomous_when_no_location
       problem = VRP.basic
       problem[:vehicles] << problem[:vehicles].first.merge({ id: 'another_vehicle' })
       problem[:configuration][:resolution][:dicho_algorithm_service_limit] = 0
@@ -189,20 +189,20 @@ class DichotomiousTest < Minitest::Test
 
       vrp.configuration.resolution.dicho_algorithm_vehicle_limit = 0
 
-      refute Interpreters::Dichotomious.dichotomious_candidate?(service_vrp), 'no dicho if no location'
+      refute Interpreters::Dichotomous.dichotomous_candidate?(service_vrp), 'no dicho if no location'
 
       location = Models::Location.new(lat: 0, lon: 0)
       vrp.points.map!{ |point| point.tap{ |p| p.location = location } }
 
-      assert Interpreters::Dichotomious.dichotomious_candidate?(service_vrp), 'dicho if all has location'
+      assert Interpreters::Dichotomous.dichotomous_candidate?(service_vrp), 'dicho if all has location'
     end
 
     def test_split_matrix
-      vrp = TestHelper.load_vrp(self, fixture_file: 'dichotomious_approach')
+      vrp = TestHelper.load_vrp(self, fixture_file: 'dichotomous_approach')
       vrp.configuration.resolution.dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
       service_vrp = { vrp: vrp, service: :demo, dicho_level: 0 }
 
-      services_vrps = Interpreters::Dichotomious.split(service_vrp)
+      services_vrps = Interpreters::Dichotomous.split(service_vrp)
       services_vrps.each{ |service_vrp_in|
         assert_equal service_vrp_in[:vrp].points.size, service_vrp_in[:vrp].matrices.first.time.size
         assert_equal service_vrp_in[:vrp].points.size, service_vrp_in[:vrp].matrices.first.distance.size
@@ -212,7 +212,7 @@ class DichotomiousTest < Minitest::Test
     def test_kmeans_function_with_services_at_same_location
       vrp = TestHelper.load_vrp(self, fixture_file: 'two_phases_clustering_sched_with_freq_and_same_point_day_5veh')
       assert vrp.services.group_by{ |s| s.activity.point_id }.any?{ |_pt_id, set| set.size > 1 }, 'This test is useless if there are not several services with same point_id'
-      split = Interpreters::Dichotomious.send(:kmeans, vrp, :duration)
+      split = Interpreters::Dichotomous.send(:kmeans, vrp, :duration)
       assert_equal 2, split.size
       assert_equal vrp.services.size, split.collect(&:size).sum, 'Wrong number of services will be returned'
     end
@@ -222,23 +222,23 @@ class DichotomiousTest < Minitest::Test
       route_rest = Models::Solution::Stop.new(rest)
       solution_route = Models::Solution::Route.new(stops: [route_rest])
       initial_solution = Models::Solution.new(routes: [solution_route])
-      assert_empty Interpreters::Dichotomious.send(:build_initial_routes, [initial_solution])
+      assert_empty Interpreters::Dichotomous.send(:build_initial_routes, [initial_solution])
     end
 
-    def test_dichotomious_approach_transfer_unused_vehicles_transfers_points_correctly
+    def test_dichotomous_approach_transfer_unused_vehicles_transfers_points_correctly
       vrp = VRP.lat_lon
       vrp[:configuration][:resolution][:duration] = 6
       vrp[:vehicles].first[:duration] = 1 # no need to plan the services
       vrp[:vehicles] << vrp[:vehicles].first.dup
       vrp[:vehicles].last[:id] = 'v_1'
 
-      Interpreters::Dichotomious.stub(:dichotomious_candidate?, lambda{ |service_vrp|
+      Interpreters::Dichotomous.stub(:dichotomous_candidate?, lambda{ |service_vrp|
         # modify limits so that the vrp will be dicho_split one and only one time
         service_vrp[:vrp].configuration.resolution.dicho_division_service_limit = 5
         service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit = 1
         true
       }) do
-        Interpreters::Dichotomious.stub(:transfer_unused_vehicles, lambda{ |service_vrp, result, sub_service_vrps|
+        Interpreters::Dichotomous.stub(:transfer_unused_vehicles, lambda{ |service_vrp, result, sub_service_vrps|
           sub_service_vrps[0][:vrp].vehicles << Helper.deep_copy(
             sub_service_vrps[0][:vrp].vehicles.last,
             override: { id: 'extra_unused_vehicle' },
@@ -247,7 +247,7 @@ class DichotomiousTest < Minitest::Test
           service_vrp[:vrp].points << sub_service_vrps[0][:vrp].vehicles.last.end_point
           sub_service_vrps[0][:vrp].points << sub_service_vrps[0][:vrp].vehicles.last.end_point
 
-          Interpreters::Dichotomious.send(:__minitest_stub__transfer_unused_vehicles, service_vrp, result, sub_service_vrps)
+          Interpreters::Dichotomous.send(:__minitest_stub__transfer_unused_vehicles, service_vrp, result, sub_service_vrps)
 
           sv_one = sub_service_vrps[1][:vrp]
           transferred_vehicle = sv_one.vehicles.last

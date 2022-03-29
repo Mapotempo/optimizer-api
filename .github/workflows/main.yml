@@ -121,7 +121,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     env:
-      OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/dichotomious_test.rb"
+      OPTIONS: "COV=false LOG_LEVEL=info TEST=test/lib/heuristics/dichotomous_test.rb"
     steps:
       - name: Checkout
         uses: actions/checkout@v2

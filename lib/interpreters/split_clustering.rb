@@ -534,7 +534,7 @@ module Interpreters
       return unless solution
 
       remove_empty_routes(solution)
-      remove_poorly_populated_routes(vrp, solution, 0.1) if !Interpreters::Dichotomious.dichotomious_candidate?(vrp: vrp, service: :ortools)
+      remove_poorly_populated_routes(vrp, solution, 0.1) if !Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :ortools)
     end
 
     def self.remove_empty_routes(solution)
@@ -974,7 +974,7 @@ module Interpreters
       }
 
       if nb_clusters != vehicles.size
-        # for max_split and dichotomious cases
+        # for max_split and dichotomous cases
         depot_counts = vehicles.collect{ |i| i[:depot] }.count_by{ |i| i }.sort_by{ |_i, cnt| -cnt }.to_h
         depots = depot_counts.keys
         while depots.size < nb_clusters

@@ -436,7 +436,7 @@ class RealCasesTest < Minitest::Test
       assert_equal 5, solutions[0].routes.size
     end
 
-    def test_dichotomious_check_number_of_services
+    def test_dichotomous_check_number_of_services
       # TODO: This test is an old test left here. It doesn't have enough vehicles.
       # It just check if we lose or add services.
       vrp = TestHelper.load_vrp(self)

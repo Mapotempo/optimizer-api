@@ -22,8 +22,8 @@ require './lib/helper.rb'
 require './util/job_manager.rb'
 
 module Interpreters
-  class Dichotomious
-    def self.dichotomious_candidate?(service_vrp)
+  class Dichotomous
+    def self.dichotomous_candidate?(service_vrp)
       service_vrp[:dicho_level]&.positive? ||
         (
           # TODO: remove cost_fixed condition after exclusion cost calculation is corrected.
@@ -44,8 +44,8 @@ module Interpreters
         solution.unassigned_stops.reject(&:reason).any?
     end
 
-    def self.dichotomious_heuristic(service_vrp, job = nil, &block)
-      if dichotomious_candidate?(service_vrp)
+    def self.dichotomous_heuristic(service_vrp, job = nil, &block)
+      if dichotomous_candidate?(service_vrp)
         vrp = service_vrp[:vrp]
         message = "dicho - level(#{service_vrp[:dicho_level]}) "\
                   "activities: #{vrp.services.size} "\
@@ -84,7 +84,7 @@ module Interpreters
           # TODO: instead of an error, we can just continue the optimisation in the child process
           # by modifying the configuration.resolution.dicho_division_X_limit's here so that the child runs the
           # optimisation instead of trying to split again
-          raise 'dichotomious_heuristic cannot split the problem into two clusters' if sub_service_vrps.size != 2
+          raise 'dichotomous_heuristic cannot split the problem into two clusters' if sub_service_vrps.size != 2
 
           solutions = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
             unless index.zero?
@@ -131,7 +131,6 @@ module Interpreters
             log "dicho - after remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
           end
           solution.parse(vrp)
-
 
           log "dicho - level(#{service_vrp[:dicho_level]}) unassigned rate " \
               "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
@@ -364,7 +363,7 @@ module Interpreters
 
         sub_vrp.configuration.resolution.minimum_duration = sub_vrp_configuration_resolution_minimum_duration if sub_vrp.configuration.resolution.minimum_duration
         sub_vrp.configuration.resolution.duration = sub_vrp_configuration_resolution_duration if sub_vrp.configuration.resolution.duration
-        sub_vrp.configuration.resolution.vehicle_limit = sub_vrp_vehicle_limit  if vrp.configuration.resolution.vehicle_limit
+        sub_vrp.configuration.resolution.vehicle_limit = sub_vrp_vehicle_limit if vrp.configuration.resolution.vehicle_limit
 
         sub_vrp.configuration.restitution.allow_empty_result = true
         solution_loop = OptimizerWrapper.solve(sub_service_vrp)
@@ -394,7 +393,7 @@ module Interpreters
       vrp.routes += new_routes
     end
 
-    def self.end_stage_insert_unassigned(service_vrp, solution, job = nil)
+    def self.end_stage_insert_unassigned(service_vrp, solution, _job = nil)
       log "---> dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
       return solution if solution.unassigned_stops.empty?
 
