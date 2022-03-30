@@ -616,7 +616,7 @@ module Models
 
       reasons = solutions[0].unassigned_stops.flat_map{ |u| u[:reason].split(' && ') }
       assert_includes reasons, 'Service belongs to a relation of type shipment which makes it infeasible'
-      assert_equal 1, vrp.relations.size
+      assert_equal 2, vrp.relations.size
     end
 
     def test_uniqueness_of_provided_services_or_vehicles_in_relation

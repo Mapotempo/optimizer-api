@@ -76,6 +76,19 @@ module Models
       vrp
     end
 
+    def self.as_json(options = {})
+      # Remove unknown linked_service_ids from relations
+      hash = super(options)
+
+      service_ids = hash[:services].map{ |service| service[:id] }
+      hash[:relations].delete_if{ |relation|
+        relation[:linked_service_ids].delete_if{ |id| service_ids.exclude?(id) }
+
+        relation[:linked_service_ids].empty?
+      }
+      hash
+    end
+
     def expand_vehicles_for_consistent_empty_result
       periodic = Interpreters::PeriodicVisits.new(self)
       periodic.generate_vehicles(self)

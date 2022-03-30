@@ -478,7 +478,6 @@ module Wrappers
 
             add_unassigned(unfeasible, vrp, service_in, "In a relation with an unfeasible service: #{service.id}")
           }
-          vrp.relations.delete(relation)
         }
         vrp.routes.each{ |route|
           route.mission_ids.delete_if{ |mission_id| mission_id == service.id }
@@ -573,7 +572,7 @@ module Wrappers
       unfeasible
     end
 
-    def sequence_relation_with_no_reachable_vehicle?(unfeasible, vrp, relation)
+    def sequence_relation_with_no_reachable_vehicle(unfeasible, vrp, relation)
       return false unless Models::Relation::POSITION_TYPES.include?(relation.type)
 
       vrp.vehicles.each{ |v|
@@ -611,21 +610,18 @@ module Wrappers
       to_delete_services.each{ |service|
         add_unassigned(unfeasible, vrp, service, "Service belongs to a relation of type #{relation.type} which makes it infeasible")
       }
-      relation.linked_services.empty?
     end
 
     def last_service_reachable_sequence(vrp, vehicle, services)
       vehicle_timewindow = vehicle.timewindow || Models::Timewindow.new(start: 0)
       vehicle_duration = [vehicle.duration, vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?) - vehicle_timewindow.start].compact.min
       successive_activities = services.map{ |service|
+        return service.id if service.vehicle_compatibility[vehicle.id] == false
         [service.id, service.activity && [service.activity] || service.activities]
       }
       return nil if successive_activities.all?{ |_id, acts| acts.any?{ |a| a.timewindows.none?(&:end) } }
 
       matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
-      successive_activities = services.map{ |service|
-        [service.id, service.activity && [service.activity] || service.activities]
-      }
 
       depot_approach = vehicle.start_point && matrix.time ? successive_activities.first.last.map{ |act| matrix.time[vehicle.start_point.matrix_index][act.point.matrix_index] }.min : 0
       earliest_arrival = vehicle_timewindow.start + depot_approach
@@ -796,15 +792,16 @@ module Wrappers
       unfeasible = check_unreachable(vrp, :time, unfeasible)
       unfeasible = check_unreachable(vrp, :distance, unfeasible)
       unfeasible = check_unreachable(vrp, :value, unfeasible)
-      vrp.relations.each{ |relation|
-        # If relation becomes empty it is removed by add_unassigned
-        sequence_relation_with_no_reachable_vehicle?(unfeasible, vrp, relation)
-      }
 
       vrp.services.each{ |service|
         if no_compatible_vehicle_with_compatible_tw(vrp, service)
           add_unassigned(unfeasible, vrp, service, 'No compatible vehicle can reach this service while respecting all constraints')
         end
+      }
+
+      vrp.relations.each{ |relation|
+        # If relation becomes empty it is removed by add_unassigned
+        sequence_relation_with_no_reachable_vehicle(unfeasible, vrp, relation)
       }
 
       unless unfeasible.empty?
