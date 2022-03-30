@@ -1,6 +1,10 @@
+# Service and Shipment
+
 ### Service
+
 Describe more specifically the activities to be performed.
 Services are single [activities](Activity.md) which are self-sufficient.
+
 ```json
   "services": [{
     "id": "visit",
@@ -19,7 +23,8 @@ Services are single [activities](Activity.md) which are self-sufficient.
 ```
 
 **position** field allows user to provide an indication on when service activity should take place among one route. Several values are available for this parameter : 
-* "neutral" (default value) : service can take place at any position of the route, 
+
+* "neutral" (default value) : service can take place at any position of the route,
 * "always_first" : service should take place at the beginning of the route that is to say in first position or among other services with this constraint, at the beginning of the route.
 * "always_last" : service should take place at the end of the route that is to say in last position or among other services with this constraint, at the end of the route.
 * "always_middle" : service should not be in first or last positions of the route.
@@ -29,8 +34,10 @@ Complementary options are also available : "never_first", "never_last", "never_m
 **sticky_vehicle_ids** field allows user to specify whenever only a subset of vehicles can be assigned to this service. There can be one or several vehicle ids in the list.
 
 ### Shipment
-Shipments are a couple of indivisible [activities](Activity.md), the __pickup__ is the action which must take-off a package and the __delivery__ the action which deliver this particular package.
-__pickup__ and __delivery__ are build following the __[activity](Activity.md)__ model
+
+Shipments are a couple of indivisible [activities](Activity.md), the **pickup** is the action which must take-off a package and the **delivery** the action which deliver this particular package.
+**pickup** and **delivery** are build following the **[activity](Activity.md)** model
+
 ```json
   "shipments": [{
     "id": "shipment",
@@ -50,7 +57,9 @@ __pickup__ and __delivery__ are build following the __[activity](Activity.md)__ 
 ```
 
 ### Pickup or Delivery
-Services can be set with a __pickup__ or a __delivery__ type which inform the solver about the activity to perform. The __pickup__ allows a reload action within the route, the __delivery__ allows to drop off resources.
+
+Services can be set with a **pickup** or a **delivery** type which inform the solver about the activity to perform. The **pickup** allows a reload action within the route, the **delivery** allows to drop off resources.
+
 ```json
   "services": [{
     "id": "visit-pickup",

@@ -1,4 +1,7 @@
+# Rest
+
 Inform about the drivers obligations to have some rest within a route
+
 ```json
   "rests": [{
     "id": "Break-1",

@@ -1,4 +1,7 @@
+# Lateness
+
 Once defined at the service level it allow the vehicles to arrive late at a points to serve.
+
 ```json
   "services": [{
     "id": "visit",
@@ -14,7 +17,9 @@ Once defined at the service level it allow the vehicles to arrive late at a poin
     }
   }
 ```
+
 Defined at the vehicle level, it allow the vehicle to arrive late at the ending depot.
+
 ```json
   "vehicles": [{
     "id": "vehicle_id-1",
@@ -33,4 +38,5 @@ Defined at the vehicle level, it allow the vehicle to arrive late at the ending 
     "cost_time_multiplier": 1.0
   }]
 ```
-Note : In the case of a global optimization, at least one those two parameters (__late_multiplier__ or __cost_late_multiplier__) must be set to zero, otherwise only one vehicle would be used.
+
+Note : In the case of a global optimization, at least one those two parameters (**late_multiplier** or **cost_late_multiplier**) must be set to zero, otherwise only one vehicle would be used.

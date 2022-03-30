@@ -1,5 +1,8 @@
-Represent a point in space, it could be called as a __location__ with latitude and longitude coordinates.
+# Point
+
+Represent a point in space, it could be called as a **location** with latitude and longitude coordinates.
 With coordinates
+
 ```json
   "points": [{
       "id": "vehicle-start",
@@ -27,8 +30,10 @@ With coordinates
       }
     }]
 ```
-Or as a __matrix_index__ can be used to link to its position within the matrices.
+
+Or as a **matrix_index** can be used to link to its position within the matrices.
 This could be usefull if the routing data are provided from an external source.
+
 ```json
   "points": [{
       "id": "vehicle-start",

@@ -1,3 +1,5 @@
+# Activity
+
 Describe where an activity take place, when it can be performed and how long it last.
 ```json
   "activity": {

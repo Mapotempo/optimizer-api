@@ -1,12 +1,17 @@
+# Timewindow
+
 Define a time interval when a resource is available or when an activity can begin. By default times and durations are supposed to be defined in seconds. If a time matrix is send with the problem, values must be set on the same time unit.
 Vehicles only have single timewindow
+
 ```json
   "timewindow": {
     "start": 0,
     "end": 7200
   }
 ```
+
 Activities can have multiple timewindows
+
 ```json
   "timewindows": [{
     "start": 600,
@@ -18,6 +23,7 @@ Activities can have multiple timewindows
 ```
 
 ### <a name="multiple-timewindows"></a>Multiple TimeWindows
+
 ```json
   "services": [{
     "id": "visit",

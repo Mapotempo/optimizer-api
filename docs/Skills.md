@@ -1,5 +1,8 @@
+# Skills
+
 Some package must be carried by some particular vehicle, or some points can only be visited by some particular vehicle or driver. Skills allow to represent those kind of constraints.
-A vehicle can carry the __services__ or __shipments__ with the defined __skills__ and the ones which have none or part of the current vehicle skills.
+A vehicle can carry the **services** or **shipments** with the defined **skills** and the ones which have none or part of the current vehicle skills.
+
 ```json
   "vehicles": [{
     "id": "vehicle_id",
@@ -16,7 +19,9 @@ A vehicle can carry the __services__ or __shipments__ with the defined __skills_
     "cost_time_multiplier": 1.0
   }]
 ```
+
 Missions must be carried by a vehicle which have at least all the required skills by the current service or shipment.
+
 ```json
   "services": [{
     "id": "visit",
@@ -34,9 +39,11 @@ Missions must be carried by a vehicle which have at least all the required skill
 ```
 
 ### <a name="alternative-skills"></a>Alternative Skills
-_This feature is currently only supported by Jsprit_
 
-Some vehicles can change its __skills__ once empty, passing from one configuration to another. Here passing from a configuration it can carry only cool products from another it can only tool frozen ones and vice versa.
+*This feature is currently not supported*
+
+Some vehicles can change its **skills** once empty, passing from one configuration to another. Here passing from a configuration it can carry only cool products from another it can only tool frozen ones and vice versa.
+
 ```json
   "vehicles": [{
     "id": "vehicle_id",
@@ -54,6 +61,7 @@ Some vehicles can change its __skills__ once empty, passing from one configurati
     "cost_time_multiplier": 1.0
   }]
 ```
+
 ```json
   "services": [{
     "id": "visit-1",
