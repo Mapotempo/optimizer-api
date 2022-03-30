@@ -25,7 +25,6 @@ Missions must be carried by a vehicle which have at least all the required skill
 ```json
   "services": [{
     "id": "visit",
-    "type": "service",
     "activity": {
       "point_id": "visit-point-1",
       "timewindows": [{

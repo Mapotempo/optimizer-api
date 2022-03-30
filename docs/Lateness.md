@@ -5,7 +5,6 @@ Once defined at the service level it allow the vehicles to arrive late at a poin
 ```json
   "services": [{
     "id": "visit",
-    "type": "service",
     "activity": {
       "point_id": "visit-point-1",
       "late_multiplier": 0.3,

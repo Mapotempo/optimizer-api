@@ -19,7 +19,6 @@ When multiple activities are performed at the same location in a direct sequence
 ```json
  "services": [{
     "id": "visit-1",
-    "type": "service",
     "activity": {
       "point_id": "visit-point-1",
       "late_multiplier": 0.3,
@@ -32,7 +31,6 @@ When multiple activities are performed at the same location in a direct sequence
     }
   }, {
     "id": "visit-2",
-    "type": "service",
     "activity": {
       "point_id": "visit-point-1",
       "late_multiplier": 0.3,

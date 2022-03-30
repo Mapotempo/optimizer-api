@@ -80,7 +80,6 @@ By default, it will divide the period by the number of visits in order to non ov
 ```json
   {
     "id": "visit-1",
-    "type": "service",
     "activity": {
         "point_id": "visit-point-1",
         "timewindows": [{
@@ -122,7 +121,6 @@ Between to visits of the same mission, it could be necessary to determine exactl
 ```json
   {
     "id": "visit-1",
-    "type": "service",
     "activity": {
         "point_id": "visit-point-1",
         "timewindows": [{

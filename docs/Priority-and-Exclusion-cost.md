@@ -5,7 +5,6 @@ Priority indicate to the solver which activities are the most important, the pri
 ```json
  "services": [{
     "id": "visit-1",
-    "type": "service",
     "activity": {
       "point_id": "visit-point-1",
       "late_multiplier": 0.3,

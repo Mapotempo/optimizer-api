@@ -27,7 +27,6 @@ Activities can have multiple timewindows
 ```json
   "services": [{
     "id": "visit",
-    "type": "service",
     "activity": {
       "point_id": "visit-point-1",
       "timewindows": [{

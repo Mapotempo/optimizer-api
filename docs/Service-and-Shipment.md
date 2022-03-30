@@ -8,7 +8,6 @@ Services are single [activities](Activity.md) which are self-sufficient.
 ```json
   "services": [{
     "id": "visit",
-    "type": "service",
     "activity": {
       "point_id": "visit-point-1",
       "position": "always_first",
@@ -53,44 +52,5 @@ Shipments are a couple of indivisible [activities](Activity.md), the **pickup** 
       "duration": 2100.0
     },
     "sticky_vehicle_ids": ["vehicle_id1"],
-  }]
-```
-
-### Pickup or Delivery
-
-Services can be set with a **pickup** or a **delivery** type which inform the solver about the activity to perform. The **pickup** allows a reload action within the route, the **delivery** allows to drop off resources.
-
-```json
-  "services": [{
-    "id": "visit-pickup",
-    "type": "pickup",
-    "activity": {
-      "point_id": "visit-point-1",
-      "timewindows": [{
-        "start": 3600,
-        "end": 4800
-      }],
-      "duration": 2100.0
-    },
-    "quantities": [{
-      "unit_id": "unit-Kg",
-      "value": 8
-    }]
-  }, {
-    "id": "visit-delivery",
-    "type": "delivery",
-    "activity": {
-      "point_id": "visit-point-2",
-      "position": "always_last",
-      "timewindows": [{
-        "start": 3600,
-        "end": 4800
-      }],
-      "duration": 2100.0
-    },
-    "quantities": [{
-      "unit_id": "unit-Kg",
-      "value": 6
-    }]
   }]
 ```
