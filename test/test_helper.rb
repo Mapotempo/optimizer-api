@@ -55,6 +55,8 @@ Minitest::Retry.use!(
 )
 
 class IsolatedTest < Minitest::Test
+  # It cleans the active_hash database before and after (around) the test. 
+  # Needed for tests calling Model::X.create directly to prevent ID errors.
   include Rack::Test::Methods
 
   def around
