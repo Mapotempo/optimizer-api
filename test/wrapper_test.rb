@@ -2834,6 +2834,17 @@ class WrapperTest < Minitest::Test
     refute vrp.vehicles.first.rests.none?, 'Should not have removed this rest because there is cost_late_multiplier'
   end
 
+  def test_simplify_activities_generates_no_raise
+    problem = VRP.toy
+    problem[:services].first[:activities] = [problem[:services].first.delete(:activity)] + [{ point_id: 'p1' }]
+
+    vrp = TestHelper.create(problem)
+    OptimizerWrapper.config[:services][:demo].simplify_constraints(vrp)
+
+    solution = OptimizerWrapper.config[:services][:demo].solve(vrp)
+    OptimizerWrapper.config[:services][:demo].patch_and_rewind_simplified_constraints(vrp, solution)
+  end
+
   def test_simplified_pause_returns_the_same_cost
     # TODO: instance needs to be replaced with an appropriate local instance with a matrix and the dump can be deleted
     # The instance needs at least:
