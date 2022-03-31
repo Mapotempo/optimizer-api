@@ -2253,7 +2253,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_add_unassigned_respects_relations
-    assert_equal %i[shipment sequence meetup].sort, Models::Relation::ALL_OR_NONE_RELATIONS.sort
+    assert_equal %i[shipment meetup].sort, Models::Relation::ALL_OR_NONE_RELATIONS.sort
 
     problem = VRP.lat_lon
     service_zero = Oj.load(Oj.dump(problem[:services].first))
@@ -2273,23 +2273,25 @@ class WrapperTest < Minitest::Test
       assert_equal linked_ids_size, services_demo.add_unassigned({}, vrp, vrp[:services][0], 'reason').values.flatten.size
     }
 
-    # 2 services in shipment, 2 in meetup, which are connected by sequence becomes unfeasible at the same time
+    # 2 services in shipment, 2 in meetup, which are connected by a fake shipment becomes unfeasible at the same time
     problem[:relations] = [
       { type: :shipment, linked_ids: problem[:services][0..1].collect{ |s| s[:id] } },
       { type: :meetup, linked_ids: problem[:services][2..3].collect{ |s| s[:id] } },
-      { type: :sequence, linked_ids: [0, 2].collect{ |s| problem[:services][s][:id] } },
+      { type: :shipment, linked_ids: [0, 2].collect{ |s| problem[:services][s][:id] } }, # fake_shipment with 3 services
       { type: :shipment, linked_ids: problem[:services][5..6].collect{ |s| s[:id] } },
     ]
     vrp = TestHelper.create(problem)
     unassigned = {}
-    assert_equal 2, services_demo.add_unassigned(unassigned, vrp, vrp[:services][5], 'reason').values.flatten.size # only 1 shipment
-    services_demo.add_unassigned(unassigned, vrp, vrp[:services][0], 'reason') # shipment + meetup
+    assert_equal 2, services_demo.add_unassigned(unassigned, vrp, vrp[:services][5], 'a_reason').values.flatten.size # only 1 shipment
+    services_demo.add_unassigned(unassigned, vrp, vrp[:services][0], 'another_reason') # in shipment and fake_shipment
     assert_equal 6, unassigned.values.flatten.size
-    in_relation_msg = 'In a relation with an unfeasible service: '
-    expected_reasons = { service_0: 'reason', service_1: "#{in_relation_msg}service_0",
+    in_relation_msg = 'In a shipment|meetup relation with an unfeasible service: '
+    expected_reasons = { service_0: 'another_reason', service_1: "#{in_relation_msg}service_0",
                          service_2: "#{in_relation_msg}service_0", service_3: "#{in_relation_msg}service_2",
-                         service_5: 'reason', service_6: "#{in_relation_msg}service_5" }
-    assert_equal expected_reasons, unassigned.values.flatten.collect{ |u| [u[:service_id], u[:reason]] }.to_h.symbolize_keys
+                         service_5: 'a_reason', service_6: "#{in_relation_msg}service_5" }
+    unassigned.values.flatten.collect{ |u| [u[:service_id], u[:reason]] }.to_h.each{ |service, actual_reason|
+      assert_match(/#{expected_reasons[service.to_sym]}/, actual_reason, "Infeasibility reason doesn't match")
+    }
   end
 
   def test_default_repetition
