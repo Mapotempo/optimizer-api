@@ -77,10 +77,10 @@ module Models
     end
 
     def self.as_json(options = {})
-      # Remove unknown linked_service_ids from relations
       hash = super(options)
 
       service_ids = hash[:services].map{ |service| service[:id] }
+      # Remove unknown linked_service_ids from relations
       hash[:relations].delete_if{ |relation|
         relation[:linked_service_ids].delete_if{ |id| service_ids.exclude?(id) }
 

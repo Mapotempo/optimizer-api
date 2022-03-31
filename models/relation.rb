@@ -19,7 +19,7 @@ require './models/base'
 
 module Models
   class Relation < Base
-    ALL_OR_NONE_RELATIONS = %i[shipment sequence meetup].freeze
+    ALL_OR_NONE_RELATIONS = %i[shipment meetup].freeze
 
     # Relations that link multiple services to be on the same route
     LINKING_RELATIONS = %i[

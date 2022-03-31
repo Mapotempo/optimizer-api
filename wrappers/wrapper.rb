@@ -471,12 +471,19 @@ module Wrappers
 
       unless service_already_marked_unfeasible
         service.relations.each{ |relation|
-          next unless Models::Relation::ALL_OR_NONE_RELATIONS.include?(relation.type.to_sym) # TODO: remove to_sym when https://github.com/Mapotempo/optimizer-api/pull/145 is merged
-
-          relation.linked_services&.each{ |service_in|
+          remove_start_index =
+            case relation.type
+            when *Models::Relation::ALL_OR_NONE_RELATIONS
+              0
+            when *Models::Relation::POSITION_TYPES
+              relation.linked_service_ids.index(service.id)
+            else
+              next
+            end
+          remove_end_index = -1
+          relation.linked_services[remove_start_index..remove_end_index].each{ |service_in|
             next if service_in == service
-
-            add_unassigned(unfeasible, vrp, service_in, "In a relation with an unfeasible service: #{service.id}")
+            add_unassigned(unfeasible, vrp, service_in, "In a #{relation.type} relation with an unfeasible service: #{service.id}")
           }
         }
         vrp.routes.each{ |route|
@@ -604,8 +611,6 @@ module Wrappers
           end
         end
       }
-
-      relation.linked_services -= to_delete_services
 
       to_delete_services.each{ |service|
         add_unassigned(unfeasible, vrp, service, "Service belongs to a relation of type #{relation.type} which makes it infeasible")
