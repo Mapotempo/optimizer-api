@@ -585,7 +585,38 @@ module Models
 
       solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
 
+      reasons = solutions[0].unassigned_stops.flat_map{ |u| u[:reason].split(' && ') }
+
+      assert_includes reasons, 'Service belongs to a relation of type shipment which makes it infeasible', 'Expected an unfeasible shipment'
+
+      problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.create(start: 1, end: 18)]
+
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem), nil)
+
       assert_empty solutions[0].unassigned_stops, 'There should be no unassigned services'
+    end
+
+    def test_shipment_feasibility_if_vehicle_maximum_lateness
+      problem = VRP.pud
+
+      problem[:shipments].first[:pickup][:timewindows] = [{ start: 0, end: 12}]
+      problem[:shipments].first[:delivery][:timewindows] = [{ start: 0, end: 21 }]
+      vrp = TestHelper.create(problem.dup)
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
+
+      reasons = solutions[0].unassigned_stops.flat_map{ |u| u[:reason].split(' && ') }
+      assert_empty reasons
+      assert_empty solutions[0].unassigned_stops
+      assert_equal 2, vrp.relations.size
+
+      problem[:vehicles].first[:timewindow] = { start: 0, end: 21, maximum_lateness: 20 }
+
+      vrp = TestHelper.create(problem.dup)
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
+
+      reasons = solutions[0].unassigned_stops.flat_map{ |u| u[:reason].split(' && ') }
+      assert_includes reasons, 'Service belongs to a relation of type shipment which makes it infeasible'
+      assert_equal 2, vrp.relations.size
     end
 
     def test_uniqueness_of_provided_services_or_vehicles_in_relation

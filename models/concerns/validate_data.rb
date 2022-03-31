@@ -180,7 +180,7 @@ module ValidateData
 
   def check_vehicle_trips_relation_consistency
     # :prioritize_first_available_trips_and_vehicles logic depends on this check
-    all_trips = @hash[:relations].flat_map{ |r| r[:linked_vehicle_ids] if r[:type].to_sym == :vehicle_trips }.compact
+    all_trips = @hash[:relations].flat_map{ |r| r[:linked_vehicle_ids] if r[:type] == :vehicle_trips }.compact
     return unless @hash[:vehicles].any?{ |v| all_trips.count(v[:id]) > 1 }
 
     raise OptimizerWrapper::UnsupportedProblemError.new(
@@ -359,7 +359,7 @@ module ValidateData
       check_consistent_ids_provided(relation)
       check_consistent_lapses_provided(relation)
 
-      case relation[:type].to_sym
+      case relation[:type]
       when :vehicle_trips
         check_vehicle_trips_stores_consistency(relation_vehicles)
         check_trip_timewindows_consistency(relation_vehicles)
@@ -442,7 +442,7 @@ module ValidateData
     ].freeze
 
     @hash[:relations]&.each{ |relation|
-      next if relations_not_needing_matching_visits_number_and_lapses.include?(relation[:type].to_sym)
+      next if relations_not_needing_matching_visits_number_and_lapses.include?(relation[:type])
 
       services_in_relation = relation[:linked_service_ids]&.collect{ |s_id| @hash[:services].find{ |s| s[:id] == s_id } } || []
       if services_in_relation.uniq{ |s| s[:visits_number] || 1 }.size > 1
@@ -512,7 +512,7 @@ module ValidateData
   def check_clustering_parameters(configuration)
     return unless configuration && configuration[:preprocessing]
 
-    if @hash[:relations].any?{ |relation| relation[:type].to_sym == :vehicle_trips }
+    if @hash[:relations].any?{ |relation| relation[:type] == :vehicle_trips }
       if configuration[:preprocessing][:partitions]&.any?
         raise OptimizerWrapper::UnsupportedProblemError.new(
           'Partitioning is not currently available with vehicle_trips relation'
@@ -521,7 +521,7 @@ module ValidateData
     end
 
     return unless configuration[:preprocessing][:partitions]&.any?{ |partition|
-      partition[:entity].to_sym == :work_day
+      partition[:entity] == :work_day
     } && configuration[:schedule]
 
     if @hash[:services].any?{ |s|

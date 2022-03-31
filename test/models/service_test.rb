@@ -18,9 +18,8 @@
 require './test/test_helper'
 
 module Models
-  class ServiceTest < Minitest::Test
+  class ServiceTest < IsolatedTest
     def test_skills
-      Models.delete_all
       service1 = { id: 'service_1' }
       service2 = { id: 'service_2' }
 

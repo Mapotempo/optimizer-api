@@ -465,18 +465,25 @@ module Wrappers
       # calls add_unassigned_internal for every service in an "ALL_OR_NONE_RELATION" with the service
       service_already_marked_unfeasible = !!unfeasible[service.id]
 
-      unless service_already_marked_unfeasible && reason.start_with?('In a relation with an unfeasible service: ')
+      unless service_already_marked_unfeasible && reason.start_with?('In a ') && reason =~ /\AIn a \S+ relation with an unfeasible service: /
         add_unassigned_internal(unfeasible, vrp, service, reason)
       end
 
       unless service_already_marked_unfeasible
         service.relations.each{ |relation|
-          next unless Models::Relation::ALL_OR_NONE_RELATIONS.include?(relation.type.to_sym) # TODO: remove to_sym when https://github.com/Mapotempo/optimizer-api/pull/145 is merged
-
-          relation.linked_services&.each{ |service_in|
+          remove_start_index =
+            case relation.type
+            when *Models::Relation::ALL_OR_NONE_RELATIONS
+              0
+            when *Models::Relation::POSITION_TYPES
+              relation.linked_service_ids.index(service.id)
+            else
+              next
+            end
+          remove_end_index = -1
+          relation.linked_services[remove_start_index..remove_end_index].each{ |service_in|
             next if service_in == service
-
-            add_unassigned(unfeasible, vrp, service_in, "In a relation with an unfeasible service: #{service.id}")
+            add_unassigned(unfeasible, vrp, service_in, "In a #{relation.type} relation with an unfeasible service: #{service.id}")
           }
         }
         vrp.routes.each{ |route|
@@ -570,6 +577,83 @@ module Wrappers
       }
 
       unfeasible
+    end
+
+    def sequence_relation_with_no_reachable_vehicle(unfeasible, vrp, relation)
+      return false unless Models::Relation::POSITION_TYPES.include?(relation.type)
+
+      vrp.vehicles.each{ |v|
+        unreachable_service_id = last_service_reachable_sequence(vrp, v, relation.linked_services)
+        next unless unreachable_service_id
+
+        service_met = false
+        relation.linked_services.each{ |service|
+          service_met = true if service.id == unreachable_service_id
+          next unless service_met
+
+          service.vehicle_compatibility[v.id] = false
+        }
+      }
+
+      previous_removed = false
+      to_delete_services = []
+      relation.linked_services.each{ |service|
+        previous_removed ||= vrp.vehicles.none?{ |vehicle|
+          service.vehicle_compatibility[vehicle.id]
+        }
+
+        if previous_removed
+          if Models::Relation::ALL_OR_NONE_RELATIONS.include?(relation.type)
+            to_delete_services = relation.linked_services
+            break false
+          else
+            to_delete_services << service
+          end
+        end
+      }
+
+      to_delete_services.each{ |service|
+        add_unassigned(unfeasible, vrp, service, "Service belongs to a relation of type #{relation.type} which makes it infeasible")
+      }
+    end
+
+    def last_service_reachable_sequence(vrp, vehicle, services)
+      vehicle_timewindow = vehicle.timewindow || Models::Timewindow.new(start: 0)
+      vehicle_duration = [vehicle.duration, vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?) - vehicle_timewindow.start].compact.min
+      successive_activities = services.map{ |service|
+        return service.id if service.vehicle_compatibility[vehicle.id] == false
+        [service.id, service.activity && [service.activity] || service.activities]
+      }
+      return nil if successive_activities.all?{ |_id, acts| acts.any?{ |a| a.timewindows.none?(&:end) } }
+
+      matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
+
+      depot_approach = vehicle.start_point && matrix.time ? successive_activities.first.last.map{ |act| matrix.time[vehicle.start_point.matrix_index][act.point.matrix_index] }.min : 0
+      earliest_arrival = vehicle_timewindow.start + depot_approach
+
+      successive_activities.each.with_index{ |(id, a_activities), a_index|
+        return id if earliest_arrival > (a_activities.map{ |act| act.timewindows.map{ |tw| tw.safe_end(act.late_multiplier&.positive?) }.max }.max ||
+                                            vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?))
+
+        last_duration = a_activities.map{ |a| a.duration_on(vehicle) }.min
+        depot_return = vehicle.end_point && matrix.time ? a_activities.map{ |act| matrix.time[act.point.matrix_index][vehicle.end_point.matrix_index] }.min : 0
+        earliest_depot_arrival = earliest_arrival + depot_return + last_duration
+
+        return id if earliest_depot_arrival > vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?) ||
+                     earliest_depot_arrival - vehicle_timewindow.start > vehicle_duration
+
+        break if a_index == successive_activities.size - 1
+
+        _b_id, b_activities = successive_activities[a_index + 1]
+
+        earliest_arrival = a_activities.map{ |a_act|
+          b_activities.map{ |b_act|
+            travel_time = matrix.time && matrix.time[a_act.point.matrix_index][b_act.point.matrix_index]
+            travel_time += a_act.duration_on(vehicle) + travel_time > 0 ? a_act.setup_duration_on(vehicle) : 0
+            [b_act.timewindows.map(&:start)&.min || 0, earliest_arrival + travel_time].max
+          }.min
+        }.min
+      }
     end
 
     def check_timewindow_inconsistency(vrp, unfeasible, service)
@@ -718,6 +802,11 @@ module Wrappers
         if no_compatible_vehicle_with_compatible_tw(vrp, service)
           add_unassigned(unfeasible, vrp, service, 'No compatible vehicle can reach this service while respecting all constraints')
         end
+      }
+
+      vrp.relations.each{ |relation|
+        # If relation becomes empty it is removed by add_unassigned
+        sequence_relation_with_no_reachable_vehicle(unfeasible, vrp, relation)
       }
 
       unless unfeasible.empty?

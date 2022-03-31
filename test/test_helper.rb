@@ -54,6 +54,19 @@ Minitest::Retry.use!(
   ]
 )
 
+class IsolatedTest < Minitest::Test
+  # It cleans the active_hash database before and after (around) the test. 
+  # Needed for tests calling Model::X.create directly to prevent ID errors.
+  include Rack::Test::Methods
+
+  def around
+    Models.delete_all
+    yield
+  ensure
+    Models.delete_all
+  end
+end
+
 module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDisableDirective, Metrics/ModuleLength
   def self.coerce(vrp)
     # This function is called both with a JSON and Models::Vrp
