@@ -465,7 +465,7 @@ module Wrappers
       # calls add_unassigned_internal for every service in an "ALL_OR_NONE_RELATION" with the service
       service_already_marked_unfeasible = !!unfeasible[service.id]
 
-      unless service_already_marked_unfeasible && reason.start_with?('In a relation with an unfeasible service: ')
+      unless service_already_marked_unfeasible && reason.start_with?('In a ') && reason =~ /\AIn a \S+ relation with an unfeasible service: /
         add_unassigned_internal(unfeasible, vrp, service, reason)
       end
 
