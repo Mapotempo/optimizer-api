@@ -54,6 +54,10 @@ module Models
       hash
     end
 
+    def lateness_allowed?
+      !(late_multiplier.nil? || late_multiplier == 0)
+    end
+
     def duration_on(vehicle = nil)
       case vehicle
       when nil

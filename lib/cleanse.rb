@@ -28,7 +28,7 @@ module Cleanse
     current.info.travel_time&.zero? || current.info.travel_distance&.zero?
   end
 
-  def self.same_empty_units(capacities, previous, current)
+  def self.same_empty_units(capacity_unit_ids, previous, current)
     if previous && current
       if previous
         previous_empty_units = previous.loads.map{ |loa|
@@ -36,9 +36,7 @@ module Cleanse
         }.compact
       end
       if current
-        useful_units = (current.loads.map{ |loa|
-          loa.quantity.unit.id
-        }.compact & capacities)
+        useful_units = useful_unit_ids(capacity_unit_ids, current)
 
         current_empty_units = current.loads.map{ |loa|
           loa.quantity.unit.id if loa.quantity.empty
@@ -49,7 +47,7 @@ module Cleanse
     end
   end
 
-  def self.same_fill_units(capacities, previous, current)
+  def self.same_fill_units(capacity_unit_ids, previous, current)
     if previous && current
       if previous
         previous_fill_units = previous.loads.map{ |loa|
@@ -57,9 +55,7 @@ module Cleanse
         }.compact
       end
       if current
-        useful_units = (current.loads.map{ |loa|
-          loa.quantity.unit.id
-        }.compact & capacities)
+        useful_units = useful_unit_ids(capacity_unit_ids, current)
 
         current_fill_units = current.loads.map{ |loa|
           loa.quantity.unit.id if loa.quantity.fill
@@ -70,24 +66,28 @@ module Cleanse
     end
   end
 
+  def self.useful_unit_ids(capacity_unit_ids, stop)
+    stop.loads.map{ |loa| loa.quantity.unit.id }.compact & capacity_unit_ids
+  end
+
   def self.cleanse_empties_fills(vrp, solution)
     service_types = %i[pickup delivery service]
     solution.routes.each{ |route|
       vehicle = route.vehicle
-      capacities_units = vehicle.capacities.collect{ |capacity| capacity.unit_id if capacity.limit }.compact
+      capacity_unit_ids = vehicle.capacities.collect{ |capacity| capacity.unit_id if capacity.limit }.compact
       previous_activity = nil
 
       route.stops.delete_if{ |stop|
         next unless service_types.include?(stop.type)
 
         if previous_activity && stop && same_position(vrp, stop) &&
-           same_empty_units(capacities_units, previous_activity, stop) &&
-           !same_fill_units(capacities_units, previous_activity, stop)
+           same_empty_units(capacity_unit_ids, previous_activity, stop) &&
+           !same_fill_units(capacity_unit_ids, previous_activity, stop)
           add_unnassigned(solution.unassigned_stops, stop, 'Duplicate empty service.')
           true
         elsif previous_activity && stop && same_position(vrp, stop) &&
-              same_fill_units(capacities_units, previous_activity, stop) &&
-              !same_empty_units(capacities_units, previous_activity, stop)
+              same_fill_units(capacity_unit_ids, previous_activity, stop) &&
+              !same_empty_units(capacity_unit_ids, previous_activity, stop)
           add_unnassigned(solution.unassigned_stops, stop, 'Duplicate fill service.')
           true
         else

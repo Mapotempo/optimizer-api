@@ -842,8 +842,24 @@ class InterpreterTest < Minitest::Test
         }
       }
     }
+
+    problem[:services][-2][:activity][:position] = :never_first
+    problem[:services][-1][:activity][:position] = :never_first
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 1, solutions[0].unassigned_stops.size
+    reasons = solutions[0].unassigned_stops.map{ |st| st[:reason] }
+    assert_includes reasons, 'Duplicate empty service.'
+    assert_equal 4, solutions[0].routes[0].stops.size
+    refute_equal 'empty_0', solutions[0].routes[0].stops[1].id
+
+    problem[:services][-2][:activity].delete(:position)
+    problem[:services][-1][:activity][:position] = :always_last
+    vrp = TestHelper.create(problem)
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+    assert_equal 1, solutions[0].unassigned_stops.size
+    reasons = solutions[0].unassigned_stops.map{ |st| st[:reason] }
+    assert_includes reasons, 'Duplicate empty service.'
     assert_equal 4, solutions[0].routes[0].stops.size
   end
 
