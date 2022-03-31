@@ -1,8 +1,9 @@
 # Lateness
 
-Once defined at the service level it allow the vehicles to arrive late at a points to serve.
+Once defined at the service level it allows the vehicles to arrive late to begin the related activity.
 
 ```json
+{
   "services": [{
     "id": "visit",
     "activity": {
@@ -14,12 +15,14 @@ Once defined at the service level it allow the vehicles to arrive late at a poin
       }],
       "duration": 2100.0
     }
-  }
+  }]
+}
 ```
 
-Defined at the vehicle level, it allow the vehicle to arrive late at the ending depot.
+Defined at the vehicle level, it allows the vehicles to arrive late at the ending depot.
 
 ```json
+{
   "vehicles": [{
     "id": "vehicle_id-1",
     "router_mode": "car",
@@ -36,6 +39,7 @@ Defined at the vehicle level, it allow the vehicle to arrive late at the ending 
     "cost_distance_multiplier": 1.0,
     "cost_time_multiplier": 1.0
   }]
+}
 ```
 
-Note : In the case of a global optimization, at least one those two parameters (**late_multiplier** or **cost_late_multiplier**) must be set to zero, otherwise only one vehicle would be used.
+Note : By default, the maximum lateness tolerated of a timewindow is 100% of the actual timewindow. In other words, if the timewindow is 6 hours wide, the maximum lateness will be 6 hours too. This value can be changed through an environment variable (server side) or individually within each timewindow using the field `maximum_lateness`.
