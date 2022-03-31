@@ -1449,7 +1449,8 @@ module Wrappers
         }
       when :rewind
         # take it back in case in dicho and there will be re-optimization
-        return nil unless vrp.services.any?{ |s| s.activity[:simplified_setup_duration] }
+        return nil if vrp.services.any?{ |s| s.activities.any? } ||
+                      vrp.services.none?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
@@ -1488,9 +1489,8 @@ module Wrappers
         # patches the solution
         # the travel_times need to be decreased and setup_duration need to be increased by
         # (coef_setup * setup_duration + additional_setup) if setup_duration > 0 and matrix_indices are different
-        return nil unless solution.routes.any?{ |route|
-          route.stops.any?{ |stop| stop.activity[:simplified_setup_duration] }
-        }
+        return nil if vrp.services.any?{ |s| s.activities.any? } ||
+                      vrp.services.none?{ |s| s.activity[:simplified_setup_duration] }
 
         simplification_active = true
 
