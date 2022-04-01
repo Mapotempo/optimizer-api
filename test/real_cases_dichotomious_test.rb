@@ -20,7 +20,7 @@ require './test/test_helper'
 class RealCasesTest < Minitest::Test
   if !ENV['SKIP_REAL_DICHO'] && !ENV['SKIP_DICHO']
 
-    def test_dichotomious_first_instance
+    def test_dichotomous_first_instance
       skip "This test have incorrect bounds so it never passes and it takes 3 hours to complete.
             Followed by gitlab-issue https://gitlab.com/mapotempo/optimizer-api/-/issues/648"
 
@@ -56,7 +56,7 @@ class RealCasesTest < Minitest::Test
       assert duration_elapsed < duration_max * 1.55, "Too much time spent inside api: #{elapsed_time_info_str}"
     end
 
-    def test_dichotomious_second_instance
+    def test_dichotomous_second_instance
       skip "This test have incorrect bounds so it never passes and it takes 3 hours to complete.
             Followed by gitlab-issue https://gitlab.com/mapotempo/optimizer-api/-/issues/648"
 

@@ -43,7 +43,7 @@ Minitest::Retry.use!(
     Api::V01::OutputTest#test_returned_types
     Api::V01::OutputTest#test_use_deprecated_csv_headers_asynchronously
     Api::V01::WithSolverTest#test_deleted_job
-    DichotomiousTest#test_dichotomious_approach
+    DichotomousTest#test_dichotomous_approach
     RealCasesTest#test_ortools_open_timewindows
     SplitClusteringTest#test_avoid_capacities_overlap
     SplitClusteringTest#test_cluster_one_phase_vehicle

@@ -166,9 +166,9 @@ module OptimizerWrapper
     tic = Time.now
     expected_activity_count = vrp.visits
 
-    solution ||= Interpreters::SplitClustering.split_clusters(service_vrp, job, &block)        # Calls recursively define_process
+    solution ||= Interpreters::SplitClustering.split_clusters(service_vrp, job, &block) # Calls recursively define_process
 
-    solution ||= Interpreters::Dichotomious.dichotomious_heuristic(service_vrp, job, &block)   # Calls recursively define_process
+    solution ||= Interpreters::Dichotomous.dichotomous_heuristic(service_vrp, job, &block) # Calls recursively define_process
 
     solution ||= solve(service_vrp, job, block)
 
