@@ -25,10 +25,11 @@ module PeriodicService
 
     return true if service.visits_number == 1
 
+    first_service_day = ((self.configuration.schedule.range_indices[:start]..self.configuration.schedule.range_indices[:end]).to_a - service.unavailable_days.to_a).min
     self.vehicles.any?{ |vehicle|
       next unless service.vehicle_compatibility.nil? || service.vehicle_compatibility[vehicle.id] # vehicle already eliminated
 
-      current_day = self.configuration.schedule.range_indices[:start]
+      current_day = [self.configuration.schedule.range_indices[:start], first_service_day].max
       decimal_day = current_day
       current_visit = 0
 
