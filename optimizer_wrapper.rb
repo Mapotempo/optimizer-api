@@ -627,8 +627,8 @@ module OptimizerWrapper
           aa.activity.timewindows.empty? || bb.activity.timewindows.empty? ||
             aa.activity.timewindows.any?{ |twa|
               bb.activity.timewindows.any?{ |twb|
-                twa.start <= twb.end + twb.maximum_lateness &&
-                  twb.start <= twa.end + twb.maximum_lateness
+                twa.start <= twb.safe_end(bb.activity.lateness_allowed?) &&
+                  twb.start <= twa.safe_end(aa.activity.lateness_allowed?)
               }
             } ?
             matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
@@ -645,7 +645,7 @@ module OptimizerWrapper
           # as a single one.
           aa.activity.timewindows.empty? || bb.activity.timewindows.empty? ||
             aa.activity.timewindows.any?{ |twa|
-              bb.activity.timewindows.any?{ |twb| twa.start <= twb.end && twb.start <= twa.end }
+              bb.activity.timewindows.any?{ |twb| twa.start <= twb.safe_end && twb.start <= twa.safe_end }
             } && (no_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) && aa.skills == bb.skills ?
             matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] : Float::INFINITY
         end
