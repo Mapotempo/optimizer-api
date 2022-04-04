@@ -76,15 +76,15 @@ module Models
       vrp
     end
 
-    def self.as_json(options = {})
+    def as_json(options = {})
       hash = super(options)
 
-      service_ids = hash[:services].map{ |service| service[:id] }
+      service_ids = hash[:services]&.map{ |service| service[:id] }
       # Remove unknown linked_service_ids from relations
-      hash[:relations].delete_if{ |relation|
-        relation[:linked_service_ids].delete_if{ |id| service_ids.exclude?(id) }
+      hash[:relations]&.delete_if{ |relation|
+        relation[:linked_service_ids]&.delete_if{ |id| service_ids.exclude?(id) }
 
-        relation[:linked_service_ids].empty?
+        relation[:linked_service_ids]&.empty?
       }
       hash
     end
