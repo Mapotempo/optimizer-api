@@ -29,7 +29,6 @@ module Models
     field :technique
     field :metric, type: Symbol
     field :entity, type: Symbol
-    field :threshold
     field :restarts
     field :centroids
   end
@@ -55,7 +54,7 @@ module Models
     field :dicho_division_service_limit, default: 100 # This variable needs to corrected using the average number of services per vehicle.
     field :dicho_division_vehicle_limit, default: 3
     field :dicho_exclusion_scaling_angle, default: 38
-    field :dicho_exclusion_rate, default: 0.6
+    field :dicho_inclusion_rate, default: 0.6
     field :dicho_algorithm_service_limit, default: 500 # This variable is exposed in a hidden way for studies
 
     field :duration, default: nil

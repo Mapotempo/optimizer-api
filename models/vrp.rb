@@ -692,7 +692,7 @@ module Models
 
             # TODO: Here we use flying_distance for approx_depot_time_correction;
             # however, this value is in terms of meters instead of seconds. Still since all dicho parameters
-            # (i.e.: resolution.dicho_exclusion_scaling_angle, resolution.dicho_exclusion_rate, etc.)
+            # (i.e.: resolution.dicho_exclusion_scaling_angle, resolution.dicho_inclusion_rate, etc.)
             # are calculated with this functionality, correcting this bug makes the calculated parameters perform
             # less effective. We need to calculate new parameters after correcting the bug.
 
@@ -707,9 +707,10 @@ module Models
 
         average_service_load = total_time_load / services.size.to_f
         average_number_of_services_per_vehicle = average_vehicles_work_time / average_service_load
-        exclusion_rate = configuration.resolution.dicho_exclusion_rate * average_number_of_services_per_vehicle
-         # Angle needs to be in between 0 and 45 - 0 means only uniform cost is used -
-         # 45 means only variable cost is used
+        inclusion_rate = configuration.resolution.dicho_inclusion_rate * average_number_of_services_per_vehicle
+         # Angle needs to be in between 0° and 45°:
+         # - 0°  means only uniform cost is used
+         # - 45° means only variable cost is used
         angle = configuration.resolution.dicho_exclusion_scaling_angle
         tan_variable = Math.tan(angle * Math::PI / 180)
         tan_uniform = Math.tan((45 - angle) * Math::PI / 180)
@@ -717,9 +718,9 @@ module Models
         coeff_uniform_cost = tan_uniform / (1 - tan_variable * tan_uniform)
 
         services.each{ |service|
-          service.exclusion_cost = (coeff_variable_cost *
-            (max_fixed_cost / exclusion_rate * service.activity.duration / average_service_load) +
-            coeff_uniform_cost * (max_fixed_cost / exclusion_rate)).ceil
+          service.exclusion_cost = (2**(4 - service.priority) * coeff_variable_cost *
+            (max_fixed_cost / inclusion_rate * service.activity.duration / average_service_load) +
+            coeff_uniform_cost * (max_fixed_cost / inclusion_rate)).ceil
         }
       when :distance
         raise 'Distance based exclusion cost calculation is not ready'

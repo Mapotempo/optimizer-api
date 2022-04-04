@@ -132,7 +132,7 @@ module VrpConfiguration
     optional(:resolution, type: Hash, desc: 'Parameters used to stop the search') do
       use :vrp_request_resolution
     end
-    optional(:restitution, type: Hash, desc: 'Restitution paramaters') do
+    optional(:restitution, type: Hash, desc: 'Restitution parameters') do
       use :vrp_request_restitution
     end
     optional(:schedule, type: Hash, desc: 'Describe the general settings of a schedule') do
@@ -148,7 +148,6 @@ module VrpConfiguration
 
     optional(:metric, type: Symbol, desc: 'Defines partition reference metric. Values should be either duration, visits or any unit you defined in units.')
     requires(:entity, type: Symbol, values: [:vehicle, :work_day], desc: 'Describes what the partition corresponds to. Available only if method in [balanced_kmeans hierarchical_tree].', coerce_with: ->(value) { value.to_sym })
-    optional(:threshold, type: Integer, desc: 'Maximum size of partition. Available only if method in [iterative_kmean clique].')
     optional(:centroids, type: Array[Integer], desc: 'Forces centroid indices used to generate clusters with kmeans partition_method. Only available through balanced_kmeans and entity vehicle as first partition.')
   end
 
@@ -157,10 +156,10 @@ module VrpConfiguration
     optional(:partition_method, type: String, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
     optional(:partition_metric, type: Symbol, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
     optional(:kmeans_centroids, type: Array[Integer], documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
-    optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geolocated point')
+    optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geo-located point')
     optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
     optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
-    optional(:neighbourhood_size, type: Integer, desc: 'Limit the size of the considered neighbourhood within the search')
+    optional(:neighbourhood_size, type: Integer, desc: 'Limit the size of the considered neighborhood within the search')
     optional(:partitions, type: Array, desc: 'Describes partition process to perform before solving. Partitions will be performed in provided order') do
       use :vrp_request_partition
     end
@@ -173,13 +172,13 @@ module VrpConfiguration
   params :vrp_request_resolution do
     optional(:duration, type: Integer, values: ->(v) { v.positive? }, allow_blank: false, desc: 'Maximum duration of resolution')
     optional(:iterations, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
-    optional(:iterations_without_improvment, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without improvment from the best solution already found')
+    optional(:iterations_without_improvment, type: Integer, allow_blank: false, desc: 'Maximum number of iterations without improvement from the best solution already found')
     optional(:stable_iterations, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:stable_coefficient, type: Float, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:initial_time_out, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: '[ DEPRECATED : use minimum_duration instead]')
     optional(:minimum_duration, type: Integer, allow_blank: false, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
     optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
-    optional(:vehicle_limit, type: Integer, desc: 'Limit the maxiumum number of vehicles within a solution. Not available with periodic heuristic.')
+    optional(:vehicle_limit, type: Integer, desc: 'Limit the maximum number of vehicles within a solution. Not available with periodic heuristic.')
     optional(:solver_parameter, type: Integer, documentation: { hidden: true }, desc: '[ DEPRECATED : use configuration.preprocessing.first_solution_strategy instead ]')
     optional(:solver, type: Boolean, desc: 'Defines if solver should be called')
     optional(:minimize_days_worked, type: Boolean, default: false, desc: '(Periodic heuristic only) Starts filling earlier days of the period first and minimizes the total number of days worked. Available only if first_solution_strategy is \'periodic\'. Not available with ORtools.')
@@ -189,9 +188,10 @@ module VrpConfiguration
     optional(:evaluate_only, type: Boolean, desc: 'Takes the solution provided through relations of type order and computes solution cost and time/distance associated values (Ortools only). Not available for periodic yet.')
     optional(:several_solutions, type: Integer, allow_blank: false, default: 1, desc: 'Return several solution computed with different matrices')
     optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug][:batch_heuristic], desc: 'Compute each heuristic solution')
-    optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrice')
+    optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrices')
     optional(:repetition, type: Integer, documentation: { hidden: true }, desc: 'Number of times the optimization process is going to be repeated. Only the best solution is returned.')
     optional(:dicho_algorithm_service_limit, type: Integer, documentation: { hidden: true }, desc: 'Minimum number of services required to allow a call to heuristic dichotomous_approach')
+    optional(:dicho_inclusion_rate, type: Float, values: ->(v) { v > 0 }, documentation: { hidden: true }, desc: 'Approximate minimum load rate for the solver to consider using a vehicle during an optimization via heuristic dichotomous_approach')
     at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
     mutually_exclusive :initial_time_out, :minimum_duration
     mutually_exclusive :solver, :solver_parameter
@@ -212,7 +212,7 @@ module VrpConfiguration
 
   params :vrp_request_schedule do
     optional(:range_indices, type: Hash, desc: '(Schedule only) Day indices within the plan has to be build') do
-      use :vrp_request_indice_range
+      use :vrp_request_index_ranges
     end
     optional(:range_date, type: Hash, desc: '(Schedule only) Define the total period to consider') do
       use :vrp_request_date_range
@@ -225,7 +225,7 @@ module VrpConfiguration
 
     optional(:unavailable_index_ranges, type: Array, desc:
       '(Schedule only) Day index ranges where no routes should be generated') do
-      use :vrp_request_indice_range
+      use :vrp_request_index_ranges
     end
     optional(:unavailable_date_ranges, type: Array, desc:
       '(Schedule only) Date ranges where no routes should be generated') do
@@ -234,7 +234,7 @@ module VrpConfiguration
     mutually_exclusive :unavailable_index_ranges, :unavailable_date_ranges
   end
 
-  params :vrp_request_indice_range do
+  params :vrp_request_index_ranges do
     requires(:start, type: Integer, desc: 'Beginning of the range')
     requires(:end, type: Integer, desc: 'End of the range')
   end
@@ -292,8 +292,8 @@ module VrpMisc
 
   params :vrp_request_subtour do
     requires(:id, type: String, allow_blank: false, desc: '')
-    optional(:time_bounds, type: Integer, desc: 'Time limit from the transmodal points (Isochrone)')
-    optional(:distance_bounds, type: Integer, desc: 'Distance limit from the transmodal points (Isodistanche)')
+    optional(:time_bounds, type: Integer, desc: 'Time limit from the transmodal points (Isochronous)')
+    optional(:distance_bounds, type: Integer, desc: 'Distance limit from the transmodal points (Isodistance)')
     optional(:router_mode, type: String, desc: '`car`, `truck`, `bicycle`, etc... See the Router Wrapper API doc')
     optional(:router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance')
     optional(:speed_multiplier, type: Float, default: 1.0, desc: 'multiply the current modality speed, default : 1.0')
@@ -351,8 +351,8 @@ module VrpMissions
 
     optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Schedule only) unavailable indices of visit')
 
-    optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptionnals days indices of unavailabilty')
-    optional(:unavailable_visit_day_date, type: Array, desc: '(Schedule only) Express the exceptionnals days of unavailability')
+    optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptional days indices of unavailability')
+    optional(:unavailable_visit_day_date, type: Array, desc: '(Schedule only) Express the exceptional days of unavailability')
     mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
     optional(:minimum_lapse, type: Float, desc: '(Schedule only) Minimum day lapse between two visits')
@@ -377,7 +377,7 @@ module VrpMissions
 
     optional(:unavailable_index_ranges, type: Array, desc:
       '(Schedule only) Day index ranges where visits can not take place') do
-      use :vrp_request_indice_range
+      use :vrp_request_index_ranges
     end
     optional(:unavailable_date_ranges, type: Array, desc:
       '(Schedule only) Date ranges where visits can not take place') do
@@ -395,8 +395,8 @@ module VrpMissions
 
     optional(:unavailable_visit_indices, type: Array[Integer], desc: '(Schedule only) unavailable indices of visit')
 
-    optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptionnals days indices of unavailabilty')
-    optional(:unavailable_visit_day_date, type: Array, desc: '(Schedule only) Express the exceptionnals days of unavailability')
+    optional(:unavailable_visit_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptional days indices of unavailability')
+    optional(:unavailable_visit_day_date, type: Array, desc: '(Schedule only) Express the exceptional days of unavailability')
     mutually_exclusive :unavailable_visit_day_indices, :unavailable_visit_day_date
 
     optional(:minimum_lapse, type: Float, desc: 'Minimum day lapse between two visits')
@@ -422,7 +422,7 @@ module VrpMissions
 
     optional(:unavailable_index_ranges, type: Array, desc:
       '(Schedule only) Day index ranges where visits can not take place') do
-      use :vrp_request_indice_range
+      use :vrp_request_index_ranges
     end
     optional(:unavailable_date_ranges, type: Array, desc:
       '(Schedule only) Date ranges where visits can not take place') do
@@ -538,13 +538,13 @@ module VrpVehicles
                       }, # TODO : Create custom coerce to consider multiple alternatives
                       desc: 'Particular abilities which could be handle by the vehicle. This parameter is a set of alternative skills, and must be defined as an Array[Array[String]]. Not available with periodic heuristic.'
 
-    optional(:unavailable_work_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptionnals indices of unavailabilty')
-    optional(:unavailable_work_date, type: Array, desc: '(Schedule only) Express the exceptionnals days of unavailability')
+    optional(:unavailable_work_day_indices, type: Array[Integer], desc: '(Schedule only) Express the exceptional indices of unavailability')
+    optional(:unavailable_work_date, type: Array, desc: '(Schedule only) Express the exceptional days of unavailability')
     mutually_exclusive :unavailable_work_day_indices, :unavailable_work_date
 
     optional(:unavailable_index_ranges, type: Array, desc:
       '(Schedule only) Day index ranges where vehicle is not available') do
-      use :vrp_request_indice_range
+      use :vrp_request_index_ranges
     end
     optional(:unavailable_date_ranges, type: Array, desc:
       '(Schedule only) Date ranges where vehicle is not available') do
@@ -582,7 +582,7 @@ module VrpVehicles
       use :vrp_request_timewindow
     end
     optional(:timewindow_id, type: String, desc: 'Sequence timewindows to consider')
-    optional(:timewindow, type: Hash, desc: 'Time window whithin the vehicle may be on route') do
+    optional(:timewindow, type: Hash, desc: 'Time window within the vehicle may be on route') do
       use :vrp_request_timewindow
     end
     mutually_exclusive :sequence_timewindows, :sequence_timewindow_ids, :timewindow
