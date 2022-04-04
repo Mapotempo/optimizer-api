@@ -94,6 +94,26 @@ module Models
         skills_to_output += self.original_skills
         skills_to_output
       end
+
+      def active_timewindow
+        return nil if activity.timewindows.empty?
+
+        if info.waiting_time > 0
+          active_tw = activity.timewindows.select{ |tw| tw.start > info.begin_time }.min_by{ |tw|
+            tw.start - info.begin_time
+          }
+          return active_tw
+        end
+
+        active_tw = activity.timewindows.find{ |tw|
+          tw.start <= info.begin_time && info.begin_time <= tw.safe_end
+        }
+        return active_tw if active_tw
+
+        activity.timewindows.find{ |tw|
+          tw.start <= info.begin_time && info.begin_time <= tw.safe_end(activity.lateness_allowed?)
+        }
+      end
     end
 
     class StopDepot < Stop

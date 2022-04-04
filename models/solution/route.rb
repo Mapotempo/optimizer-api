@@ -65,6 +65,11 @@ module Models
         self.stops.each_with_index{ |stop, index|
           next if index <= shift_start_index
 
+          active_tw = stop.active_timewindow
+          if active_tw && (active_tw.safe_end(stop.activity.lateness_allowed?) - stop.info.begin_time < current_shift)
+            raise 'Current implementation of shift route times should not happen in the context of tight timewindows'
+          end
+
           if stop.info.waiting_time > 0
             waiting_resorb = [stop.info.waiting_time - current_shift, 0].max
             current_shift = [current_shift - waiting_resorb, 0].max
@@ -75,7 +80,7 @@ module Models
           stop.info.end_time += current_shift if stop.info.end_time
           stop.info.departure_time += current_shift if stop.info.departure_time
         }
-        self.info.end_time += shift_amount if self.info.end_time
+        self.info.end_time += current_shift if self.info.end_time
       end
     end
   end
