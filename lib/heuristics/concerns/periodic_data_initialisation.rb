@@ -58,7 +58,7 @@ module PeriodicDataInitialization
         best_index = find_best_index(id, associated_route, false) if associated_route
         considered_ids << id
         if best_index
-          insert_point_in_route(associated_route, best_index, false)
+          insert_visit_in_route(associated_route, best_index, false)
 
           # unlock corresponding services
           services_to_add = @services_unlocked_by[id].to_a & @candidate_services_ids
@@ -206,7 +206,7 @@ module PeriodicDataInitialization
     }
 
     @indices.each_key{ |point_id|
-      @points_assignment[point_id] = { vehicles: [], days: [], maximum_visits_number: 0 }
+      @points_assignment[point_id] = { vehicles: [], days: [], service_ids: [] }
     }
   end
 
