@@ -79,12 +79,15 @@ module Models
     def as_json(options = {})
       hash = super(options)
 
-      service_ids = hash[:services]&.map{ |service| service[:id] }
-      # Remove unknown linked_service_ids from relations
+      service_ids = hash[:services]&.map{ |service| service[:id] } || []
+      vehicle_ids = hash[:vehicles]&.map{ |vehicle| vehicle[:id] } || []
+      # Remove unknown service and vehicle IDs from relations
       hash[:relations]&.delete_if{ |relation|
         relation[:linked_service_ids]&.delete_if{ |id| service_ids.exclude?(id) }
+        relation[:linked_vehicle_ids]&.delete_if{ |id| vehicle_ids.exclude?(id) }
 
-        relation[:linked_service_ids]&.empty?
+        relation[:linked_service_ids].to_a.empty? &&
+          relation[:linked_vehicle_ids].to_a.empty?
       }
       hash
     end

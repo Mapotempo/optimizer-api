@@ -436,5 +436,19 @@ module Models
       # Verify that a JSON dumped solution may be imported again
       Models::Solution.new(solution_hash)
     end
+
+    def test_vrp_as_json_relations
+      problem = VRP.basic
+      problem[:relations] = [{ type: :shipment, linked_service_ids: ['service_1', 'service_2']}]
+      vrp = Models::Vrp.create(problem)
+
+      vrp.services.pop(2)
+      vrp_hash = vrp.as_json
+      assert_equal 1, vrp_hash[:relations].first[:linked_service_ids].size
+
+      vrp.services.pop(1)
+      vrp_hash = vrp.as_json
+      assert_empty vrp_hash[:relations]
+    end
   end
 end
