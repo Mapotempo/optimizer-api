@@ -220,20 +220,11 @@ class WrapperTest < Minitest::Test
           matrix_index: i
         }
       },
-      rests: [{
-        id: 'rest_0',
-        timewindows: [{
-          start: 1,
-          end: 2
-        }],
-        duration: 1
-      }],
       vehicles: [{
         id: 'vehicle_0',
         start_point_id: 'point_0',
         end_point_id: 'point_' + (size - 1).to_s,
         matrix_id: 'matrix_0',
-        rest_ids: ['rest_0']
       }],
       services: (1..(size - 2)).collect{ |i|
         {
@@ -259,7 +250,7 @@ class WrapperTest < Minitest::Test
       }
     }
     solution = OptimizerWrapper.solve(service: :ortools, vrp: TestHelper.create(problem))
-    assert_equal size + 1, solution.routes[0].stops.size # always return stops for start/end
+    assert_equal size, solution.routes[0].stops.size # always return stops for start/end
     points = solution.routes[0].stops.collect{ |a| a.service_id || a.activity.point_id || a.rest_id }
     services_size = problem[:services].size
     services_size.times.each{ |i|

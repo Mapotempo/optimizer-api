@@ -537,7 +537,6 @@ module OptimizerWrapper
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
         tags = { expected: expected_value, assigned: nb_assigned, unassigned: nb_unassigned }
         log 'Wrong number of visits returned in result', tags.merge(level: :warn)
-        # FIXME: Validate time computation for zip clusters
         raise RuntimeError, 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
       end
     }
@@ -591,7 +590,7 @@ module OptimizerWrapper
   end
 
   def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    @zip_condition = cluster_threshold && vrp.matrices.any? && vrp.services.all?(&:activity) &&
+    @zip_condition = cluster_threshold && vrp.matrices.any? && vrp.services.all?(&:activity) && vrp.rests.empty? &&
                      !vrp.schedule? && (vrp.relations.map(&:type) - RELATION_ZIP_CLUSTER_CAN_HANDLE).empty?
 
     if @zip_condition
@@ -764,14 +763,12 @@ module OptimizerWrapper
           if cluster_index && clusters[cluster_index].data_items.size > 1
             cluster_data_indices = clusters[cluster_index].data_items.collect{ |i| i[0] }
             cluster_services = cluster_data_indices.map{ |index| original_vrp.services[index] }
-            next_point = route.stops[act_index + 1..route.stops.size].find{ |act|
-              act.activity.point
-            }&.activity&.point
+            next_stop = route.stops[act_index + 1..route.stops.size].find{ |act| act.activity.point }
             tsp = TSPHelper.create_tsp(original_vrp,
                                        vehicle: route.vehicle,
                                        services: cluster_services,
                                        start_point: previous_stop.activity.point,
-                                       end_point: next_point,
+                                       end_point: next_stop&.activity&.point,
                                        begin_time: previous_stop.info.end_time)
             tsp_solution = TSPHelper.solve(tsp)
             previous_stop = tsp_solution.routes[0].stops.reverse.find(&:service_id)
@@ -780,12 +777,14 @@ module OptimizerWrapper
               original_service = original_vrp.services.find{ |service| service.id == service_stop.id }
               stop = Models::Solution::Stop.new(original_service, info: service_stop.info)
             }
+            shift = tsp_solution.routes[0].info.total_travel_time - stop.info.travel_time - next_stop&.info&.travel_time || 0
+            route.shift_route_times(shift, act_index + 1) if act_index < route.stops.size
             service_stops
           else
             stop
           end
         else
-          previous_stop = stop || previous_stop
+          previous_stop = stop.activity.point ? stop : previous_stop
           stop
         end
       }
