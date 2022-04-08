@@ -20,7 +20,8 @@ require './models/base'
 module Parsers
   class ServiceParser
     def self.parse(service, options)
-      activity = options[:index] && service.activities[options[:index]] || service.activity
+      alternative_index = options[:index] || (service.activity ? 0 : (service.activities.size - 1))
+      activity = service.activity || service.activities[alternative_index]
       activity_hash = Models::Activity.field_names.map{ |key|
         next if key == :point_id
 
@@ -36,7 +37,7 @@ module Parsers
         pickup_shipment_id: service.type == :pickup ? (service.original_id || service.id) : nil,
         delivery_shipment_id: service.type == :delivery ? (service.original_id || service.id) : nil,
         type: service.type,
-        alternative: options[:index],
+        alternative: options[:index], # nil if unassigned but return by default the last activity
         loads: build_loads(service, options),
         activity: dup_activity,
         info: options[:info] || Models::Solution::Stop::Info.new({}),

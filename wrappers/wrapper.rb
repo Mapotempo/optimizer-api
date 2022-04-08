@@ -671,7 +671,13 @@ module Wrappers
 
         max_earliest_arrival = 0
         relation.linked_services.map{ |service_in|
-          next unless service_in.activity.timewindows.any?
+          if !service_in.activity && service_in.activities.any?{ |act| act.timewindows.any? }
+            # TODO: Should consider alternatives
+            log_string = 'Service activities within relations are not considered for timewindow inconsistency check'
+            log log_string, relation.as_json.merge(level: :warn)
+            next
+          end
+          next if service_in.activity.nil? || service_in.activity.timewindows.none?
 
           earliest_arrival = service_in.activity.timewindows.map{ |tw|
             tw.day_index.to_i * 86400 + tw.start
