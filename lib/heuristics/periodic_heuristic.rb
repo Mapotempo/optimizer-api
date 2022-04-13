@@ -703,22 +703,23 @@ module Wrappers
       [activity_out, tw_accepted, shift, time_back_to_depot]
     end
 
+    # For each day where at least one visit was recently assigned to vehicle_id,
+    # insert minimum required visits in order to ensure that route will not be emptied later
     def ensure_routes_will_not_be_rejected(vehicle_id, impacted_days)
       while impacted_days.size.positive?
         started_day = impacted_days.first
-        can_not_insert_more = false
         route_cost_fixed = @candidate_routes[vehicle_id][started_day][:cost_fixed]
         route_exclusion_costs =
           @candidate_routes[vehicle_id][started_day][:stops].map{ |stop|
             @services_data[stop[:id]][:raw].exclusion_cost || 0
           }.reduce(&:+)
-        while route_exclusion_costs < route_cost_fixed || can_not_insert_more
+        while route_exclusion_costs < route_cost_fixed
           inserted_id, _unlocked_ids = try_to_add_new_point(vehicle_id, started_day)
           impacted_days |= adjust_candidate_routes(vehicle_id, started_day)
           if inserted_id
             route_exclusion_costs += @services_data[inserted_id][:raw].exclusion_cost.to_f
           else
-            can_not_insert_more = true
+            break
           end
         end
 
@@ -726,6 +727,7 @@ module Wrappers
       end
     end
 
+    # Fill each vehicle/day route while possible
     def fill_days
       @candidate_routes.each{ |current_vehicle_id, all_routes|
         current_vehicle_index = 0
@@ -737,20 +739,22 @@ module Wrappers
         impacted_days = []
 
         while possible_to_fill
-          best_day = if @spread_among_days
-            all_routes.reject{ |day, _route_data| already_considered_days.include?(day) }.min_by{ |_day, route_data|
-              route_data[:stops].empty? ? 0 : route_data[:stops].sum{ |stop| stop[:end] - stop[:start] }
-            }[0]
-          else
+          best_day =
+            if @spread_among_days
+              all_routes.reject{ |day, _route_data| already_considered_days.include?(day) }.min_by{ |_day, route_data|
+                route_data[:stops].empty? ? 0 : route_data[:stops].sum{ |stop| stop[:end] - stop[:start] }
+              }[0]
+            else
               best_day || (all_routes.keys - already_considered_days).min
-          end
+            end
           break unless best_day
 
           inserted_id, unlocked_ids = try_to_add_new_point(current_vehicle_id, best_day)
           already_considered_days |= [best_day] unless inserted_id
-          already_considered_days = [] unless unlocked_ids.empty?
+          already_considered_days = [] if unlocked_ids.any?
           possible_to_fill = false if @to_plan_service_ids.empty? || nb_of_days == already_considered_days.size
-
+          # plan remaining visits of inserted_id if @spread_among_days
+          # otherwise we are going to fill this day fully before calling this function
           if @spread_among_days
             adjust_candidate_routes(current_vehicle_id, best_day)
           elsif inserted_id.nil? || !possible_to_fill
@@ -770,6 +774,9 @@ module Wrappers
       }
     end
 
+    # When activating same_point_day parameter, if we insert a point at a given location
+    # with a given number of visits then we automatically insert all services at same point
+    # location and with same frequency. This could and should be improved (issue)
     def add_same_freq_located_points(best_index, route_data)
       start = best_index[:end]
       max_shift = best_index[:potential_shift]
