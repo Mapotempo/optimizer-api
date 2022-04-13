@@ -55,7 +55,7 @@ module PeriodicDataInitialization
       defined_route.mission_ids.each{ |id|
         next if !@services_data.key?(id) # id has been removed when detecting unfeasible services in wrapper
 
-        best_index = find_best_index(id, associated_route, false) if associated_route
+        best_index = find_candidate_best_position(id, associated_route, false) if associated_route
         considered_ids << id
         if best_index
           insert_visit_in_route(associated_route, best_index, false)
@@ -75,8 +75,8 @@ module PeriodicDataInitialization
     }
 
     routes.sort_by(&:day_index).each{ |defined_route|
-      # TODO : try to affect missing visits with add_missing visits functions (because plan_next_visits only plans after last planned day, not in between)
-      # Should plan_next_visits use this logic always ?
+      # TODO : try to affect missing visits with add_missing visits functions (because plan_service_next_visits only plans after last planned day, not in between)
+      # Should plan_service_next_visits use this logic always ?
       plan_visits_missing_in_routes(defined_route.vehicle_id, defined_route.day_index.to_i)
     }
 
@@ -104,7 +104,7 @@ module PeriodicDataInitialization
               # therefore, trying to insert more visits might cause inconsistency
               @services_assignment[id][:unassigned_reasons].any?
 
-      plan_next_visits(vehicle_id, id, @services_assignment[id][:days].size + 1)
+      plan_service_next_visits(vehicle_id, id, @services_assignment[id][:days].size + 1)
       @output_tool&.insert_visits(@services_assignment[id][:days], id, @services_data[id][:visits_number])
     }
   end
