@@ -585,57 +585,57 @@ $(document).ready(function() {
         return element['unit'] == 'unit1';
       });
       var value1_2 = quantity1_2 && quantity1_2['value'] || 0;
-      if (job.shipment_id) {
-        var customer_id = customers.indexOf(job.shipment_id);
-        if (job.type == 'delivery') {
-          stops.push([
-            job.shipment_id,
-            '',
-            '',
-            'visite',
-            job.shipment_id, // name
-            '', // street
-            '', // postalcode
-            '', // country
-            data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'],
-            data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'],
-            data.customers[customer_id][mapping.delivery_duration || 'delivery_duration'],
-            value1_1,
-            value1_2,
-            data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
-            data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
-            $.map(data.customers[customer_id], function(val, key) {
-              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
-            }).filter(function(el) {
-              return el;
-            }).join(',')
-          ]);
-        } else {
-          stops.push([
-            (job.shipment_id + ' pickup'),
-            '',
-            '',
-            'visite',
-            job.shipment_id + ' pickup', // name
-            '', // street
-            '', // postalcode
-            '', // country
-            data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'],
-            data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'],
-            data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'],
-            value1_1,
-            value1_2,
-            data.customers[customer_id][mapping.pickup_start || 'pickup_start'],
-            data.customers[customer_id][mapping.pickup_end || 'pickup_end'],
-            $.map(data.customers[customer_id], function(val, key) {
-              if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
-            }).filter(function(el) {
-              return el;
-            }).join(',')
-          ]);
-        }
+      var customer_id;
+      if (job.type == 'delivery') {
+        customer_id = customers.indexOf(job.delivery_shipment_id);
+        stops.push([
+          job.service_id,
+          '',
+          '',
+          'visite',
+          job.service_id, // name
+          '', // street
+          '', // postalcode
+          '', // country
+          data.customers[customer_id][mapping.delivery_lat || 'delivery_lat'],
+          data.customers[customer_id][mapping.delivery_lon || 'delivery_lon'],
+          data.customers[customer_id][mapping.delivery_duration || 'delivery_duration'],
+          value1_1,
+          value1_2,
+          data.customers[customer_id][mapping.delivery_start || 'delivery_start'],
+          data.customers[customer_id][mapping.delivery_end || 'delivery_end'],
+          $.map(data.customers[customer_id], function(val, key) {
+            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+          }).filter(function(el) {
+            return el;
+          }).join(',')
+        ]);
+      } else if (job.type == 'pickup') {
+        customer_id = customers.indexOf(job.pickup_shipment_id);
+        stops.push([
+          job.service_id,
+          '',
+          '',
+          'visite',
+          job.service_id, // name
+          '', // street
+          '', // postalcode
+          '', // country
+          data.customers[customer_id][mapping.pickup_lat || 'pickup_lat'],
+          data.customers[customer_id][mapping.pickup_lon || 'pickup_lon'],
+          data.customers[customer_id][mapping.pickup_duration || 'pickup_duration'],
+          value1_1,
+          value1_2,
+          data.customers[customer_id][mapping.pickup_start || 'pickup_start'],
+          data.customers[customer_id][mapping.pickup_end || 'pickup_end'],
+          $.map(data.customers[customer_id], function(val, key) {
+            if (key.replace(/ [0-9]+$/, '') == (mapping.skills || 'skills')) return val;
+          }).filter(function(el) {
+            return el;
+          }).join(',')
+        ]);
       } else {
-        var customer_id = customers.indexOf(job.service_id);
+        customer_id = customers.indexOf(job.service_id);
         if (data.customers[customer_id][mapping.pickup_lat || 'pickup_lat']) {
           stops.push([
             job.service_id,
