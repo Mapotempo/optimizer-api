@@ -345,7 +345,7 @@ class HeuristicTest < Minitest::Test
       s.instance_variable_set(:@matrices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_matrices.bindump'))) # rubocop: disable Security/MarshalLoad
       s.instance_variable_set(:@indices, Marshal.load(File.binread('test/fixtures/compute_next_insertion_cost_when_activities_indices.bindump'))) # rubocop: disable Security/MarshalLoad
 
-      s.send(:insertion_cost_with_tw, timewindow, route_data, service, 1)
+      s.send(:insertion_route_info_with_tw, timewindow, route_data, service, 1)
 
       assert_equal 0, route_data[:stops].find{ |stop| stop[:id].include?('with_activities') }[:activity]
       assert_equal 'point_1', route_data[:stops].find{ |stop| stop[:id].include?('with_activities') }[:point_id]
@@ -369,7 +369,7 @@ class HeuristicTest < Minitest::Test
       ]
       route_data[:stops][0][:point_id] = service_data[:points_ids][0]
       times_back_to_depot = potential_tws.collect{ |tw|
-        _next_a, _accepted, _shift, back_depot = s.send(:insertion_cost_with_tw, tw, route_data, { id: service_to_plan, point_id: service_data[:points_ids][0], duration: 876 }, 0)
+        _next_a, _accepted, _shift, back_depot = s.send(:insertion_route_info_with_tw, tw, route_data, { id: service_to_plan, point_id: service_data[:points_ids][0], duration: 876 }, 0)
         back_depot
       }
       assert_operator times_back_to_depot[0], :!=, times_back_to_depot[1]
@@ -381,63 +381,63 @@ class HeuristicTest < Minitest::Test
       vrp.vehicles = TestHelper.expand_vehicles(vrp)
       s = Wrappers::PeriodicHeuristic.new(vrp)
 
-      assert_equal [0], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [])
-      assert_equal [0, 1], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+      assert_equal [0], s.get_feasible_insertion_positions(:always_first, 'unknown_point', [])
+      assert_equal [0, 1], s.get_feasible_insertion_positions(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
                                                                                                      { requirement: :neutral, point_id: 'point' }])
-      assert_equal [0], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
-      assert_equal [0, 1, 2, 3], s.compute_consistent_positions_to_insert(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+      assert_equal [0], s.get_feasible_insertion_positions(:always_first, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
+      assert_equal [0, 1, 2, 3], s.get_feasible_insertion_positions(:always_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
                                                                                                            { requirement: :never_middle, point_id: 'point' },
                                                                                                            { requirement: :always_first, point_id: 'point' },
                                                                                                            { requirement: :neutral, point_id: 'point' },
                                                                                                            { requirement: :neutral, point_id: 'point' },
                                                                                                            { requirement: :always_last, point_id: 'point' }])
 
-      assert_equal [], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+      assert_equal [], s.get_feasible_insertion_positions(:always_middle, 'unknown_point', [])
+      assert_equal [1], s.get_feasible_insertion_positions(:always_middle, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
                                                                                                    { requirement: :always_last, point_id: 'point' }])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
+      assert_equal [1], s.get_feasible_insertion_positions(:always_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
                                                                                                    { requirement: :neutral, point_id: 'point' }])
-      assert_equal [1, 2], s.compute_consistent_positions_to_insert(:always_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
+      assert_equal [1, 2], s.get_feasible_insertion_positions(:always_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
                                                                                                       { requirement: :always_middle, point_id: 'point' },
                                                                                                       { requirement: :neutral, point_id: 'point' }])
 
-      assert_equal [0], s.compute_consistent_positions_to_insert(:always_last, 'unknown_point', [])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:always_last, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
-      assert_equal [2, 3, 4, 5], s.compute_consistent_positions_to_insert(:always_last, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
+      assert_equal [0], s.get_feasible_insertion_positions(:always_last, 'unknown_point', [])
+      assert_equal [1], s.get_feasible_insertion_positions(:always_last, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
+      assert_equal [2, 3, 4, 5], s.get_feasible_insertion_positions(:always_last, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
                                                                                                           { requirement: :neutral, point_id: 'point' },
                                                                                                           { requirement: :always_last, point_id: 'point' },
                                                                                                           { requirement: :always_last, point_id: 'point' },
                                                                                                           { requirement: :always_last, point_id: 'point' }])
 
-      assert_equal [], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
-      assert_equal [], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
-      assert_equal [1], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
+      assert_equal [], s.get_feasible_insertion_positions(:never_first, 'unknown_point', [])
+      assert_equal [1], s.get_feasible_insertion_positions(:never_first, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
+      assert_equal [1], s.get_feasible_insertion_positions(:never_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
+      assert_equal [], s.get_feasible_insertion_positions(:never_first, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
+      assert_equal [1], s.get_feasible_insertion_positions(:never_first, 'unknown_point', [{ requirement: :neutral, point_id: 'point' },
                                                                                                  { requirement: :always_last, point_id: 'point' }])
-      assert_equal [1, 2], s.compute_consistent_positions_to_insert(:never_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+      assert_equal [1, 2], s.get_feasible_insertion_positions(:never_first, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
                                                                                                     { requirement: :neutral, point_id: 'point' },
                                                                                                     { requirement: :always_last, point_id: 'point' }])
 
-      assert_equal [0], s.compute_consistent_positions_to_insert(:never_middle, 'unknown_point', [])
-      assert_equal [0, 1], s.compute_consistent_positions_to_insert(:never_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
-      assert_equal [0, 1, 3], s.compute_consistent_positions_to_insert(:never_middle, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
+      assert_equal [0], s.get_feasible_insertion_positions(:never_middle, 'unknown_point', [])
+      assert_equal [0, 1], s.get_feasible_insertion_positions(:never_middle, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
+      assert_equal [0, 1, 3], s.get_feasible_insertion_positions(:never_middle, 'unknown_point', [{ requirement: :always_first, point_id: 'point' },
                                                                                                         { requirement: :neutral, point_id: 'point' },
                                                                                                         { requirement: :neutral, point_id: 'point' }])
 
-      assert_equal [], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [])
-      assert_equal [], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
-      assert_equal [0], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
-      assert_equal [0], s.compute_consistent_positions_to_insert(:never_last, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
+      assert_equal [], s.get_feasible_insertion_positions(:never_last, 'unknown_point', [])
+      assert_equal [], s.get_feasible_insertion_positions(:never_last, 'unknown_point', [{ requirement: :always_first, point_id: 'point' }])
+      assert_equal [0], s.get_feasible_insertion_positions(:never_last, 'unknown_point', [{ requirement: :neutral, point_id: 'point' }])
+      assert_equal [0], s.get_feasible_insertion_positions(:never_last, 'unknown_point', [{ requirement: :always_last, point_id: 'point' }])
 
       # with point at same location :
-      assert_equal [2, 3], s.compute_consistent_positions_to_insert(:always_middle, ['same_point'], [{ requirement: :always_first, point_id: 'point' },
+      assert_equal [2, 3], s.get_feasible_insertion_positions(:always_middle, ['same_point'], [{ requirement: :always_first, point_id: 'point' },
                                                                                                      { requirement: :neutral, point_id: 'point' },
                                                                                                      { requirement: :neutral, point_id: 'same_point' },
                                                                                                      { requirement: :neutral, point_id: 'point' }])
     end
 
-    def test_insertion_cost_with_tw_choses_best_value
+    def test_insertion_route_info_with_tw_choses_best_value
       vrp = VRP.lat_lon_periodic_two_vehicles
       vrp = TestHelper.create(vrp)
       vrp.vehicles = []
@@ -457,7 +457,7 @@ class HeuristicTest < Minitest::Test
                      stops: [{ id: 'service_with_activities', point_id: 'point_10', start: 0, arrival: 1990, end: 1990, considered_setup_duration: 0, activity: 1 }] }
       service = { id: 'service_3', point_id: 'point_3', duration: 0 }
 
-      set = s.send(:insertion_cost_with_tw, timewindow, route_data, service, 0)
+      set = s.send(:insertion_route_info_with_tw, timewindow, route_data, service, 0)
       assert set.last < 10086, "#{set.last} should be the best value among all activities' value"
     end
 
