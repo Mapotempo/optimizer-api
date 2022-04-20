@@ -767,7 +767,7 @@ class SplitClusteringTest < Minitest::Test
         minimum_day_lapse
         minimum_duration_lapse
         vehicle_trips
-      ], Interpreters::SplitClustering::FORCING_RELATIONS, 'Forcing relation constant has changed'
+      ], Models::Relation::FORCING_RELATIONS, 'Forcing relation constant has changed'
     end
 
     def test_collect_data_items_respects_linking_relations

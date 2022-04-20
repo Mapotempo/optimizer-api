@@ -2569,15 +2569,51 @@ class WrapperTest < Minitest::Test
     problem = VRP.independent_skills
 
     problem[:vehicles][1][:end_point_id] = problem[:vehicles].first[:start_point_id]
+    problem[:vehicles][1][:skills] = [[]] # vehicle_1
+
+    # WITHOUT vehicle_trips
+    vrp = TestHelper.create(problem)
+    independent_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    # 5 independent vrps
+    # one with v0
+    # one with v2
+    # one without vehicle for "infeasible" service_3
+    # one without vehicle for "infeasible" service_5 (this and the previous one can be in the same sub-vrp eventually)
+    # one with v1 and without services because it cannot serve any
+    assert_equal 5, independent_vrps.size,
+                 'split_independent_vrp function does not generate expected number of independent_vrps'
+
+    expected_vehicles = [["vehicle_0"], ["vehicle_2"], [], [], ["vehicle_1"]]
+    expected_services = [["service_2", "service_4"], ["service_1", "service_6"], ["service_3"], ["service_5"], []]
+    assert_equal expected_vehicles.sort, independent_vrps.map{ |i| i.vehicles.map(&:id) }.sort
+    assert_equal expected_services.sort, independent_vrps.map{ |i| i.services.map(&:id).sort }.sort
+
+    # INTERIM CHECK
     problem[:relations] = [{ type: :vehicle_trips, linked_vehicle_ids: ['vehicle_1', 'vehicle_2'] }]
     vrp = TestHelper.create(problem)
-
     independent_vrps = OptimizerWrapper.split_independent_vrp(vrp)
-    expected_skills_sets = [[[[:D, :S1]]], [[[:D, :S2]], [[:S3, :S4]]]]
-    assert_equal expected_skills_sets, independent_vrps.map{ |i| i.vehicles.map(&:skills).sort }.sort
+    msg = "Waiting for split_independent_vrp forcing relation implementation. This INTERIM CHECK part can be "\
+          "deleted upto the skip and the rest of the test with vehicle_trips can be activated."
+    assert_equal 1, independent_vrps.size,
+                 'split_independent_vrp function does not generate expected number of independent_vrps' + msg
+    skip msg
 
-    assert_equal 2, independent_vrps.size,
-                 'split_independent_vrp function does not generate expected number of independent_vrps'
+    # WITH vehicle_trips
+    problem[:relations] = [{ type: :vehicle_trips, linked_vehicle_ids: ['vehicle_1', 'vehicle_2'] }]
+    vrp = TestHelper.create(problem)
+    independent_vrps = OptimizerWrapper.split_independent_vrp(vrp)
+    # 4 independent vrps
+    # one with v0
+    # one with v1 and v2 (because of vehicle trips relation otherwise v1 would be in a separate "empty" sub-problem)
+    # one without vehicle for "infeasible" service_3
+    # one without vehicle for "infeasible" service_5 (this and the previous one can be in the same sub-vrp eventually)
+    assert_equal 4, independent_vrps.size,
+                'split_independent_vrp function does not generate expected number of independent_vrps'
+
+    expected_vehicles = [["vehicle_0"], ["vehicle_1", "vehicle_2"], [], []]
+    expected_services = [["service_2", "service_4"], ["service_1", "service_6"], ["service_3"], ["service_5"]]
+    assert_equal expected_vehicles.sort, independent_vrps.map{ |i| i.vehicles.map(&:id) }.sort
+    assert_equal expected_services.sort, independent_vrps.map{ |i| i.services.map(&:id).sort }.sort
   end
 
   def test_split_independent_vrps_with_useless_vehicle
