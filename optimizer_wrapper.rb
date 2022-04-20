@@ -404,6 +404,11 @@ module OptimizerWrapper
     mission_skills = vrp.services.map(&:skills).uniq
     return [vrp] if mission_skills.include?([])
 
+    if vrp.relations.any?{ |r| Models::Relation::FORCING_RELATIONS.include?(r.type) }
+      log 'split_independent_vrp does not support vehicle_trips and other FORCING_RELATIONS yet', level: :warn
+      return [vrp]
+    end
+
     # Generate Services data
     grouped_services = vrp.services.group_by(&:skills)
     skill_service_ids = Hash.new{ [] }
