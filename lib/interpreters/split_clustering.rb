@@ -22,16 +22,6 @@ require './lib/interpreters/periodic_visits.rb'
 
 module Interpreters
   class SplitClustering
-    # Relations that force multiple services/vehicles to stay in the same VRP
-    FORCING_RELATIONS = %i[
-      maximum_day_lapse
-      maximum_duration_lapse
-      meetup
-      minimum_day_lapse
-      minimum_duration_lapse
-      vehicle_trips
-    ].freeze
-
     # TODO: private method
     def self.split_clusters(service_vrp, job = nil, &block)
       vrp = service_vrp[:vrp]
@@ -379,7 +369,7 @@ module Interpreters
       }
 
       # go through the original relations and force the services and vehicles to stay in the same sub-vrp if necessary
-      split_solve_data[:original_vrp].relations.select{ |r| FORCING_RELATIONS.include?(r.type) }.each{ |relation|
+      split_solve_data[:original_vrp].relations.select{ |r| Models::Relation::FORCING_RELATIONS.include?(r.type) }.each{ |relation|
         if relation.linked_vehicle_ids.any? && relation.linked_services.none?
           linked_ids = []
           relation.linked_vehicle_ids.map{ |v_id|
@@ -452,7 +442,7 @@ module Interpreters
       current_and_unused_vehicle_ids = ss_data[:current_vehicles].map(&:id) + unused_vehicle_ids
 
       related_forcing_relations = o_vrp.relations.select{ |r|
-        FORCING_RELATIONS.include?(r.type) && (r.linked_vehicle_ids.to_a & unused_vehicle_ids).any?
+        Models::Relation::FORCING_RELATIONS.include?(r.type) && (r.linked_vehicle_ids.to_a & unused_vehicle_ids).any?
       }
 
       # FIXME: this operation can be done faster by exploiting the fact that some unused vehicles might share a relation
@@ -499,7 +489,7 @@ module Interpreters
 
       used_vehicle_ids = result[:routes].map{ |r| r[:vehicle_id] }
       forcing_vehicle_relations = split_solve_data[:original_vrp].relations.select{ |r|
-        FORCING_RELATIONS.include?(r.type) && r.linked_vehicle_ids&.any?
+        Models::Relation::FORCING_RELATIONS.include?(r.type) && r.linked_vehicle_ids&.any?
       }
 
       split_solve_data[:transferred_vehicles].delete_if{ |vehicle|
@@ -543,7 +533,7 @@ module Interpreters
 
     def self.remove_poorly_populated_routes(vrp, result, limit)
       forcing_relation_vehicle_ids = vrp.relations.flat_map{ |relation|
-        FORCING_RELATIONS.include?(relation.type) ? relation.linked_vehicle_ids.to_a : []
+        Models::Relation::FORCING_RELATIONS.include?(relation.type) ? relation.linked_vehicle_ids.to_a : []
       }.uniq
 
       emptied_routes = false
@@ -564,7 +554,7 @@ module Interpreters
         # "non-removable" (i.e., either it is well-used or it has a well-used link)
         # Or we would calculate the "overall" stats for all linked vehicles and remove/leave them together
         # NOTE: This might need a recursive logic because different vehicles might be connected via different
-        # FORCING_RELATIONS.
+        # Models::Relation::FORCING_RELATIONS.
         next if forcing_relation_vehicle_ids.include?(route[:vehicle_id])
 
         time_flag = vehicle_worktime && route_duration < limit * vehicle_worktime
