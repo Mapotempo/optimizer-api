@@ -302,6 +302,7 @@ class Api::V01::OutputTest < Minitest::Test
         :build_csv,
         lambda { |_solutions|
           assert_equal expected, I18n.locale
+          '' # api.format is expecting a csv format
         }
       ) do
         submit_csv api_key: 'demo', vrp: vrp, http_accept_language: provided
@@ -314,6 +315,7 @@ class Api::V01::OutputTest < Minitest::Test
         :build_csv,
         lambda { |solutions|
           assert_equal parameter_value, solutions.first[:configuration][:deprecated_headers]
+          '' # api.format is expecting a csv format
         }
       ) do
         submit_csv api_key: 'demo', vrp: vrp, http_accept_language: 'fr'
@@ -359,7 +361,7 @@ class Api::V01::OutputTest < Minitest::Test
     vrp = VRP.lat_lon
     vrp[:configuration][:restitution] = { csv: true }
     result = submit_csv api_key: 'demo', vrp: vrp
-    assert_equal 10, result.size
+    assert_equal 9, result.size # header + 2 depots +6 services
   end
 
   def test_csv_configuration_asynchronously
@@ -445,7 +447,7 @@ class Api::V01::OutputTest < Minitest::Test
       problem[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }} if method == :periodic_ortools
       problem[:configuration][:restitution] = { csv: true }
       response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: problem }.to_json, 'CONTENT_TYPE' => 'application/json'
-      headers = response.body.slice(1..-1).split('\n').map{ |line| line.split(',') }.first
+      headers = response.body.split("\n").map{ |line| line.split(',') }.first
       assert_empty (expected_activities_keys - headers), "#{expected_activities_keys - headers} activity keys are missing in #{method}"
       assert_empty (expected_route_keys - headers - data[:periodic_keys]), "#{expected_route_keys - headers} route keys are missing in #{method} result"
       assert_empty (expected_unassigned_keys - headers), "#{expected_unassigned_keys - headers} unassigned keys are missing in #{method}"
@@ -561,7 +563,7 @@ class Api::V01::OutputTest < Minitest::Test
     asynchronously start_worker: true do
       @job_id = submit_csv api_key: 'ortools', vrp: vrp
       expected_headers.each{ |language, expected_list|
-        wait_status_csv @job_id, 200, api_key: 'ortools', http_accept_language: language
+        wait_status_csv @job_id, 'completed', api_key: 'ortools', http_accept_language: language
         current_headers = last_response.body.split("\n").first.split(',')
         assert_empty expected_list - current_headers, 'Header misses labels'
         # assert_empty current_headers - expected_list, 'Header has extra labels' # TODO: this should be checked

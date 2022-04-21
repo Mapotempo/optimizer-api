@@ -29,6 +29,7 @@ module Parsers
       compute_total_time
       compute_route_waiting_times unless @route.stops.empty?
       compute_route_total_dimensions(matrix)
+      route.stops.each{ |stop| stop.info.set_schedule(vrp, route.vehicle) }
       return unless ([:polylines, :encoded_polylines] & vrp.configuration.restitution.geometry).any? &&
                     @route.stops.any?(&:service_id)
 

@@ -145,6 +145,7 @@ module Api
                 status 200
                 solutions = ret.vrp_result.each(&:deep_symbolize_keys!)
                 if vrp.configuration.restitution.csv
+                  env['api.format'] = :csv # To override json default format
                   present(OutputHelper::Result.build_csv(solutions), type: CSV)
                 else
                   present({
@@ -214,7 +215,6 @@ module Api
             result_object ||= OptimizerWrapper::Result.get(id) || {}
             output_format = params[:format]&.to_sym ||
                             (result_object[:configuration] && result_object[:configuration][:csv] ? :csv : env['api.format'])
-            env['api.format'] = output_format # To override json default format
 
             if job&.completed? # job can still be nil if we have the solution from the dump
               APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Oj.dump(result_object)) if stored_result.nil? && OptimizerWrapper.config[:dump][:solution]
@@ -224,6 +224,7 @@ module Api
             status 200
 
             if output_format == :csv && (job.nil? || job.completed?) # At this step, if the job is nil then it has already been retrieved into the result store
+              env['api.format'] = :csv # To override json default format
               present(OutputHelper::Result.build_csv(result_object[:result]), type: CSV)
             else
               present({

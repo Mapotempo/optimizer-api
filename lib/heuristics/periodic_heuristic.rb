@@ -1186,11 +1186,7 @@ module Wrappers
     end
 
     def get_stop(day, type, vehicle, data = {})
-      size_weeks = (@schedule_end.to_f / 7).ceil.to_s.size
-      week = Helper.string_padding(day / 7 + 1, size_weeks)
-      times = Models::Solution::Stop::Info.new(begin_time: data[:arrival],
-                                               day_week_num: "#{day % 7}_#{week}",
-                                               day_week: "#{OptimizerWrapper::WEEKDAYS[day % 7]}_#{week}")
+      times = Models::Solution::Stop::Info.new(begin_time: data[:arrival])
 
       case type
       when 'start'

@@ -119,7 +119,7 @@ module TestHelper
       puts "#{job_id} #{Time.now} submitted_csv #{hex}"
       job_id
     when 200
-      response = last_response.body.slice(1..-1).split('\n').map{ |line| line.split(',') }
+      response = last_response.body.split("\n").map{ |line| line.split(',') }
       puts "#{job_id} #{Time.now} submitted_csv #{hex} but it returned a result"
       response
     else
