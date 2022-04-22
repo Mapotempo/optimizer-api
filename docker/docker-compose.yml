@@ -15,6 +15,7 @@ x-default-environment: &default-environment
   REDIS_COUNT_HOST: redis-count
   REDIS_HOST: redis-cache
   REDIS_RESQUE_HOST: redis
+  REDIS_RESULT_TTL_DAYS: ${REDIS_RESULT_TTL_DAYS}
   ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
   ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
 
