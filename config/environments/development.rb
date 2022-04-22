@@ -44,7 +44,7 @@ module OptimizerWrapper
   FileUtils.mkdir_p(DUMP_DIR) unless File.directory?(DUMP_DIR)
   @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
 
-  OptimizerLogger.level = :debug
+  OptimizerLogger.level = ENV['LOG_LEVEL']&.to_sym || :debug
   OptimizerLogger.with_datetime = true
   OptimizerLogger.caller_location = :relative
 

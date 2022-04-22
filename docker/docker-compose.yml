@@ -10,6 +10,7 @@ x-default-redis: &default-redis
     - ${APP_HOME:-..}/redis:/data
 
 x-default-environment: &default-environment
+  LOG_LEVEL: ${LOG_LEVEL:-info}
   PASSENGER_APP_ENV: test
   REDIS_COUNT_HOST: redis-count
   REDIS_HOST: redis-cache
