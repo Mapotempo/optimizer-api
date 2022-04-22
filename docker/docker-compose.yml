@@ -14,12 +14,12 @@ x-default-environment: &default-environment
   REDIS_COUNT_HOST: redis-count
   REDIS_HOST: redis-cache
   REDIS_RESQUE_HOST: redis
+  ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
+  ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
 
 x-environment-resque: &environment-resque
   <<: *default-environment
   APP_ENV: test
-  ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
-  ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
 
 x-default-service: &default-service
   image: ${REGISTRY:-registry.mapotempo.com}/mapotempo-${EDT:-ce}/optimizer-api:${OPTIMIZER_VERSION:-latest}
