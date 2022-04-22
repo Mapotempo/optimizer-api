@@ -155,14 +155,19 @@ module ValidateData
   end
 
   def check_services(schedule)
+    schedule_range_indices_flag = schedule && schedule[:range_indices]
     @hash[:services]&.each{ |mission|
       if (mission[:minimum_lapse] || 0) > (mission[:maximum_lapse] || 2**32)
         raise OptimizerWrapper::DiscordantProblemError.new('Minimum lapse can not be bigger than maximum lapse')
       end
 
-      next if schedule && schedule[:range_indices] || mission[:visits_number].to_i <= 1
+      if !schedule_range_indices_flag && mission[:visits_number].to_i > 1
+        raise OptimizerWrapper::DiscordantProblemError.new('There can not be more than one visit without schedule')
+      end
 
-      raise OptimizerWrapper::DiscordantProblemError.new('There can not be more than one visit without schedule')
+      if mission[:quantities]&.any?{ |q| q[:empty] && q[:value] == 0 }
+        raise OptimizerWrapper::DiscordantProblemError.new('Value of an empty operation cannot be 0 -- value signifies the maximum amount to empty')
+      end
     }
   end
 

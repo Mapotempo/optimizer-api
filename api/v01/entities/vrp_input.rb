@@ -471,8 +471,8 @@ module VrpShared
   params :vrp_request_quantity do
     optional(:id, type: String)
     requires(:unit_id, type: String, allow_blank: false, desc: 'Unit related to this quantity')
-    optional(:fill, type: Boolean, desc: 'Allows to fill this quantity, increases the current load of the vehicle up to value amount')
-    optional(:empty, type: Boolean, desc: 'Allows to empty this quantity, decreases the current load of the vehicle up to value amount')
+    optional(:fill, type: Boolean, desc: 'Allows to fill this quantity, increases the current load of the vehicle minimum value amount. Attention: if the value of the fill operation is greater than the capacity of the vehicle, the fill operation cannot be used by the vehicle since value signifies the minimum amount to fill.')
+    optional(:empty, type: Boolean, desc: 'Allows to empty this quantity, decreases the current load of the vehicle at most value amount -- completely if no value is given')
     mutually_exclusive :fill, :empty
     optional(:value, type: Float, desc: 'Value of current quantity')
     optional(:setup_value, type: Integer, desc: 'If the associated unit is a counting one, defines the default value to count for this stop (additional quantities for this specific service are to define with the value tag)')

@@ -3271,7 +3271,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     refute_equal('service_2', solution.routes.first.stops[2].service_id)
   end
 
-  def test_fill_quantities
+  def test_fill_and_empty_quantities
     ortools = OptimizerWrapper.config[:services][:ortools]
     problem = {
       units: [{
@@ -3354,6 +3354,23 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert solution.routes.first.stops.first.service_id == 'service_3' || solution.routes.first.stops.last.service_id == 'service_3'
     assert_equal 'service_1', solution.routes.first.stops[1].service_id
     assert_equal 5, solution.routes.first.initial_loads.first.current
+
+    # EMPTY
+    problem[:services].first[:quantities].first.delete(:fill)
+    problem[:services].first[:quantities].first[:empty] = true
+    problem[:services].first[:quantities].first.delete(:value) # empty without value means unloading completely
+    problem[:services][1][:quantities].first[:value] = 5
+    problem[:services][2][:quantities].first[:value] = 5
+
+    vrp = TestHelper.create(problem)
+    solution = ortools.solve(vrp, 'test')
+    assert solution
+    assert_equal problem[:services].size, solution.routes.first.stops.size
+    assert solution.routes.first.stops.first.service_id == 'service_2' || solution.routes.first.stops.last.service_id == 'service_2'
+    assert solution.routes.first.stops.first.service_id == 'service_3' || solution.routes.first.stops.last.service_id == 'service_3'
+    assert_equal 'service_1', solution.routes.first.stops[1].service_id
+    assert_equal 0, solution.routes.first.initial_loads.first.current
+    assert_equal 5, solution.routes.first.stops.last.loads.first.current
   end
 
   def test_max_ride_time

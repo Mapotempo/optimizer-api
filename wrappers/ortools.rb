@@ -158,7 +158,12 @@ module Wrappers
               #   - an empty unit then the amount is negative for the empty service and positive for the proper services
               #   - a fill unit then the amount is positive for the fill service and negative for the proper services
               if is_empty_unit || is_fill_unit
-                q&.value.to_f.abs * (((is_empty_unit && q&.empty) || (is_fill_unit && !q&.fill)) ? -1 : 1)
+                empty_fill_value = q&.value.to_f.abs
+                if q&.empty && empty_fill_value == 0
+                  # The empty operation itself having nil/0 value means complete empty operation
+                  empty_fill_value = total_quantities[unit.id].abs
+                end
+                empty_fill_value * (((is_empty_unit && q&.empty) || (is_fill_unit && !q&.fill)) ? -1 : 1)
               else
                 q&.value.to_f
               end
@@ -198,7 +203,12 @@ module Wrappers
                 #   - an empty unit then the amount is negative for the empty service and positive for the proper services
                 #   - a fill unit then the amount is positive for the fill service and negative for the proper services
                 if is_empty_unit || is_fill_unit
-                  q&.value.to_f.abs * (((is_empty_unit && q&.empty) || (is_fill_unit && !q&.fill)) ? -1 : 1)
+                  empty_fill_value = q&.value.to_f.abs
+                  if q&.empty && empty_fill_value == 0
+                    # The empty operation itself having nil/0 value means complete empty operation
+                    empty_fill_value = total_quantities[unit.id].abs
+                  end
+                  empty_fill_value * (((is_empty_unit && q&.empty) || (is_fill_unit && !q&.fill)) ? -1 : 1)
                 else
                   q&.value.to_f
                 end
