@@ -45,7 +45,7 @@ module OptimizerWrapper
   FileUtils.mkdir_p(DUMP_DIR) unless File.directory?(DUMP_DIR)
   @@dump_vrp_dir = CacheManager.new(DUMP_DIR)
 
-  # OptimizerLogger.level = :info
+  OptimizerLogger.level = ENV['LOG_LEVEL']&.to_sym || :info
   OptimizerLogger.with_datetime = true
   # OptimizerLogger.caller_location = nil => nil is default
 

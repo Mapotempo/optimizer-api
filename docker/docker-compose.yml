@@ -10,16 +10,21 @@ x-default-redis: &default-redis
     - ${APP_HOME:-..}/redis:/data
 
 x-default-environment: &default-environment
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  OPTIM_DEFAULT_MAX_LATENESS_RATIO: 1
+  OPTIM_GENERATE_GEOJSON_POLYLINES: 'true'
   PASSENGER_APP_ENV: test
   REDIS_COUNT_HOST: redis-count
   REDIS_HOST: redis-cache
   REDIS_RESQUE_HOST: redis
+  REDIS_RESULT_TTL_DAYS: ${REDIS_RESULT_TTL_DAYS}
+  ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
+  ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
+  SENTRY_DSN: ${SENTRY_DSN}
 
 x-environment-resque: &environment-resque
   <<: *default-environment
   APP_ENV: test
-  ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
-  ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
 
 x-default-service: &default-service
   image: ${REGISTRY:-registry.mapotempo.com}/mapotempo-${EDT:-ce}/optimizer-api:${OPTIMIZER_VERSION:-latest}
