@@ -3193,6 +3193,20 @@ class WrapperTest < Minitest::Test
     refute_includes unfeasible_services.values.flatten.collect{ |un| un[:original_service_id] }, vrp.services.first.id
   end
 
+  def test_no_compatible_vehicle_with_enough_capacity_respects_empty_operation
+    problem = VRP.lat_lon_capacitated
+    problem[:services].first[:quantities].first[:value] = 2 * problem[:vehicles].first[:capacities].first[:limit]
+
+    vrp = TestHelper.create(problem)
+    unassigned_flag = OptimizerWrapper.config[:services][:demo].no_compatible_vehicle_with_enough_capacity(vrp, vrp.services.first)
+    assert unassigned_flag, "Service quantity violate vehicle capacity, it should be eliminated"
+
+    problem[:services].first[:quantities].first[:empty] = true
+    vrp = TestHelper.create(problem)
+    unassigned_flag = OptimizerWrapper.config[:services][:demo].no_compatible_vehicle_with_enough_capacity(vrp, vrp.services.first)
+    refute unassigned_flag, "Empty operation cannot violate vehicle capacity, it should not be eliminated"
+  end
+
   def test_filter_infeasible_route
     vrp = VRP.basic
     vrp[:vehicles].first[:timewindow] = { start: 0, end: 0}

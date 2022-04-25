@@ -705,7 +705,11 @@ module Wrappers
     def no_compatible_vehicle_with_enough_capacity(vrp, service)
       no_vehicle_with_compatible_skills(vrp, service) if service.vehicle_compatibility.nil?
 
-      s_quantities = service.quantities.map{ |quantity| [quantity.unit_id, quantity.value.abs] }.to_h
+      s_quantities = service.quantities.map{ |quantity|
+        next if quantity.empty # empty operation value is an upper-bound
+
+        [quantity.unit_id, quantity.value.abs]
+      }.compact.to_h
 
       vrp.vehicles.each{ |vehicle|
         next unless service.vehicle_compatibility[vehicle.id] # already eliminated
