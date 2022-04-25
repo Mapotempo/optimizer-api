@@ -203,17 +203,25 @@ module ValidateData
         @hash[:services].find{ |service| service[:id] == linked_id }
       }
       previous_service = nil
+      previous_activities = []
       services.each{ |service|
-        if previous_service && forbidden_position_pairs.include?([previous_service[:activity][:position], service[:activity][:position]])
-          inconsistent_position_services << [previous_service[:id], service[:id]]
-        end
+        activities = service[:activity] ? [service[:activity]] : service[:activities]
+
+        previous_activities.each{ |previous_activity|
+          activities.each{ |activity|
+            next unless forbidden_position_pairs.include?([previous_activity[:position], activity[:position]])
+
+            inconsistent_position_services << [previous_service[:id], service[:id]]
+          }
+        }
         previous_service = service
+        previous_activities = activities
       }
     }
 
     return unless inconsistent_position_services.any?
 
-    raise OptimizerWrapper::DiscordantProblemError.new("Inconsistent positions in relations: #{inconsistent_position_services}")
+    raise OptimizerWrapper::DiscordantProblemError.new("Inconsistent positions in relations: #{inconsistent_position_services.uniq}")
   end
 
   def calculate_day_availabilities(vehicles, timewindow_arrays)
@@ -405,6 +413,7 @@ module ValidateData
     check_position_relation_specificities
     check_relation_consistent_ids
     check_sticky_relation_consistency
+    check_relation_compatibility_with_alternatives
 
     if periodic_heuristic
       incompatible_relation_types = @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end same_vehicle]
@@ -481,6 +490,25 @@ module ValidateData
       'All services from a relation should have consistent sticky_vehicle_ids or none'\
       'Following services have different sticky_vehicle_ids: ',
       inconsistent_stickies
+    )
+  end
+
+  def check_relation_compatibility_with_alternatives
+    not_handled_relations = []
+    @hash[:relations].each{ |relation|
+      next if Models::Relation::ALTERNATIVE_COMPATIBLE_RELATIONS.include?(relation[:type])
+
+      services = @hash[:services].select{ |service| relation[:linked_service_ids]&.include?(service[:id]) }
+      not_handled_relations << relation if services.any?{ |service|
+        (service[:activities]&.size || 0) > 1
+      }
+    }
+
+    return unless not_handled_relations.any?
+
+    raise OptimizerWrapper::UnsupportedProblemError.new(
+      "The following relations are not compatible with alternative activities: ",
+      not_handled_relations
     )
   end
 

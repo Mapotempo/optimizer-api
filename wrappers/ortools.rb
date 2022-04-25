@@ -77,7 +77,7 @@ module Wrappers
       duplicated_begins = already_begin.uniq.select{ |linked_id| already_begin.select{ |link| link == linked_id }.size > 1 }
       already_end = order_relations.collect{ |relation| relation.linked_service_ids[1..-1] }.flatten
       duplicated_ends = already_end.uniq.select{ |linked_id| already_end.select{ |link| link == linked_id }.size > 1 }
-      if vrp.routes.empty? && order_relations.size == 1
+      if vrp.routes.empty? && order_relations.size == 1 && vrp.services.none?{ |service| service.activities.any? }
         order_relations.select{ |relation| (relation.linked_service_ids[0..-2] & duplicated_begins).size == 0 && (relation.linked_service_ids[1..-1] & duplicated_ends).size == 0 }.each{ |relation|
           order_route = {
             vehicle: (vrp.vehicles.size == 1) ? vrp.vehicles.first : nil,
@@ -185,7 +185,7 @@ module Wrappers
 
           services = update_services_positions(services, services_positions, service.id, service.activity.position, service_index)
         elsif service.activities
-          service.activities.each_with_index{ |possible_activity, activity_index|
+          service.activities.each{ |possible_activity|
             services << OrtoolsVrp::Service.new(
               time_windows: possible_activity.timewindows.collect{ |tw|
                 OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647, maximum_lateness: tw.maximum_lateness)
@@ -209,7 +209,7 @@ module Wrappers
               matrix_index: possible_activity.point.matrix_index,
               vehicle_indices: vehicles_indices,
               setup_duration: possible_activity.setup_duration,
-              id: "#{service.id}_activity#{activity_index}",
+              id: service.id.to_s,
               late_multiplier: possible_activity.late_multiplier || 0,
               setup_quantities: vrp.units.collect{ |unit|
                 q = service.quantities.find{ |quantity| quantity.unit == unit }
@@ -336,7 +336,6 @@ module Wrappers
       )
 
       log "ortools solve problem creation elapsed: #{Time.now - tic}sec", level: :debug
-
       run_ortools(problem, vrp, thread_proc, &block)
     end
 

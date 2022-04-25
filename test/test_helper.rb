@@ -406,6 +406,70 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
     }
   end
 
+  def self.basic_alternatives
+    {
+      units: [{ id: 'kg' }],
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 4, 5, 5],
+          [6, 0, 1, 5],
+          [1, 2, 0, 5],
+          [5, 5, 5, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }, {
+        id: 'point_3',
+        matrix_index: 3
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        matrix_id: 'matrix_0',
+        start_point_id: 'point_0'
+      }],
+      services: [{
+        id: 'service_1',
+        activities: [{
+          point_id: 'point_1',
+        }, {
+          point_id: 'point_2'
+        }]
+      }, {
+        id: 'service_2',
+        activities: [{
+          point_id: 'point_2'
+        }, {
+          point_id: 'point_3'
+        }]
+      }, {
+        id: 'service_3',
+        activities: [{
+          point_id: 'point_3'
+        }, {
+          point_id: 'point_1'
+        }]
+      }],
+      configuration: {
+        resolution: {
+          duration: 100
+        },
+        preprocessing: {},
+        restitution: {
+          intermediate_solutions: false,
+        }
+      }
+    }
+  end
+
   def self.pud
     {
       matrices: [{

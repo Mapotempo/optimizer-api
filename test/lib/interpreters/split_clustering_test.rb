@@ -768,6 +768,16 @@ class SplitClusteringTest < Minitest::Test
         minimum_duration_lapse
         vehicle_trips
       ], Models::Relation::FORCING_RELATIONS, 'Forcing relation constant has changed'
+
+      assert_equal %i[
+      force_end
+      force_first
+      never_first
+      order
+      same_route
+      sequence
+      shipment
+      ], Models::Relation::ALTERNATIVE_COMPATIBLE_RELATIONS.sort, 'Forcing relation constant has changed'
     end
 
     def test_collect_data_items_respects_linking_relations

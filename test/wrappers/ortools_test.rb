@@ -4372,14 +4372,13 @@ class Wrappers::OrtoolsTest < Minitest::Test
 
   def test_insert_with_order
     vrp = TestHelper.load_vrp(self, fixture_file: 'instance_order')
+    ordered_service_ids = vrp.relations.first.linked_service_ids
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
     assert solutions[0]
     assert_equal 0, solutions[0].unassigned_stops.size, 'All services should be planned.'
 
-    order_in_route = vrp[:relations][0][:linked_service_ids].collect{ |service_id|
-      solutions[0].routes.first.stops.find_index{ |activity| activity.service_id == service_id }
-    }
-    assert_equal order_in_route.sort, order_in_route, 'Services with order relation should appear in correct order in route.'
+    order_in_route = solutions[0].routes.first.stops.select{ |activity| ordered_service_ids.include?(activity.service_id) }.map(&:service_id)
+    assert_equal vrp.relations.first.linked_service_ids, order_in_route, 'Services with order relation should appear in correct order in route.'
   end
 
   def test_ordre_with_2_vehicles
@@ -5174,5 +5173,57 @@ class Wrappers::OrtoolsTest < Minitest::Test
         OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
       end
     }
+  end
+
+  def test_activities_positions
+    problem = VRP.basic_alternatives
+    problem[:services].first[:activities].each{ |activity|
+      activity[:position] = :always_last
+    }
+    OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+  end
+
+  def test_activities_build_unassigned
+    problem = VRP.basic_alternatives
+    vrp = Models::Vrp.create(problem)
+
+    OptimizerWrapper.config[:services][:ortools].stub(
+      :build_unassigned,
+      lambda { |_, _|
+        unassigned_services = vrp.services.map{ |service| [service.id, service] }.to_h
+        unassigned_rests = []
+        OptimizerWrapper.config[:services][:ortools].send(:__minitest_stub__build_unassigned, unassigned_services, unassigned_rests)
+      }
+    ) do
+      OptimizerWrapper.config[:services][:ortools].solve(vrp, 'test')
+    end
+  end
+
+  def test_activities_order
+    problem = VRP.basic_alternatives
+    problem[:services][0][:activities][0][:timewindows] = [{start: 0, end: 20}]
+    problem[:services][0][:activities][1][:timewindows] = [{start: 100, end: 120}]
+    problem[:services][1][:activities][0][:timewindows] = [{start: 100, end: 120}]
+    problem[:services][1][:activities][1][:timewindows] = [{start: 0, end: 20}]
+    problem[:services][2][:activities][0][:timewindows] = [{start: 0, end: 20}]
+    problem[:services][2][:activities][1][:timewindows] = [{start: 100, end: 120}]
+    problem[:relations] = [{
+      type: :order,
+      linked_service_ids: ['service_1', 'service_2', 'service_3']
+    }]
+
+    solution = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+    alternative_indices = solution.routes[0].stops.map(&:alternative).compact.uniq
+    assert_equal 2, alternative_indices.size
+    assert_equal 1, (solution.routes[0].stops.index{ |stop| stop.id == 'service_1' })
+    assert_equal 2, (solution.routes[0].stops.index{ |stop| stop.id == 'service_2' })
+    assert_equal 3, (solution.routes[0].stops.index{ |stop| stop.id == 'service_3' })
+
+    problem[:services][1][:activities][0][:timewindows] = [{start: 0, end: 1}]
+    problem[:services][1][:activities][1][:timewindows] = [{start: 0, end: 1}]
+
+    solution = OptimizerWrapper.config[:services][:ortools].solve(TestHelper.create(problem), 'test')
+    unassigned_stops = solution.unassigned_stops
+    assert_equal 2, unassigned_stops.size
   end
 end

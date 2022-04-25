@@ -20,6 +20,15 @@ require './models/base'
 module Models
   class Relation < Base
     ALL_OR_NONE_RELATIONS = %i[shipment meetup].freeze
+    ALTERNATIVE_COMPATIBLE_RELATIONS = %i[
+      order
+      same_route
+      sequence
+      shipment
+      force_first
+      never_first
+      force_end
+    ].freeze
 
     # Relations that link multiple services to be on the same route
     LINKING_RELATIONS = %i[
