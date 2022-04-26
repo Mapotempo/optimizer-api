@@ -66,14 +66,54 @@ module OptimizerWrapper
       ortools: ORTOOLS,
     },
     profiles: {
-      demo: {
-        queue: 'DEFAULT',
+      small: {
+        queue: 'SMALL',
         services: {
           vrp: [:vroom, :ortools]
         },
         params_limit: PARAMS_LIMIT,
+        quotas: nil, # No default quota for production
+      },
+      large: {
+        queue: 'LARGE',
+        services: {
+          vrp: [:vroom, :ortools] # , :jsprit]
+        },
+        params_limit: PARAMS_LIMIT,
+        quotas: nil, # No default quota for production
+      },
+      vroom: {
+        queue: 'SMALL',
+        services: {
+          vrp: [:vroom]
+        },
+        params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT
-      }
+      },
+      ortools: {
+        queue: 'LARGE',
+        services: {
+          vrp: [:ortools]
+        },
+        params_limit: PARAMS_LIMIT,
+        quotas: QUOTAS, # Only taken into account if REDIS_COUNT
+      },
+      # jsprit: {
+      #   queue: 'LARGE',
+      #   services: {
+      #     vrp: [:jsprit]
+      #   },
+      #   params_limit: PARAMS_LIMIT,
+      #   quotas: QUOTAS, # Only taken into account if REDIS_COUNT
+      # },
+      test: {
+        queue: 'TEST',
+        services: {
+          vrp: [:vroom, :ortools] # , :jsprit]
+        },
+        params_limit: PARAMS_LIMIT,
+        quotas: QUOTAS, # Only taken into account if REDIS_COUNT
+      },
     },
     solve: {
       synchronously: ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] == 'true',
