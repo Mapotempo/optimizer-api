@@ -69,7 +69,7 @@ module OptimizerWrapper
       small: {
         queue: 'SMALL',
         services: {
-          vrp: [:vroom, :ortools]
+          vrp:  %i[vroom ortools]
         },
         params_limit: PARAMS_LIMIT,
         quotas: nil, # No default quota for production
@@ -77,15 +77,31 @@ module OptimizerWrapper
       large: {
         queue: 'LARGE',
         services: {
-          vrp: [:vroom, :ortools] # , :jsprit]
+          vrp: %i[vroom ortools]
         },
         params_limit: PARAMS_LIMIT,
         quotas: nil, # No default quota for production
       },
+      france: {
+        queue: 'FRANCE',
+        services: {
+          vrp: %i[vroom ortools]
+        },
+        params_limit: {},
+        quotas: nil,
+      },
+      world: {
+        queue: 'WORLD',
+        services: {
+          vrp: %i[vroom ortools]
+        },
+        params_limit: {},
+        quotas: nil,
+      },
       vroom: {
         queue: 'SMALL',
         services: {
-          vrp: [:vroom]
+          vrp: %i[vroom]
         },
         params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT
@@ -93,23 +109,15 @@ module OptimizerWrapper
       ortools: {
         queue: 'LARGE',
         services: {
-          vrp: [:ortools]
+          vrp: %i[ortools]
         },
         params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT
       },
-      # jsprit: {
-      #   queue: 'LARGE',
-      #   services: {
-      #     vrp: [:jsprit]
-      #   },
-      #   params_limit: PARAMS_LIMIT,
-      #   quotas: QUOTAS, # Only taken into account if REDIS_COUNT
-      # },
       test: {
         queue: 'TEST',
         services: {
-          vrp: [:vroom, :ortools] # , :jsprit]
+          vrp: %i[vroom ortools]
         },
         params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT
