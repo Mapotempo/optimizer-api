@@ -92,7 +92,8 @@ APP_ENV=production bundle exec rackup [-p 1791]
 
 Start Redis and then start the worker
 ```
-APP_ENV=production COUNT=5 QUEUE=* bundle exec rake resque:workers
+APP_ENV=production COUNT=2 QUEUE=SMALL bundle exec rake resque:workers
+APP_ENV=production COUNT=2 QUEUE=LARGE bundle exec rake resque:workers
 ```
 
 ## Usage
