@@ -91,7 +91,11 @@ module OptimizerWrapper
           }
           p[:graph] << { iteration: avancement, cost: cost, time: time }
           p[:result] = [solution.vrp_result].flatten if solution
-          Result.set(self.uuid, p)
+          begin
+            Result.set(self.uuid, p)
+          rescue Redis::BaseError => e
+            log "Could not set an intermediate result due to the following error: #{e}", level: :warning
+          end
         end
       }
       log "Ending job... #{options['checksum']}"
