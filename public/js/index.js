@@ -45,11 +45,13 @@ postForm.on('submit', function (e) {
       timer = displayTimer();
       $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + submittedJob.job.id + '"></input><button id="optim-kill">' + i18next.t('kill_optim') + '</button>');
       $('#optim-kill').click(function (e) {
-        jobsManager.delete($('#optim-job-uid').val())
-          .done(function () {
-            $('#optim-infos').html('');
-            displaySolution(submittedJob, lastSolution, { initForm: true });
-          });
+        if (window.confirm(i18next.t('delete_confirm'))) {
+          jobsManager.delete($('#optim-job-uid').val())
+            .done(function () {
+              $('#optim-infos').html('');
+              displaySolution(submittedJob, lastSolution, { initForm: true });
+            });
+        }
         e.preventDefault();
         return false;
       });

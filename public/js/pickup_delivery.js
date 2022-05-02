@@ -366,11 +366,13 @@ $(document).ready(function() {
       $('#optim-infos').append(' <input id="optim-job-uid" type="hidden" value="' + result.job.id + '"></input><button id="optim-kill">' + i18next.t('kill_optim') + '</button>');
       timer = displayTimer();
       $('#optim-kill').click(function (e) {
-        jobsManager.delete($('#optim-job-uid').val())
-        .done(function () {
-          $('#optim-infos').html('');
-          displayPDSolution(result, { initForm: true });
-        })
+        if (window.confirm(i18next.t('delete_confirm'))) {
+          jobsManager.delete($('#optim-job-uid').val())
+            .done(function () {
+              $('#optim-infos').html('');
+              displayPDSolution(result, { initForm: true });
+            });
+        }
         e.preventDefault();
         return false;
       });
