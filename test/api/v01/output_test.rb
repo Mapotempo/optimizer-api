@@ -428,7 +428,10 @@ class Api::V01::OutputTest < Minitest::Test
     }
 
     expected_route_keys = %w[vehicle_id original_vehicle_id total_travel_time total_travel_distance total_waiting_time]
-    expected_activities_keys = %w[point_id waiting_time begin_time end_time id original_id lat lon duration setup_duration additional_value skills tags]
+    expected_activities_keys = %w[
+                                  point_id waiting_time begin_time end_time id original_id lat lon duration
+                                  setup_duration additional_value skills tags travel_time travel_distance
+                                ]
     expected_unassigned_keys = %w[point_id id type unassigned_reason]
 
     [:ortools, :periodic_ortools].each{ |method| methods[method][:problem][:vehicles].first[:timewindow] = { start: 28800, end: 61200 } }

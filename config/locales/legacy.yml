@@ -42,6 +42,8 @@ legacy:
       setup: setup_duration
       skills: skills
       start_time: begin_time
+      travel_distance: travel_distance
+      travel_time: travel_time
       tw_end: "timewindow_end_%{index}"
       tw_start: "timewindow_start_%{index}"
       type: type

@@ -67,7 +67,9 @@ module OutputHelper
        I18n.t('export_file.stop.additional_value'),
        I18n.t('export_file.stop.skills'),
        I18n.t('export_file.tags'),
+       I18n.t('export_file.stop.travel_time'),
        I18n.t('export_file.route.total_travel_time'),
+       I18n.t('export_file.stop.travel_distance'),
        I18n.t('export_file.route.total_travel_distance'),
        I18n.t('export_file.route.total_wait_time')]
     end
@@ -176,7 +178,9 @@ module OutputHelper
         activity[:detail][:additional_value] || 0,
         activity[:detail][:skills].to_a.empty? ? nil : activity[:detail][:skills].to_a.flatten.join(','),
         name,
+        formatted_duration(activity[:travel_time]),
         route && formatted_duration(route[:total_travel_time]),
+        activity[:travel_distance],
         route && route[:total_distance],
         route && formatted_duration(route[:total_waiting_time]),
       ].flatten

@@ -27,7 +27,7 @@ es:
       id: gira
       original_id: vehículo
       total_travel_distance: recorrido total
-      total_travel_time: duración total
+      total_travel_time: duración total # Seems odd to use duración for travel time, activity duration and setup duration
       total_wait_time: tiempo de espera total
     stop:
       additional_value: valor adicional
@@ -42,6 +42,8 @@ es:
       setup: duración de preparación
       skills: etiquetas visita
       start_time: hora
+      travel_distance: recorrido
+      travel_time: tiempo de viaje
       tw_end: "horario fin %{index}"
       tw_start: "horario inicio %{index}"
       type: tipo parada
