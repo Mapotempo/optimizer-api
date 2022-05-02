@@ -280,7 +280,8 @@ module Interpreters
         verified('global_cheapest_arc')
       elsif vehicles.size == 1 && size_rest.positive? || size_mtws > 0
         verified('local_cheapest_insertion')
-      elsif loop_route && unique_configuration && vehicles.size < 10 && vehicles.none?(&:duration)
+      elsif loop_route && unique_configuration && vehicles.size < 10 && vehicles.none?(&:duration) && vrp.points.size < 500
+        # Savings heuristic requires a high memory quantity which may lead to OOM error for large problems
         verified('savings')
       elsif size_rest.positive? || unique_configuration || loop_route
         verified('parallel_cheapest_insertion')
