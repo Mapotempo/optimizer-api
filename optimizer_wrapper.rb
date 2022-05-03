@@ -33,8 +33,6 @@ RELATION_ZIP_CLUSTER_CAN_HANDLE = %i[
 ].freeze
 
 module OptimizerWrapper
-  @zip_condition = false
-
   def self.wrapper_vrp(api_key, profile, vrp, checksum, job_id = nil)
     inapplicable_services = []
     apply_zones(vrp)
@@ -243,7 +241,7 @@ module OptimizerWrapper
 
       if vrp.configuration.resolution.solver && (!periodic_heuristic_flag || vrp.services.size < 200)
         block&.call(nil, nil, nil, "process clique clustering : threshold (#{vrp.configuration.preprocessing.cluster_threshold.to_f}) ", nil, nil, nil) if vrp.configuration.preprocessing.cluster_threshold.to_f.positive?
-        optim_solution = clique_cluster(vrp, vrp.configuration.preprocessing.cluster_threshold, vrp.configuration.preprocessing.force_cluster) { |cliqued_vrp|
+        optim_solution = clique_cluster(vrp, vrp.configuration.preprocessing.cluster_threshold) { |cliqued_vrp|
           time_start = Time.now
 
           OptimizerWrapper.config[:services][service].simplify_constraints(cliqued_vrp)
@@ -622,21 +620,26 @@ module OptimizerWrapper
     }
   end
 
-  def self.clique_cluster(vrp, cluster_threshold, force_cluster)
-    @zip_condition = cluster_threshold && vrp.matrices.any? && vrp.services.all?(&:activity) && vrp.rests.empty? &&
-                     !vrp.schedule? && (vrp.relations.map(&:type) - RELATION_ZIP_CLUSTER_CAN_HANDLE).empty?
+  def self.clique_cluster_candidate?(vrp, cluster_threshold)
+    cluster_threshold && vrp.matrices.any? && vrp.services.all?(&:activity) && vrp.rests.empty? &&
+      !vrp.schedule? && (vrp.relations.map(&:type) - RELATION_ZIP_CLUSTER_CAN_HANDLE).empty? &&
+      vrp.services.none?{ |s| s.activity.timewindows.any? }
+  end
 
-    if @zip_condition
+  def self.clique_cluster(vrp, cluster_threshold)
+    zip_condition = clique_cluster_candidate?(vrp, cluster_threshold)
+
+    if zip_condition
       if vrp.services.any?{ |s| s.activities.any? }
         raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.')
       end
 
       original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
-      clusters = zip_cluster(vrp, cluster_threshold, force_cluster)
+      clusters = zip_cluster(vrp, cluster_threshold)
     end
     solution = yield(vrp)
 
-    if @zip_condition
+    if zip_condition
       vrp.services = original_services
       unzip_cluster(solution, clusters, vrp)
     else
@@ -644,44 +647,24 @@ module OptimizerWrapper
     end
   end
 
-  def self.zip_cluster(vrp, cluster_threshold, force_cluster)
+  def self.zip_cluster(vrp, cluster_threshold)
     return nil if vrp.services.empty?
 
     c = Ai4r::Clusterers::CompleteLinkageMaxDistance.new
 
     matrix = vrp.matrices[0][vrp.vehicles[0].router_dimension.to_sym]
+    used_units = {}
+    vrp.services.each{ |s| s.quantities.each{ |q| used_units[q.unit.id] = true if q.value != 0 }}
+    no_useful_capacities = vrp.vehicles.none?{ |v|
+      v.capacities.any?{ |capa| capa.limit && used_units.key?(capa.unit.id) }
+    }
 
-    c.distance_function =
-      if force_cluster
-        lambda do |a, b|
-          aa = vrp.services[a[0]]
-          bb = vrp.services[b[0]]
-          aa.activity.timewindows.empty? || bb.activity.timewindows.empty? ||
-            aa.activity.timewindows.any?{ |twa|
-              bb.activity.timewindows.any?{ |twb|
-                twa.start <= twb.safe_end(bb.activity.lateness_allowed?) &&
-                  twb.start <= twa.safe_end(aa.activity.lateness_allowed?)
-              }
-            } ?
-            matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] :
-            Float::INFINITY
-        end
-      else
-        no_capacities = vrp.vehicles.all?{ |v| v.capacities&.empty? }
-
-        lambda do |a, b|
-          aa = vrp.services[a[0]]
-          bb = vrp.services[b[0]]
-          # We suppose that all the services within the range of the threshold can be served in the same row.
-          # It may not be correct, but cluster_threshold is an approximation to consider close points
-          # as a single one.
-          aa.activity.timewindows.empty? || bb.activity.timewindows.empty? ||
-            aa.activity.timewindows.any?{ |twa|
-              bb.activity.timewindows.any?{ |twb| twa.start <= twb.safe_end && twb.start <= twa.safe_end }
-            } && (no_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) && aa.skills == bb.skills ?
-            matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] : Float::INFINITY
-        end
-      end
+    c.distance_function = lambda do |a, b|
+      aa = vrp.services[a[0]]
+      bb = vrp.services[b[0]]
+      (no_useful_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) && aa.skills == bb.skills ?
+      matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] : Float::INFINITY
+    end
 
     data_set = Ai4r::Data::DataSet.new(data_items: (0..(vrp.services.length - 1)).collect{ |i| [i] })
 
@@ -715,67 +698,7 @@ module OptimizerWrapper
 
       new_services[i].activity.duration =
         cluster.data_items.map{ |di| vrp.services[di[0]].activity.duration }.reduce(&:+)
-      next unless force_cluster
-
-      new_quantities = []
-      services_quantities = cluster.data_items.map{ |di|
-        di.collect{ |index|
-          vrp.services[index].quantities
-        }.flatten
-      }
-
-      services_quantities.each{ |service_quantity|
-        if new_quantities.empty?
-          new_quantities = service_quantity
-        else
-          service_quantity.each{ |sub_quantity|
-            if new_quantities.one?{ |new_quantity| new_quantity.unit.id == sub_quantity.unit.id }
-              new_quantities.find{ |new_quantity|
-                new_quantity.unit.id == sub_quantity.unit.id
-              }.value += sub_quantity.value
-            else
-              new_quantities << sub_quantity
-            end
-          }
-        end
-      }
-      new_services[i].quantities = new_quantities
       new_services[i].priority = cluster.data_items.map{ |di| vrp.services[di[0]].priority }.min
-
-      new_tws = []
-      to_remove_tws = []
-      service_tws = cluster.data_items.map{ |di|
-        di.collect{ |index|
-          vrp.services[index].activity.timewindows
-        }.flatten
-      }
-      service_tws.each{ |service_tw|
-        if new_tws.empty?
-          new_tws = service_tw
-        else
-          new_tws.each{ |new_tw|
-            # find intersection with tw of service_tw
-            compatible_tws = service_tw.select{ |tw|
-              tw.day_index.nil? || new_tw.day_index.nil? || tw.day_index == new_tw.day_index &&
-                (new_tw.end.nil? || tw.start <= new_tw.end) &&
-                (tw.end.nil? || tw.end >= new_tw.start)
-            }
-            if compatible_tws.empty?
-              to_remove_tws << new_tws
-            else
-              compatible_start = compatible_tws.collect(&:start).max
-              compatible_end = compatible_tws.collect(&:end).compact.min
-              new_tw.start = [new_tw.start, compatible_start].max
-              new_tw.end = [new_tw.end, compatible_end].min if compatible_end
-            end
-          }
-        end
-      }
-      if !new_tws.empty? && (new_tws - to_remove_tws).empty?
-        raise OptimizerWrapper::DiscordantProblemError.new('Zip cluster: no intersecting tw could be found')
-      end
-
-      new_services[i].activity.timewindows = (new_tws - to_remove_tws).compact
     end
 
     # Fill new vrp
