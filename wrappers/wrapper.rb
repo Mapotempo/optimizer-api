@@ -1640,6 +1640,7 @@ module Wrappers
         Array.new(service.visits_number) { |visit_index|
           {
             service_id: vrp.schedule? ? "#{service.id}_#{visit_index + 1}_#{service.visits_number}" : service.id,
+            original_service_id: service.original_id,
             type: service.type.to_s,
             point_id: service.activity.point_id,
             detail: build_detail(service, service.activity, service.activity.point, nil, nil, nil),
