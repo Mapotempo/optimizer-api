@@ -1026,6 +1026,9 @@ module Wrappers
           return nil
         end
 
+        # TODO: The internal model should reference the services belonging to the current vrp
+        vrp.services.each{ |s| Models::Service.insert(s) } if Models::Service.all.empty?
+
         simplification_active = true
 
         expanded_services = []
