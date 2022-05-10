@@ -28,12 +28,14 @@ module Interpreters
 
       if vrp.configuration.preprocessing.partitions&.any?
         splited_service_vrps = generate_split_vrps(service_vrp, job, block)
-        OutputHelper::Clustering.generate_files(splited_service_vrps, vrp.configuration.preprocessing.partitions.size == 2, job) if OptimizerWrapper.config[:debug][:output_clusters] && service_vrp.size < splited_service_vrps.size
-
+        if OptimizerWrapper.config[:debug][:output_clusters] && splited_service_vrps.size > 1
+          OutputHelper::Clustering.generate_files(splited_service_vrps, vrp.configuration.preprocessing.partitions.size == 2, job)
+        end
         split_solutions = splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
           cluster_ref = i + 1
           solution = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
-            msg = "split partition process #{cluster_ref}/#{splited_service_vrps.size} - #{message}" unless message.nil?
+            add = "split partition process #{cluster_ref}/#{splited_service_vrps.size}"
+            msg = OptimizerWrapper.concat_avancement(add, message)
             block&.call(wrapper, avancement, total, msg, cost, time, solution)
           }
 
@@ -169,6 +171,8 @@ module Interpreters
 
       # ss_data
       service_vrp[:split_level] = 0
+      service_vrp[:split_denominators] = [1]
+      service_vrp[:split_sides] = [0]
       service_vrp[:split_solve_data] = {
         current_vehicles: vrp.vehicles.map(&:itself), # new array but original objects
         current_vehicle_limit: vrp.configuration.resolution.vehicle_limit,
@@ -218,13 +222,17 @@ module Interpreters
           enum_current_vehicles.select{ |v| side.any?{ |s| s.id == "0_representative_vrp_s_#{v.id}" } }
         }
 
-        unless sides.size == 2 && sides.none?(&:empty?)
+        if sides.size != 2 || sides.any?(&:empty?)
           # this might happen under certain cases (skills etc can force all points to be on one side)
           # and not necessarily a problem but it should happen very rarely (in real instances)
           # it might also happen because the vehicles are in a linking relation (like vehicle_trips)
           # which forces them to be stay on one side.
           log 'There should be exactly two clusters in split_solve_core!', level: :warn
           ss_data[:cannot_split_further] = true
+        else
+          service_vrp[:split_level] = split_level + 1
+          service_vrp[:split_denominators] << 2**service_vrp[:split_level]
+          service_vrp[:split_sides] << 0
         end
 
         # TODO: In some case one side might be significantly smaller than the other side.
@@ -238,7 +246,7 @@ module Interpreters
 
         # RECURSIVELY CALL split_solve_core AND MERGE SOLUTIONS
         solutions = sides.collect.with_index{ |side, index|
-          service_vrp[:split_level] = split_level + 1
+          service_vrp[:split_sides][split_level + 1] = index
 
           ss_data[:current_vehicles] = side
 
@@ -246,7 +254,20 @@ module Interpreters
           # Warning: round does not work if there is an even "half" split
           ss_data[:current_vehicle_limit] = current_vehicle_limit && (index.zero? ? v_limit.ceil : v_limit.floor)
 
-          split_solve_core(service_vrp, job = nil, &block)
+          split_solve_core(service_vrp, job = nil) { |wrapper, avancement, total, message, cost, time, solution|
+            avc = service_vrp[:split_denominators].map.with_index{ |lvl, idx|
+              Rational(service_vrp[:split_sides][idx], lvl)
+            }.sum
+
+            msg =
+              if message.include?('max split process')
+                message
+              else
+                add = "max split process #{(service_vrp[:split_denominators].last * avc).to_i}/#{service_vrp[:split_denominators].last}"
+                OptimizerWrapper.concat_avancement(add, message)
+              end
+            block&.call(wrapper, avancement, total, msg, cost, time, solution)
+          }
         }
         ss_data[:cannot_split_further] = false
         log "<-- split_solve_core level: #{split_level}"
@@ -677,10 +698,7 @@ module Interpreters
       end
 
       log "<--- build_partial_service_vrp takes #{Time.now - tic}", level: :debug
-      {
-        vrp: sub_vrp,
-        service: service_vrp[:service]
-      }
+      service_vrp.dup.tap{ |s_v| s_v[:vrp] = sub_vrp }
     end
 
     def self.adjust_independent_duration(vrp, this_sub_size, total_size)

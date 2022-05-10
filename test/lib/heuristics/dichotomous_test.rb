@@ -151,7 +151,7 @@ class DichotomousTest < Minitest::Test
       # two very close service ending up in two different routes.
       # Moreover, it would increase the performance of clustering.
       vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomous')
-      service_vrp = { vrp: vrp, service: :demo, dicho_level: 0 }
+      service_vrp = { vrp: vrp, service: :demo, dicho_level: 0, dicho_denominators: [1], dicho_sides: [0] }
       while service_vrp[:vrp].services.size > 100
         services_vrps_dicho = Interpreters::Dichotomous.split(service_vrp, nil)
         assert_equal 2, services_vrps_dicho.size
@@ -200,7 +200,7 @@ class DichotomousTest < Minitest::Test
     def test_split_matrix
       vrp = TestHelper.load_vrp(self, fixture_file: 'dichotomous_approach')
       vrp.configuration.resolution.dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
-      service_vrp = { vrp: vrp, service: :demo, dicho_level: 0 }
+      service_vrp = { vrp: vrp, service: :demo, dicho_level: 0, dicho_denominators: [1], dicho_sides: [0] }
 
       services_vrps = Interpreters::Dichotomous.split(service_vrp)
       services_vrps.each{ |service_vrp_in|

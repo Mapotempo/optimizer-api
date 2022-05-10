@@ -47,11 +47,11 @@ module Interpreters
     def self.dichotomous_heuristic(service_vrp, job = nil, &block)
       if dichotomous_candidate?(service_vrp)
         vrp = service_vrp[:vrp]
-        message = "dicho - level(#{service_vrp[:dicho_level]}) "\
+        log_message = "dicho - level(#{service_vrp[:dicho_level]}) "\
                   "activities: #{vrp.services.size} "\
                   "vehicles (limit): #{vrp.vehicles.size}(#{vrp.configuration.resolution.vehicle_limit})"\
                   "duration [min, max]: [#{vrp.configuration.resolution.minimum_duration&.round},#{vrp.configuration.resolution.duration&.round}]"
-        log message, level: :info
+        log log_message, level: :info
 
         set_config(service_vrp)
 
@@ -87,11 +87,6 @@ module Interpreters
           raise 'dichotomous_heuristic cannot split the problem into two clusters' if sub_service_vrps.size != 2
 
           solutions = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
-            unless index.zero?
-              sub_service_vrp[:vrp].configuration.resolution.split_number = sub_service_vrps[0][:vrp].configuration.resolution.split_number + 1
-              sub_service_vrp[:vrp].configuration.resolution.total_split_number =
-                sub_service_vrps[0][:vrp].configuration.resolution.total_split_number
-            end
             if sub_service_vrp[:vrp].configuration.resolution.duration
               sub_service_vrp[:vrp].configuration.resolution.duration *=
                 sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
@@ -101,14 +96,25 @@ module Interpreters
                 sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
             end
 
-            solution = OptimizerWrapper.define_process(sub_service_vrp, job, &block)
+            solution = OptimizerWrapper.define_process(sub_service_vrp, job) { |wrapper, avancement, total, message, cost, time, sol|
+              avc = service_vrp[:dicho_denominators].map.with_index{ |lvl, idx|
+                Rational(service_vrp[:dicho_sides][idx], lvl)
+              }.sum
+
+              msg =
+                if message.include?('dichotomous process')
+                  message
+                else
+                  add = "dichotomous process #{(service_vrp[:dicho_denominators].last * avc).to_i}/#{service_vrp[:dicho_denominators].last}"
+                  OptimizerWrapper.concat_avancement(add, message)
+                end
+              block&.call(wrapper, avancement, total, msg, cost, time, sol)
+            }
 
             transfer_unused_vehicles(service_vrp, solution, sub_service_vrps) if index.zero? && solution
 
             solution
           }
-          service_vrp[:vrp].configuration.resolution.split_number = sub_service_vrps[1][:vrp].configuration.resolution.split_number
-          service_vrp[:vrp].configuration.resolution.total_split_number = sub_service_vrps[1][:vrp].configuration.resolution.total_split_number
           solution = solutions.reduce(&:+)
           log "dicho - level(#{service_vrp[:dicho_level]}) before remove_bad_skills unassigned rate " \
               "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
@@ -508,13 +514,13 @@ module Interpreters
 
           # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
           sub_vrp.configuration.resolution.vehicle_limit = vehicle_limits_by_cluster[i]
-          sub_vrp.configuration.resolution.split_number += i
-          sub_vrp.configuration.resolution.total_split_number += 1
 
           split_service_vrps << {
             service: service_vrp[:service],
             vrp: sub_vrp,
-            dicho_level: service_vrp[:dicho_level] + 1
+            dicho_level: service_vrp[:dicho_level] + 1,
+            dicho_denominators: service_vrp[:dicho_denominators] + [2**(service_vrp[:dicho_level] + 1)],
+            dicho_sides: service_vrp[:dicho_sides] + [i]
           }
         }
       else
@@ -528,7 +534,9 @@ module Interpreters
         split_service_vrps << {
           service: service_vrp[:service],
           vrp: sub_vrp,
-          dicho_level: service_vrp[:dicho_level]
+          dicho_level: service_vrp[:dicho_level],
+          dicho_denominators: service_vrp[:dicho_denominators],
+          dicho_sides: service_vrp[:dicho_sides]
         }
       end
       OutputHelper::Clustering.generate_files(split_service_vrps) if OptimizerWrapper.config[:debug][:output_clusters]

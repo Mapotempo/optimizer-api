@@ -63,7 +63,9 @@ module OptimizerWrapper
           end
         },
         vrp: vrp_element,
-        dicho_level: 0
+        dicho_level: 0,
+        dicho_denominators: [1],
+        dicho_sides: [0]
       }
     }
 
@@ -101,7 +103,8 @@ module OptimizerWrapper
     several_service_vrps = Interpreters::SeveralSolutions.expand_similar_resolutions(services_vrps)
     several_solutions = several_service_vrps.collect.with_index{ |current_service_vrps, solution_index|
       callback_main = lambda { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
-        msg = "#{"solution: #{solution_index + 1}/#{several_service_vrps.size} - " if several_service_vrps.size > 1}#{message}" unless message.nil?
+        add = "solution #{solution_index + 1}/#{several_service_vrps.size}"
+        msg = several_service_vrps.size > 1 && concat_avancement(add, message) || message
         block&.call(wrapper, avancement, total, msg, cost, time, solution)
       }
 
@@ -112,7 +115,8 @@ module OptimizerWrapper
 
         service_vrp_repeats.each_with_index{ |repeated_service_vrp, repetition_index|
           repeated_results << define_process(repeated_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
-            msg = "#{"repetition #{repetition_index + 1}/#{service_vrp_repeats.size} - " if service_vrp_repeats.size > 1}#{message}" unless message.nil?
+            add = "repetition #{repetition_index + 1}/#{service_vrp_repeats.size}"
+            msg = service_vrp_repeats.size > 1 && concat_avancement(add, message) || message
             callback_join&.call(wrapper, avancement, total, msg, cost, time, solution)
           }
           Models.delete_all # needed to prevent duplicate ids because expand_repeat uses Marshal.load/dump
@@ -270,8 +274,7 @@ module OptimizerWrapper
           OptimizerWrapper.config[:services][service].patch_and_rewind_simplified_constraints(cliqued_vrp, cliqued_solution)
 
           if cliqued_solution.is_a?(Models::Solution)
-            # cliqued_solution[:elapsed] = (Time.now - time_start) * 1000 # Can be overridden in wrappers
-            block&.call(nil, nil, nil, "process #{vrp.configuration.resolution.split_number}/#{vrp.configuration.resolution.total_split_number} - " + 'run optimization' + " - elapsed time #{(Result.time_spent(cliqued_solution.elapsed) / 1000).to_i}/" + "#{vrp.configuration.resolution.total_duration / 1000} ", nil, nil, nil) if dicho_level&.positive?
+            block&.call(nil, nil, nil, 'run optimization', nil, nil, nil) if dicho_level&.positive?
             cliqued_solution
           elsif cliqued_solution.status == :killed
             next
@@ -455,7 +458,8 @@ module OptimizerWrapper
     solutions = services_vrps.each_with_index.map{ |service_vrp, i|
       block = if services_vrps.size > 1 && !callback.nil?
                 proc { |wrapper, avancement, total, message, cost = nil, time = nil, solution = nil|
-                  msg = "split independent process #{i + 1}/#{services_vrps.size} - #{message}" unless message.nil?
+                  add = "split independent process #{i + 1}/#{services_vrps.size}"
+                  msg = concat_avancement(add, message) || message
                   callback&.call(wrapper, avancement, total, msg, cost, time, solution)
                 }
               else
@@ -465,6 +469,12 @@ module OptimizerWrapper
     }
 
     solutions.reduce(&:+)
+  end
+
+  def self.concat_avancement(addition, message)
+    return unless message
+
+    addition + ' - ' + message
   end
 
   def self.job_list(api_key)
