@@ -60,12 +60,14 @@ var jobsManager = {
   },
   roleDispatcher: function (object) {
     switch ($(object).data('role')) {
-      case 'focus':
-        //actually in building, create to apply different behavior to the button object restartJob, actually not set. #TODO
-        break;
-      case 'delete':
+    case 'focus':
+      //actually in building, create to apply different behavior to the button object restartJob, actually not set. #TODO
+      break;
+    case 'delete':
+      if (window.confirm(i18next.t('delete_confirm'))) {
         this.ajaxDeleteJob($(object).val());
-        break;
+      }
+      break;
     }
   },
   ajaxGetJobs: function (timeinterval) {

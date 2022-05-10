@@ -58,6 +58,7 @@ es:
       send: Enviar
       csv_vehicles_label: 'Su expediente vehicules csv:'
       file_customer_label: 'Su archivo csv de clientes:'
+      file_problem_label: 'VRP (JSON):'
     result:
       title: Visualización de resultados
       show_result: Ver los resultados del trabajo

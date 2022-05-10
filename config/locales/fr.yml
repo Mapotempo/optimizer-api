@@ -58,6 +58,7 @@ fr:
       send: Envoyer
       csv_vehicles_label: 'Véhicules (CSV) :'
       file_customer_label: 'Clients (CSV) :'
+      file_problem_label: 'VRP (JSON) :'
     result:
       title: Visualisation des résultats
       show_result: Visualiser les résultats du job
