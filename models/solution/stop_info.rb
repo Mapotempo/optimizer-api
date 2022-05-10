@@ -36,6 +36,10 @@ module Models
 
         field :current_distance, default: 0
 
+        # Fields related to the vehicle performing the current leg
+        field :router_mode
+        field :speed_multiplier
+
         def set_schedule(vrp, vehicle)
           return unless vrp.schedule?
 
