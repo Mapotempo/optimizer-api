@@ -11,7 +11,7 @@ var fr = {
     kill_optim: 'Arrêter l\'optimisation',
     error: 'Une erreure s\'est produite',
     optimize_queued: 'En attente d\'un processus disponible...',
-    delete_confirm: 'Êtes vous sûr de vouloir supprimer?',
+    delete_confirm: 'Êtes vous sûr de vouloir supprimer ?',
     display_solution: 'Afficher la solution intermédiaire',
     download_csv: 'Télécharger le fichier CSV',
     download_json: 'Télécharger le fichier json',
