@@ -20,7 +20,7 @@ module VrpInput
   extend Grape::API::Helpers
 
   params :input do
-    optional(:vrp, type: Hash, documentation: { param_type: 'body' }, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c[:tempfile].read) : c }) do
+    optional(:vrp, type: Hash, allow_blank: false, documentation: { param_type: 'body' }, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c[:tempfile].read) : c }) do
       use :request_object
     end
     use :request_files
@@ -40,7 +40,7 @@ module VrpInput
 
     optional(:zones, type: Array, desc: '') do use :vrp_request_zone end
 
-    requires(:vehicles, type: Array, documentation: { desc: 'Set of available vehicles' }) do
+    requires(:vehicles, type: Array, allow_blank: false, documentation: { desc: 'Set of available vehicles' }) do
       use :vrp_request_vehicle
     end
 
