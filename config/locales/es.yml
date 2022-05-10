@@ -27,8 +27,8 @@ es:
       id: gira
       original_id: vehículo
       total_travel_distance: recorrido total
-      total_travel_time: duración total # Seems odd to use duración for travel time, activity duration and setup duration
-      total_wait_time: tiempo de espera total
+      total_travel_time: duración total del viaje
+      total_wait_time: tiempo total de espera
     stop:
       additional_value: valor adicional
       duration: duración visita
