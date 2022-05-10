@@ -91,7 +91,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     # TODO: Either find a way to call grape validators automatically or add necessary grape coerces here
     [:duration, :setup_duration].each { |symbol|
       vrp[:services]&.each{ |service|
-        raise if service[:type]
+        raise 'Remove deprecated type field' if service[:type]
 
         service.delete(:type)
         service[:activity][symbol] = ScheduleType.type_cast(service[:activity][symbol] || 0) if service[:activity]
@@ -286,7 +286,7 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
   def self.load_vrps(test, options = {})
     filename = options[:fixture_file] || test.name[5..-1]
-    json_file = "test/fixtures/#{filename}.json"
+    json_file = options[:json_file_path] || "test/fixtures/#{filename}.json"
     vrps = options[:problem] ? { vrp: options[:problem] } :
                                JSON.parse(File.read(json_file), symbolize_names: true)
     vrps = [vrps] unless vrps.is_a?(Array)
