@@ -20,10 +20,11 @@
 - Mapotempo github wiki is now directly part of the project [#351](https://github.com/Mapotempo/optimizer-api/pull/351)
 - Empty/Fill behavior changed so that the loads are naturally managed within optimizer-ortools [#370](https://github.com/Mapotempo/optimizer-api/pull/370)
 - Allow multiple rests with the same day index in periodic heuristic algorithm (`first_solution_strategy='periodic'`) [#273](https://github.com/Mapotempo/optimizer-api/pull/273)
-- Conditions to benefit of `cluster_threshold` are more stricts. This avoids shifts out of feasible timewindows and capacity excesses. [#407](https://github.com/Mapotempo/optimizer-api/pull/407)
+- Conditions to benefit from `cluster_threshold` parameter are more strict -- to avoid time-window and capacity constraint violations [#407](https://github.com/Mapotempo/optimizer-api/pull/407)
 
 ### Removed
 
+- `force_cluster` option is removed -- `cluster_threshold` is applied only on supported cases [#407](https://github.com/Mapotempo/optimizer-api/pull/407)
 - The unused field `type` is removed in input [#321](https://github.com/Mapotempo/optimizer-api/pull/321)
 
 ### Fixed
