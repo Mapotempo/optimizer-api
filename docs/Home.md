@@ -41,19 +41,22 @@ Using the denomination used by [Caceres-Cruz & al](https://dl.acm.org/citation.c
 The data model is constructed around a main object called **vrp** and is constituted of multiple high level entities
 
 ```json
-"vrp": {
-  "points": [],
-  "vehicles": [],
-  "units": [],
-  "services": [],
-  "shipments": [],
-  "matrices": [],
-  "rests": [],
-  "relations": [],
-  "zones": [],
-  "configuration": {}
+{
+  "vrp": {
+    "points": [],
+    "vehicles": [],
+    "units": [],
+    "services": [],
+    "shipments": [],
+    "matrices": [],
+    "rests": [],
+    "relations": [],
+    "zones": [],
+    "configuration": {}
+  }
 }
 ```
+
 Those high level entities are completed by few others as **[Timewindows](Timewindow.md)** and **[Activities](Activity.md)** which are locally defined.
 To define the model, the first step will be to describe every **[Point](Point.md)** which will be used in the description of the problem. This will include the depots and the customers locations.
 Furthermore at least one **[Vehicle](Vehicle.md)** is mandatory and define at least one **[Service](Service-and-Shipment.md)** or **[Shipment](Service-and-Shipment.md)** will be essential to launch the solve.
@@ -72,11 +75,49 @@ VROOM provide a direct exchange format in JSON
 
 ## [Resolution](Resolution.md)
 
+The resolution is divided in three main steps. The first one **Define main process** isolate the independent resolutions requested through the parameters `several_solutions` and `repetition`.
+
+**Define process** allows to manage the recursive and dependent processes.
+
+**Solve** is the method which perform the proper call to the resolution methods (heuristics and solvers).
+
+### Define main process
+
+```bash
+└── define_main_process
+   └── SeveralSolutions
+      └── Repetitions
+         └── define_process
+```
+
+### Define process
+
+```bash
+└── define_process
+   ├── SplitClustering
+   |   └── define_process
+   ├── Dichotomous
+   |   └── define_process
+   └── solve
+```
+
+### Solve
+
+```bash
+└── solve
+   ├── PeriodicVisits
+   ├── Heuristics
+   └── Wrapper::solve
+      ├── demo
+      ├── ortools
+      └── vroom
+```
+
 
 ## [Examples](Examples.md)
 
 ## Generate client
-A client class could be generated using [swagger-codegen 2.4.12](https://github.com/swagger-api/swagger-codegen/tree/v2.4.12).
+A client class could be generated using [swagger-codegen v2.X](https://github.com/swagger-api/swagger-codegen/).
 At this purpose, the current master and dev branches generates incorrect documentation.
 
 The client can be generated using the following JSON:
