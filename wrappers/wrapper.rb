@@ -36,16 +36,6 @@ module Wrappers
       (vrp.points.all?(&:location) || vrp.points.none?(&:location)) && (vrp.points.all?(&:matrix_index) || vrp.points.none?(&:matrix_index))
     end
 
-    def assert_vehicles_only_one(vrp)
-      vrp.vehicles.size == 1 && !vrp.schedule?
-    end
-
-    def assert_vehicles_start(vrp)
-      vrp.vehicles.none?{ |vehicle|
-        vehicle.start_point.nil?
-      }
-    end
-
     def assert_vehicles_start_or_end(vrp)
       vrp.vehicles.none?{ |vehicle|
         vehicle.start_point.nil? && vehicle.end_point.nil?
@@ -129,10 +119,6 @@ module Wrappers
       # or all points and vehicles have matrix_index and matrix_id, respectively
       (vrp.matrices.count{ |matrix| matrix[:time] || matrix[:distance] }.zero? && vrp.points.all?(&:location)) ||
         (vrp.points.all?(&:matrix_index) && vrp.vehicles.all?(&:matrix_id))
-    end
-
-    def assert_one_sticky_at_most(vrp)
-      vrp.services.none?{ |service| service.sticky_vehicle_ids.size > 1 }
     end
 
     def assert_no_relations_except_simple_shipments(vrp)
