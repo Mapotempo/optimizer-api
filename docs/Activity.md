@@ -153,6 +153,14 @@ It represents the cost applied for each second arrived late to start the activit
 Note that, by default a maximum lateness value is fulfilled (depending on the server configuration) to limit the maximum lateness to 100% of each timewindow. Having a timewindow with a span of 1 hour. You could refer to [Lateness](Lateness.md) for more details.
 
 ### position
+
+`position` field allows user to provide an indication on when service activity should take place among one route. Several values are available for this parameter :
+
+* `neutral` (default value) : service can take place at any position of the route,
+* `always_first` : service should take place at the beginning of the route that is to say in first position or among other services with this constraint, at the beginning of the route.
+* `always_last` : service should take place at the end of the route that is to say in last position or among other services with this constraint, at the end of the route.
+* `always_middle` : service should not be in first or last positions of the route.
+
 The available values are : `neutral`, `always_first`, `always_middle`, `always_last`, `never_first`, `never_middle`, `never_last`).
 
 ```json
