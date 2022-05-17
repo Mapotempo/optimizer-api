@@ -8,23 +8,24 @@ The plan must be described in its general way, the schedule duration the begin a
 Some day may have to be exclude from the resolution, like holiday, and could be defined by its days or indices.
 
 ```json
+{
   "configuration": {
-      "preprocessing": {
-          "prefer_short_segment": true
+    "preprocessing": {
+      "prefer_short_segment": true
+    },
+    "resolution": {
+      "duration": 1000,
+      "iterations_without_improvment": 100
+    },
+    "schedule": {
+      "range_indices": {
+        "start": 0,
+        "end": 13
       },
-      "resolution": {
-          "duration": 1000,
-          "iterations_without_improvment": 100
-      },
-      "schedule": {
-          "range_indices": {
-              "start": 0,
-              "end": 13
-          },
-          "unavailable_indices": [2]
-      }
+      "unavailable_indices": [2]
+    }
   }
-
+}
 ```
 
 ### Vehicle definition
@@ -36,36 +37,36 @@ To link a timewindow with a week day, a **day_index can** be set (from 0 [monday
 As at the problem definition level, some days could be unavailable to a specific vehicle, this can be defined with **unavailable_work_date** or **unavailable_work_day_indices**
 
 ```json
-  {
-    "id": "vehicle_id-1",
-    "router_mode": "car",
-    "router_dimension": "time",
-    "speed_multiplier": 1.0,
-    "sequence_timewindows": [{
-        "day_index": 0,
-        "start": 25200,
-        "end": 57600
-    }, {
-        "day_index": 1,
-        "start": 25200,
-        "end": 57600
-    }, {
-        "day_index": 2,
-        "start": 25200,
-        "end": 57600
-    }, {
-        "day_index": 3,
-        "start": 25200,
-        "end": 57600
-    }, {
-        "day_index": 4,
-        "start": 25200,
-        "end": 57600
-    }],
-    "start_point_id": "store",
-    "end_point_id": "store",
-    "unavailable_work_day_indices": [5, 7]
-  }
+{
+  "id": "vehicle_id-1",
+  "router_mode": "car",
+  "router_dimension": "time",
+  "speed_multiplier": 1.0,
+  "sequence_timewindows": [{
+    "day_index": 0,
+    "start": 25200,
+    "end": 57600
+  }, {
+    "day_index": 1,
+    "start": 25200,
+    "end": 57600
+  }, {
+    "day_index": 2,
+    "start": 25200,
+    "end": 57600
+  }, {
+    "day_index": 3,
+    "start": 25200,
+    "end": 57600
+  }, {
+    "day_index": 4,
+    "start": 25200,
+    "end": 57600
+  }],
+  "start_point_id": "store",
+  "end_point_id": "store",
+  "unavailable_work_day_indices": [5, 7]
+}
 ```
 
 ### Services definition
@@ -78,35 +79,35 @@ To define multiple visit of a customer over the period, you can set it through t
 By default, it will divide the period by the number of visits in order to non overlap the multiple visits.
 
 ```json
-  {
-    "id": "visit-1",
-    "activity": {
-        "point_id": "visit-point-1",
-        "timewindows": [{
-            "day_index": 0,
-            "start": 28800,
-            "end": 64800
-        }, {
-            "day_index": 0,
-            "start": 61200,
-            "end": 97200
-        }, {
-            "day_index": 2,
-            "start": 28800,
-            "end": 64800
-        }, {
-            "day_index": 3,
-            "start": 28800,
-            "end": 64800
-        }, {
-            "day_index": 4,
-            "start": 28800,
-            "end": 64800
-        }],
-        "duration": 1200.0
-    },
-    "visits_number": 2
-  }
+{
+  "id": "visit-1",
+  "activity": {
+    "point_id": "visit-point-1",
+    "timewindows": [{
+      "day_index": 0,
+      "start": 28800,
+      "end": 64800
+    }, {
+      "day_index": 0,
+      "start": 61200,
+      "end": 97200
+    }, {
+      "day_index": 2,
+      "start": 28800,
+      "end": 64800
+    }, {
+      "day_index": 3,
+      "start": 28800,
+      "end": 64800
+    }, {
+      "day_index": 4,
+      "start": 28800,
+      "end": 64800
+    }],
+    "duration": 1200.0
+  },
+  "visits_number": 2
+}
 ```
 
 N.B: Shipments are currently not available within the schedule optimisation
@@ -119,35 +120,35 @@ N.B: Shipments are currently not available within the schedule optimisation
 Between to visits of the same mission, it could be necessary to determine exactly the lapse. At this purpose, the **minimum_lapse** and **maximum_lapse** fields of services are available.
 
 ```json
-  {
-    "id": "visit-1",
-    "activity": {
-        "point_id": "visit-point-1",
-        "timewindows": [{
-            "day_index": 0,
-            "start": 28800,
-            "end": 64800
-        }, {
-            "day_index": 0,
-            "start": 61200,
-            "end": 97200
-        }, {
-            "day_index": 2,
-            "start": 28800,
-            "end": 64800
-        }, {
-            "day_index": 3,
-            "start": 28800,
-            "end": 64800
-        }, {
-            "day_index": 4,
-            "start": 28800,
-            "end": 64800
-        }],
-        "duration": 1200.0
-    },
-    "visits_number": 2,
-    "minimum_lapse": 7,
-    "maximum_lapse": 14
-  }
+{
+  "id": "visit-1",
+  "activity": {
+    "point_id": "visit-point-1",
+    "timewindows": [{
+      "day_index": 0,
+      "start": 28800,
+      "end": 64800
+    }, {
+      "day_index": 0,
+      "start": 61200,
+      "end": 97200
+    }, {
+      "day_index": 2,
+      "start": 28800,
+      "end": 64800
+    }, {
+      "day_index": 3,
+      "start": 28800,
+      "end": 64800
+    }, {
+      "day_index": 4,
+      "start": 28800,
+      "end": 64800
+    }],
+    "duration": 1200.0
+  },
+  "visits_number": 2,
+  "minimum_lapse": 7,
+  "maximum_lapse": 14
+}
 ```
