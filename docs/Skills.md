@@ -4,6 +4,7 @@ Some package must be carried by some particular vehicle, or some points can only
 A vehicle can carry the **services** or **shipments** with the defined **skills** and the ones which have none or part of the current vehicle skills.
 
 ```json
+{
   "vehicles": [{
     "id": "vehicle_id",
     "router_mode": "car",
@@ -18,11 +19,13 @@ A vehicle can carry the **services** or **shipments** with the defined **skills*
     "cost_distance_multiplier": 0.0,
     "cost_time_multiplier": 1.0
   }]
+}
 ```
 
 Missions must be carried by a vehicle which have at least all the required skills by the current service or shipment.
 
 ```json
+{
   "services": [{
     "id": "visit",
     "activity": {
@@ -34,7 +37,8 @@ Missions must be carried by a vehicle which have at least all the required skill
       "duration": 2100.0
     },
     "skills": ["frozen"]
-  }
+  }]
+}
 ```
 
 ### <a name="alternative-skills"></a>Alternative Skills
@@ -44,6 +48,7 @@ Missions must be carried by a vehicle which have at least all the required skill
 Some vehicles can change its **skills** once empty, passing from one configuration to another. Here passing from a configuration it can carry only cool products from another it can only tool frozen ones and vice versa.
 
 ```json
+{
   "vehicles": [{
     "id": "vehicle_id",
     "router_mode": "car",
@@ -59,9 +64,11 @@ Some vehicles can change its **skills** once empty, passing from one configurati
     "cost_distance_multiplier": 0.0,
     "cost_time_multiplier": 1.0
   }]
+}
 ```
 
 ```json
+{
   "services": [{
     "id": "visit-1",
     "type": "service",
@@ -87,4 +94,5 @@ Some vehicles can change its **skills** once empty, passing from one configurati
     },
     "skills": ["cool"]
   }]
+}
 ```
