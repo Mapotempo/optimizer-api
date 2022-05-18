@@ -91,7 +91,11 @@ module OptimizerWrapper
           }
           p[:graph] << { iteration: avancement, cost: cost, time: time }
           p[:result] = [solution.vrp_result].flatten if solution
-          Result.set(self.uuid, p)
+          begin
+            Result.set(self.uuid, p)
+          rescue Redis::BaseError => e
+            log "Could not set an intermediate result due to the following error: #{e}", level: :warning
+          end
         end
       }
       log "Ending job... #{options['checksum']}"
@@ -108,7 +112,13 @@ module OptimizerWrapper
         p[:result].first[:iterations] = p[:graph].last[:iteration]
         p[:result].first[:elapsed] = p[:graph].last[:time]
       end
-      Result.set(self.uuid, p)
+      begin
+        Result.set(self.uuid, p)
+      rescue Redis::BaseError => e
+        log "Could not set the last result due to the following error (will try again after sleep): #{e}", level: :warning
+        sleep 120 # Try setting the result one last time without rescue since this is the last result
+        Result.set(self.uuid, p)
+      end
     rescue Resque::Plugins::Status::Killed, JobKilledError => e
       log 'Job Killed'
       tick('Job Killed')
