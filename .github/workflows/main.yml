@@ -138,7 +138,7 @@ jobs:
         run: ./.github/actions/launch_stack.sh
         shell: bash
       - name: Starting tests
-        timeout-minutes: 25
+        timeout-minutes: 30
         run: ./.github/actions/tests.sh
         shell: bash
 
