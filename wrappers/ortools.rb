@@ -569,6 +569,7 @@ module Wrappers
         rescue Google::Protobuf::ParseError => e
           # log and ignore protobuf parsing errors
           log "#{e.class}: #{e.message} (in run_ortools during parse_output)", level: :error
+          Raven.capture_exception(e, level: :warn)
         end
       }
 
