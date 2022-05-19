@@ -118,23 +118,23 @@ module Interpreters
           solution = solutions.reduce(&:+)
           log "dicho - level(#{service_vrp[:dicho_level]}) before remove_bad_skills unassigned rate " \
               "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
-              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
+              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
 
           remove_bad_skills(service_vrp, solution)
           Interpreters::SplitClustering.remove_empty_routes(solution)
           solution.parse(vrp)
           log "dicho - level(#{service_vrp[:dicho_level]}) before end_stage_insert  unassigned rate " \
               "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
-              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
+              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
 
           solution = end_stage_insert_unassigned(service_vrp, solution, job)
           Interpreters::SplitClustering.remove_empty_routes(solution)
 
           if service_vrp[:dicho_level].zero?
             # Remove vehicles which are half empty
-            log "dicho - before remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
+            log "dicho - before remove_poorly_populated_routes: #{solution.routes.size}"
             Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], solution, 0.5)
-            log "dicho - after remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
+            log "dicho - after remove_poorly_populated_routes: #{solution.routes.size}"
           end
           solution.parse(vrp)
 
@@ -400,7 +400,7 @@ module Interpreters
     end
 
     def self.end_stage_insert_unassigned(service_vrp, solution, _job = nil)
-      log "---> dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
+      log "---> dicho::end_stage - level(#{service_vrp[:dicho_level]})"
       return solution if solution.unassigned_stops.empty?
 
       vrp = service_vrp[:vrp]
@@ -425,7 +425,7 @@ module Interpreters
       }
       solution
     ensure
-      log "<--- dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
+      log "<--- dicho::end_stage - level(#{service_vrp[:dicho_level]})"
     end
 
     def self.split_vehicles(vrp, services_by_cluster)
