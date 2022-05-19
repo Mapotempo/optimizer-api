@@ -343,7 +343,7 @@ module Interpreters
         sub_vrp_configuration_resolution_minimum_duration =
           [(vrp.configuration.resolution.minimum_duration.to_f / 3.99 * rate_vehicles * rate_services).to_i, 100].max
 
-        used_vehicle_count = vehicles_indices.size
+        used_vehicle_count = vehicles_indices.count{ |_v_id, r_index, _v_index| r_index }
 
         if vrp.configuration.resolution.vehicle_limit
           sub_vrp_vehicle_limit = @leftover_vehicle_limit + used_vehicle_count
