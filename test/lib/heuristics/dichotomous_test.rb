@@ -21,52 +21,44 @@ class DichotomousTest < Minitest::Test
   if !ENV['SKIP_DICHO']
     def test_dichotomous_approach
       vrp = TestHelper.load_vrp(self)
-      # TODO: Remove it once the dicho contions are stabilized
+
       vrp.configuration.resolution.dicho_algorithm_service_limit = 457 # There are 458 services in the instance.
 
-      t1 = Time.now
-      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-      t2 = Time.now
-      active_route_size = solutions[0].routes.count{ |route| route.count_services.positive? }
-      # Check stops
-      activity_assert_message =
-        "Too many unassigned services (#{solutions[0].unassigned_stops.size}) for #{active_route_size} routes"
-      if active_route_size > 12
-        assert solutions[0].unassigned_stops.size <= 27, activity_assert_message
-      elsif active_route_size == 12
-        assert solutions[0].unassigned_stops.size <= 37, activity_assert_message
-      elsif active_route_size == 11
-        assert solutions[0].unassigned_stops.size <= 57, activity_assert_message
-      else
-        assert solutions[0].unassigned_stops.size <= 78, activity_assert_message
-      end
+      vrp.configuration.resolution.minimum_duration = 60000 # instead of the original 480 and 540 seconds
+      vrp.configuration.resolution.duration = 120000
 
-      # Check routes
-      route_assert_message =
-        "Too many routes (#{active_route_size}) to have #{solutions[0].unassigned_stops.size} unassigned services"
-      if solutions[0].unassigned_stops.size > 30
-        assert active_route_size < 12, route_assert_message
-      elsif solutions[0].unassigned_stops.size > 15
-        assert active_route_size < 13, route_assert_message
-      elsif solutions[0].unassigned_stops.size > 5
-        assert active_route_size < 14, route_assert_message
+      t1 = Time.now
+      solution = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)[0]
+      t2 = Time.now
+
+      active_route_size = solution.routes.count{ |route| route.count_services.positive? }
+
+      # Check solution quality
+      soln_quality_assert_message =
+        "Too many unassigned services (#{solution.unassigned_stops.size}) for #{active_route_size} routes"
+      if active_route_size > 12
+        assert solution.unassigned_stops.size <= 13, soln_quality_assert_message
+      elsif active_route_size == 12
+        assert solution.unassigned_stops.size <= 21, soln_quality_assert_message
+      elsif active_route_size == 11
+        assert solution.unassigned_stops.size <= 31, soln_quality_assert_message
       else
-        assert active_route_size < 15, route_assert_message
+        assert solution.unassigned_stops.size <= 40, soln_quality_assert_message
       end
 
       # Check elapsed time
-      min_dur = vrp.configuration.resolution.minimum_duration / 1000.0
       max_dur = vrp.configuration.resolution.duration / 1000.0
+      min_dur = vrp.configuration.resolution.minimum_duration / 1000.0
 
-      assert solutions[0].elapsed / 1000 < max_dur, # Should never be violated!
-             "Time spent in optimization (#{solutions[0].elapsed / 1000}) is greater than " \
+      assert solution.elapsed / 1000 < max_dur * 1.01, # Should never be violated!
+             "Time spent in optimization (#{solution.elapsed / 1000}) is greater than " \
              "the maximum duration asked (#{max_dur})."
-      # Due to "no remaining jobs" in end_stage, it can be violated (randomly).
-      assert solutions[0].elapsed / 1000 > min_dur * 0.95,
-             "Time spent in optimization (#{solutions[0].elapsed / 1000}) is less than " \
+      # Due to "no remaining jobs" in end_stage, it can be violated (randomly but very rarely).
+      assert solution.elapsed / 1000 > min_dur * 0.99,
+             "Time spent in optimization (#{solution.elapsed / 1000}) is less than " \
              "the minimum duration asked (#{min_dur})."
-      assert t2 - t1 > min_dur, "Too short elapsed time: #{t2 - t1}"
-      assert t2 - t1 < max_dur * 1.35, # Due to API overhead, it can be violated (randomly).
+      assert t2 - t1 < max_dur * 2, # Due to API overhead, it can be violated (randomly but very rarely).
+                                    # Since the optimisation time is short the relative overhead is big.
              "Time spend in the API (#{t2 - t1}) is too big compared to maximum " \
              "optimization duration asked (#{max_dur})."
     end
@@ -131,10 +123,18 @@ class DichotomousTest < Minitest::Test
       problem.configuration.resolution.dicho_division_service_limit = 5
 
       counter = 0
-      Interpreters::Dichotomous.stub(:kmeans, lambda{ |vrpi, cut_symbol|
-        assert_operator counter, :<, 3, 'Interpreters::Dichotomous::kmeans is called too many times. Either there is an infinite loop due to imposible clustering or dicho split logic is altered.'
-        counter += 1
-        Interpreters::Dichotomous.send(:__minitest_stub__kmeans, vrpi, cut_symbol)
+      level = nil
+      Interpreters::Dichotomous.stub(:split, lambda{ |vrpi, cut_symbol|
+        assert_operator counter, :<, 3, 'Interpreters::Dichotomous::split is called too many times. Either there is an infinite loop due to imposible clustering or dicho split logic is altered.'
+
+        if vrpi[:dicho_level] != level
+          level = vrpi[:dicho_level]
+          counter = 1
+        else
+          counter += 1
+        end
+
+        Interpreters::Dichotomous.send(:__minitest_stub__split, vrpi, cut_symbol)
       }) do
         OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, problem, nil)
       end
@@ -143,14 +143,15 @@ class DichotomousTest < Minitest::Test
     def test_cluster_dichotomous_heuristic
       # Warning: This test is not enough to ensure that two services at the same point will
       # not end up in two different routes because after clustering there is tsp_simple.
-      # In fact this check is too limiting because for this test to pass we disactivate
+      # In fact this check is too limiting because for this test to pass we deactivate
       # balancing in dicho_split at the last iteration.
 
-      # TODO: Instead of disactivating balancing we can implement
-      # clicque like preprocessing inside clustering that way it would be impossible for
+      # TODO: Instead of deactivating balancing we can implement
+      # clique like preprocessing inside clustering that way it would be impossible for
       # two very close service ending up in two different routes.
       # Moreover, it would increase the performance of clustering.
       vrp = TestHelper.load_vrp(self, fixture_file: 'cluster_dichotomous')
+      vrp.vehicles = vrp.vehicles[0..60] # no need for all vehicles
       service_vrp = { vrp: vrp, service: :demo, dicho_level: 0, dicho_denominators: [1], dicho_sides: [0] }
       while service_vrp[:vrp].services.size > 100
         services_vrps_dicho = Interpreters::Dichotomous.split(service_vrp, nil)
@@ -158,7 +159,11 @@ class DichotomousTest < Minitest::Test
 
         locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } # clusters.first.data_items.map{ |d| [d[0], d[1]] }
         locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } # clusters.second.data_items.map{ |d| [d[0], d[1]] }
-        assert_equal 0, (locations_one & locations_two).size
+        # split is done by vehicle + by representative_vrp so this might lead to some points get split between sides
+        # but this should not be an issue because the optimisation should handle such points if they can be performed
+        # on the same vehicle.
+        # The solution is to improve the vehicle_compatibility logic and using it inside collect_data
+        assert_operator 3, :>=, (locations_one & locations_two).size, 'There should not be too many "split" points'
 
         durations = []
         services_vrps_dicho.each{ |service_vrp_dicho|
@@ -197,24 +202,12 @@ class DichotomousTest < Minitest::Test
       assert Interpreters::Dichotomous.dichotomous_candidate?(service_vrp), 'dicho if all has location'
     end
 
-    def test_split_matrix
-      vrp = TestHelper.load_vrp(self, fixture_file: 'dichotomous_approach')
-      vrp.configuration.resolution.dicho_algorithm_service_limit = 457 # There are 458 services in the instance. TODO: Remove it once the dicho contions are stabilized
-      service_vrp = { vrp: vrp, service: :demo, dicho_level: 0, dicho_denominators: [1], dicho_sides: [0] }
-
-      services_vrps = Interpreters::Dichotomous.split(service_vrp)
-      services_vrps.each{ |service_vrp_in|
-        assert_equal service_vrp_in[:vrp].points.size, service_vrp_in[:vrp].matrices.first.time.size
-        assert_equal service_vrp_in[:vrp].points.size, service_vrp_in[:vrp].matrices.first.distance.size
-      }
-    end
-
-    def test_kmeans_function_with_services_at_same_location
+    def test_split_function_with_services_at_same_location
       vrp = TestHelper.load_vrp(self, fixture_file: 'two_phases_clustering_sched_with_freq_and_same_point_day_5veh')
       assert vrp.services.group_by{ |s| s.activity.point_id }.any?{ |_pt_id, set| set.size > 1 }, 'This test is useless if there are not several services with same point_id'
-      split = Interpreters::Dichotomous.send(:kmeans, vrp, :duration)
+      split = Interpreters::Dichotomous.send(:split, { vrp: vrp, dicho_sides: [], dicho_denominators: [], dicho_level: 0 })
       assert_equal 2, split.size
-      assert_equal vrp.services.size, split.collect(&:size).sum, 'Wrong number of services will be returned'
+      assert_equal vrp.services.size, split.sum{ |s| s[:vrp].services.size }, 'Wrong number of services returned'
     end
 
     def test_rest_cannot_appear_as_a_mission_in_the_initial_route
@@ -238,16 +231,15 @@ class DichotomousTest < Minitest::Test
         service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit = 1
         true
       }) do
-        Interpreters::Dichotomous.stub(:transfer_unused_vehicles, lambda{ |service_vrp, result, sub_service_vrps|
+        Interpreters::Dichotomous.stub(:transfer_unused_vehicles, lambda{ |result, sub_service_vrps|
           sub_service_vrps[0][:vrp].vehicles << Helper.deep_copy(
             sub_service_vrps[0][:vrp].vehicles.last,
             override: { id: 'extra_unused_vehicle' },
             shallow_copy: [:start_point] # regenerate end_point to check
           )
-          service_vrp[:vrp].points << sub_service_vrps[0][:vrp].vehicles.last.end_point
           sub_service_vrps[0][:vrp].points << sub_service_vrps[0][:vrp].vehicles.last.end_point
 
-          Interpreters::Dichotomous.send(:__minitest_stub__transfer_unused_vehicles, service_vrp, result, sub_service_vrps)
+          Interpreters::Dichotomous.send(:__minitest_stub__transfer_unused_vehicles, result, sub_service_vrps)
 
           sv_one = sub_service_vrps[1][:vrp]
           transferred_vehicle = sv_one.vehicles.last
