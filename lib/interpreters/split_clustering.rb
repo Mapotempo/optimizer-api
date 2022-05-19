@@ -636,12 +636,11 @@ module Interpreters
       tic = Time.now
       vrp = service_vrp[:vrp]
       sub_vrp = Models::Vrp.create({ name: vrp.name, configuration: vrp.configuration.as_json }, check: false) # Create an empty vrp
-      sub_vehicles = []
       if available_vehicles_indices
         sub_vrp.vehicles = vrp.vehicles.select.with_index{ |_v, v_i| available_vehicles_indices.include?(v_i) }
         sub_vrp.routes = vrp.routes.select{ |r|
           route_week_day = r.day_index ? r.day_index % 7 : nil
-          sub_vehicles.any?{ |vehicle|
+          sub_vrp.vehicles.any?{ |vehicle|
             vehicle_week_day_availability =
               if vehicle.timewindow
                 vehicle.timewindow.day_index || (0..6)
