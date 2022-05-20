@@ -231,8 +231,7 @@ module Interpreters
           log 'There should be exactly two clusters in split_solve_core!', level: :warn
           ss_data[:cannot_split_further] = true
         else
-          service_vrp[:split_level] = split_level + 1
-          service_vrp[:split_denominators] << 2**service_vrp[:split_level]
+          service_vrp[:split_denominators] << 2**(split_level + 1)
           service_vrp[:split_sides] << 0
         end
 
@@ -247,6 +246,9 @@ module Interpreters
 
         # RECURSIVELY CALL split_solve_core AND MERGE SOLUTIONS
         solutions = sides.collect.with_index{ |side, index|
+          # This is a recursive function and service_vrp[:split_level] needs to be corrected because
+          # it is incremented within the children of the other branch ("left-side") of this level
+          service_vrp[:split_level] = split_level + 1 # This needs to be here!
           service_vrp[:split_sides][split_level + 1] = index
 
           ss_data[:current_vehicles] = side
