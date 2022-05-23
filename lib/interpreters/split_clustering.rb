@@ -231,8 +231,12 @@ module Interpreters
           ss_data[:cannot_split_further] = true
         else
           service_vrp[:split_level] = split_level + 1
-          service_vrp[:split_denominators] << 2**service_vrp[:split_level]
-          service_vrp[:split_sides] << 0
+          if !service_vrp[:split_denominators].include?(2**service_vrp[:split_level])
+            service_vrp[:split_denominators] << 2**service_vrp[:split_level]
+            service_vrp[:split_sides] << 0
+          else
+            service_vrp[:split_sides][split_level + 1] = 0
+          end
         end
 
         # TODO: In some case one side might be significantly smaller than the other side.
@@ -271,7 +275,7 @@ module Interpreters
         }
         ss_data[:cannot_split_further] = false
         log "<-- split_solve_core level: #{split_level}"
-
+        service_vrp[:split_level] = split_level
         solutions.reduce(&:+)
       else # Stopping condition -- the problem is small enough
         # Finally generate the sub-vrp without hard-copy and solve it
