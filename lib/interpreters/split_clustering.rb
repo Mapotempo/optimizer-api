@@ -437,7 +437,7 @@ module Interpreters
       representative_vrp = ::Models::Vrp.create({
         name: 'representative_vrp',
         points: points,
-        vehicles: Array.new(2){ |i| { id: "v#{i}", router_mode: 'car' } },
+        vehicles: Array.new(2){ |i| { id: "representative_vrp_v#{i}", router_mode: 'car' } },
         services: services,
         relations: relations
       }, delete: false)
