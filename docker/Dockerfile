@@ -7,7 +7,11 @@ ARG VROOM_VERSION
 # Install Vroom
 FROM vroomvrp/vroom-docker:${VROOM_VERSION:-v1.8.0} as vroom
 
-# Rake
+# optimizer-ortools
+# Set OPTIMIZER_ORTOOLS_VERSION to a tag from mapotempo/optimizer-ortools repo as a secret on your
+# optimizer-api repo to force the CI to use a specific mapotempo/optimizer-ortools image.
+# Mapotempo devs can also set this variable to their github username on their own optimizer-api repo
+# to force the CI to use the last succesful username/optimizer-ortools image.
 FROM ${REGISTRY:-registry.mapotempo.com/}mapotempo-${BRANCH:-ce}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.14.0}
 ARG BUNDLE_WITHOUT
 

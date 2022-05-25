@@ -33,10 +33,10 @@ module Interpreters
         end
         split_solutions = splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
           cluster_ref = i + 1
-          solution = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
+          solution = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution_|
             add = "split partition process #{cluster_ref}/#{splited_service_vrps.size}"
             msg = OptimizerWrapper.concat_avancement(add, message)
-            block&.call(wrapper, avancement, total, msg, cost, time, solution)
+            block&.call(wrapper, avancement, total, msg, cost, time, solution_)
           }
 
           # add associated cluster as skill
@@ -164,16 +164,30 @@ module Interpreters
       vrp = service_vrp[:vrp]
       log "available_vehicle_ids: #{vrp.vehicles.size} - #{vrp.vehicles.collect(&:id)}", level: :debug
 
-      # Initialize by first split_by_vehicle and keep the assignment info (don't generate the sub-VRPs yet)
-      empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
-      vrp.services -= empties_or_fills
-      split_by_vehicle = split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol: :duration, restarts: 2, build_sub_vrps: false)
-
       # ss_data
       service_vrp[:split_level] = 0
       service_vrp[:split_denominators] = [1]
       service_vrp[:split_sides] = [0]
-      service_vrp[:split_solve_data] = {
+      service_vrp[:split_solve_data], empties_or_fills = initialize_split_data(service_vrp, job)
+
+      # Then split the services into left-and-right groups by
+      # using the service_vehicle_assignments information
+      # (don't generate any sub-VRP yet)
+      split_solve_core(service_vrp, job, &block) # self-recursive method
+    ensure
+      service_vrp[:vrp] = service_vrp[:split_solve_data][:original_vrp] if service_vrp[:split_solve_data]
+      service_vrp[:vrp]&.services&.concat empties_or_fills
+      log '<-- split_solve (clustering by max_split)'
+    end
+
+    def self.initialize_split_data(service_vrp, _job = nil)
+      # Initialize by first split_by_vehicle and keep the assignment info (don't generate the sub-VRPs yet)
+      vrp = service_vrp[:vrp]
+      empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
+      vrp.services -= empties_or_fills
+      split_by_vehicle = split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol: :duration, restarts: 2, build_sub_vrps: false)
+
+      split_data = {
         current_vehicles: vrp.vehicles.map(&:itself), # new array but original objects
         current_vehicle_limit: vrp.configuration.resolution.vehicle_limit,
         vehicle_has_complete_matrix: vrp.vehicles.map{ |v| [v.id, !v.matrix_id.blank?] }.to_h,
@@ -185,22 +199,9 @@ module Interpreters
         original_vrp: vrp,
         representative_vrp: nil,
       }
-      transfer_empty_vehicles, service_vrp[:split_solve_data][:current_vehicles] =
-        service_vrp[:split_solve_data][:current_vehicles].partition{ |vehicle|
-          service_vrp[:split_solve_data][:service_vehicle_assignments][vehicle.id].empty?
-        }
-      service_vrp[:split_solve_data][:transferred_vehicles].concat(transfer_empty_vehicles)
-      transfer_empty_vehicles.each{ |v| service_vrp[:split_solve_data][:service_vehicle_assignments].delete(v.id) }
-      service_vrp[:split_solve_data][:representative_vrp] = create_representative_vrp(service_vrp[:split_solve_data])
+      split_data[:representative_vrp] = create_representative_vrp(split_data)
 
-      # Then split the services into left-and-right groups by
-      # using the service_vehicle_assignments information
-      # (don't generate any sub-VRP yet)
-      split_solve_core(service_vrp, job, &block) # self-recursive method
-    ensure
-      service_vrp[:vrp] = service_vrp[:split_solve_data][:original_vrp] if service_vrp[:split_solve_data]
-      service_vrp[:vrp]&.services&.concat empties_or_fills
-      log '<-- split_solve (clustering by max_split)'
+      [split_data, empties_or_fills]
     end
 
     # self-recursive method
@@ -230,8 +231,7 @@ module Interpreters
           log 'There should be exactly two clusters in split_solve_core!', level: :warn
           ss_data[:cannot_split_further] = true
         else
-          service_vrp[:split_level] = split_level + 1
-          service_vrp[:split_denominators] << 2**service_vrp[:split_level]
+          service_vrp[:split_denominators] << 2**(split_level + 1)
           service_vrp[:split_sides] << 0
         end
 
@@ -246,6 +246,9 @@ module Interpreters
 
         # RECURSIVELY CALL split_solve_core AND MERGE SOLUTIONS
         solutions = sides.collect.with_index{ |side, index|
+          # This is a recursive function and service_vrp[:split_level] needs to be corrected because
+          # it is incremented within the children of the other branch ("left-side") of this level
+          service_vrp[:split_level] = split_level + 1 # This needs to be here!
           service_vrp[:split_sides][split_level + 1] = index
 
           ss_data[:current_vehicles] = side
@@ -340,10 +343,21 @@ module Interpreters
       sub_vrp
     end
 
+    def self.transfer_empty_vehicle_clusters(split_solve_data)
+      transfer_empty_vehicles, split_solve_data[:current_vehicles] =
+        split_solve_data[:current_vehicles].partition{ |vehicle|
+          split_solve_data[:service_vehicle_assignments][vehicle.id].empty?
+        }
+      split_solve_data[:transferred_vehicles].concat(transfer_empty_vehicles)
+      transfer_empty_vehicles.each{ |v| split_solve_data[:service_vehicle_assignments].delete(v.id) }
+    end
+
     def self.create_representative_vrp(split_solve_data)
       # This VRP represent the original VRP with only `m` number of points by reducing the services belonging to the
       # same vehicle-zone to a single point (with average lat/lon and total duration/visits). Where `m` is the
       # number of non-empty vehicle-zones generated by the very first split_by_vehicle.
+
+      transfer_empty_vehicle_clusters(split_solve_data)
 
       points = []
       services = []
@@ -423,7 +437,7 @@ module Interpreters
       representative_vrp = ::Models::Vrp.create({
         name: 'representative_vrp',
         points: points,
-        vehicles: Array.new(2){ |i| { id: "v#{i}", router_mode: 'car' } },
+        vehicles: Array.new(2){ |i| { id: "representative_vrp_v#{i}", router_mode: 'car' } },
         services: services,
         relations: relations
       }, delete: false)
@@ -624,12 +638,11 @@ module Interpreters
       tic = Time.now
       vrp = service_vrp[:vrp]
       sub_vrp = Models::Vrp.create({ name: vrp.name, configuration: vrp.configuration.as_json }, check: false) # Create an empty vrp
-      sub_vehicles = []
       if available_vehicles_indices
         sub_vrp.vehicles = vrp.vehicles.select.with_index{ |_v, v_i| available_vehicles_indices.include?(v_i) }
         sub_vrp.routes = vrp.routes.select{ |r|
           route_week_day = r.day_index ? r.day_index % 7 : nil
-          sub_vehicles.any?{ |vehicle|
+          sub_vrp.vehicles.any?{ |vehicle|
             vehicle_week_day_availability =
               if vehicle.timewindow
                 vehicle.timewindow.day_index || (0..6)
@@ -648,12 +661,11 @@ module Interpreters
         sub_vrp.routes = vrp.routes
       end
 
-      matrix_ids = sub_vrp.vehicles.map(&:matrix_id).uniq
       sub_vrp.matrices = vrp.matrices
       sub_vrp.units = vrp.units
 
       sub_vrp.services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }
-      sub_vrp.rests = sub_vrp.vehicles.flat_map{ |v| v.rests }.uniq
+      sub_vrp.rests = sub_vrp.vehicles.flat_map(&:rests).uniq
       available_vehicle_ids = sub_vrp.vehicles.map(&:id)
 
       sub_vrp.relations = vrp.relations.select{ |r|
@@ -692,7 +704,7 @@ module Interpreters
       sub_vrp = Models::Vrp.create(sub_vrp_hash, check: false)
 
       if !sub_vrp.matrices&.empty?
-        matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
+        matrix_indices = sub_vrp.points.map(&:matrix_index)
         update_matrix_index(sub_vrp)
         update_matrix(sub_vrp, matrix_indices)
       end

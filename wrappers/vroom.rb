@@ -207,7 +207,6 @@ module Wrappers
         end_time: begin_time && (begin_time + act_step['service']),
         departure_time: begin_time && (begin_time + act_step['service'])
       }.merge(route_data)
-      quantity_hash = service.quantities.map{ |quantity| [quantity.unit.id, quantity] }.to_h
       loads = vrp.units.map.with_index{ |unit, u_index|
         Models::Solution::Load.new(
           quantity: Models::Quantity.new(unit: unit),

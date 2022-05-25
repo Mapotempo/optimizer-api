@@ -94,7 +94,7 @@ module Interpreters
           elsif mandatory_heuristic == 'parallel_cheapest_insertion'
             [mandatory_heuristic, verified('global_cheapest_arc'), verified('local_cheapest_insertion')]
           else
-            [mandatory_heuristic, verified('global_cheapest_arc')]
+            [mandatory_heuristic, verified('global_cheapest_arc'), verified('parallel_cheapest_insertion')]
           end
 
         heuristic_list |= ['savings'] if vrp.vehicles.collect{ |vehicle| vehicle[:rests].to_a.size }.sum.positive? # while waiting for self_selection improve

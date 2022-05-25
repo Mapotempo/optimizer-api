@@ -35,7 +35,9 @@ module Interpreters
             service_vrp[:vrp].configuration.resolution.dicho_algorithm_service_limit &&
           !service_vrp[:vrp].schedule? &&
           service_vrp[:vrp].points.all?{ |point| point&.location&.lat && point&.location&.lon } &&
-          service_vrp[:vrp].relations.empty?
+          service_vrp[:vrp].relations.empty? &&
+          # TODO: max_split transfer_unused_resources can handle empties_or_fills use that logic in dicho
+          service_vrp[:vrp].services.none?{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
         )
     end
 
@@ -78,24 +80,16 @@ module Interpreters
 
           3.times do # TODO: move this logic inside the split function
             sub_service_vrps = split(service_vrp, job)
-            break if sub_service_vrps.size == 2
+
+            break if sub_service_vrps.size == 2 && sub_service_vrps.none?{ |s_vrp| s_vrp[:vrp].services.empty? }
           end
 
-          # TODO: instead of an error, we can just continue the optimisation in the child process
-          # by modifying the configuration.resolution.dicho_division_X_limit's here so that the child runs the
-          # optimisation instead of trying to split again
-          raise 'dichotomous_heuristic cannot split the problem into two clusters' if sub_service_vrps.size != 2
+          if sub_service_vrps.size != 2 || sub_service_vrps.any?{ |s_vrp| s_vrp[:vrp].services.empty? }
+            sub_service_vrps.each{ |s_vrp| s_vrp[:dicho_data][:cannot_split_further] = true }
+            log 'dichotomous_heuristic cannot split the problem into two clusters', level: :warn
+          end
 
           solutions = sub_service_vrps.map.with_index{ |sub_service_vrp, index|
-            if sub_service_vrp[:vrp].configuration.resolution.duration
-              sub_service_vrp[:vrp].configuration.resolution.duration *=
-                sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
-            end
-            if sub_service_vrp[:vrp].configuration.resolution.minimum_duration
-              sub_service_vrp[:vrp].configuration.resolution.minimum_duration *=
-                sub_service_vrp[:vrp].services.size / service_vrp[:vrp].services.size.to_f * 2
-            end
-
             solution = OptimizerWrapper.define_process(sub_service_vrp, job) { |wrapper, avancement, total, message, cost, time, sol|
               avc = service_vrp[:dicho_denominators].map.with_index{ |lvl, idx|
                 Rational(service_vrp[:dicho_sides][idx], lvl)
@@ -111,30 +105,30 @@ module Interpreters
               block&.call(wrapper, avancement, total, msg, cost, time, sol)
             }
 
-            transfer_unused_vehicles(service_vrp, solution, sub_service_vrps) if index.zero? && solution
+            transfer_unused_vehicles(solution, sub_service_vrps) if index.zero? && solution
 
             solution
           }
           solution = solutions.reduce(&:+)
           log "dicho - level(#{service_vrp[:dicho_level]}) before remove_bad_skills unassigned rate " \
               "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
-              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
+              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
 
           remove_bad_skills(service_vrp, solution)
           Interpreters::SplitClustering.remove_empty_routes(solution)
           solution.parse(vrp)
           log "dicho - level(#{service_vrp[:dicho_level]}) before end_stage_insert  unassigned rate " \
               "#{solution.unassigned_stops.size}/#{service_vrp[:vrp].services.size}: " \
-              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%", level: :debug
+              "#{(solution.unassigned_stops.size.to_f / service_vrp[:vrp].services.size * 100).round(1)}%"
 
           solution = end_stage_insert_unassigned(service_vrp, solution, job)
           Interpreters::SplitClustering.remove_empty_routes(solution)
 
           if service_vrp[:dicho_level].zero?
             # Remove vehicles which are half empty
-            log "dicho - before remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
+            log "dicho - before remove_poorly_populated_routes: #{solution.routes.size}"
             Interpreters::SplitClustering.remove_poorly_populated_routes(service_vrp[:vrp], solution, 0.5)
-            log "dicho - after remove_poorly_populated_routes: #{solution.routes.size}", level: :debug
+            log "dicho - after remove_poorly_populated_routes: #{solution.routes.size}"
           end
           solution.parse(vrp)
 
@@ -148,11 +142,11 @@ module Interpreters
       solution
     end
 
-    def self.transfer_unused_vehicles(service_vrp, solution, sub_service_vrps)
-      original_vrp = service_vrp[:vrp]
+    def self.transfer_unused_vehicles(solution, sub_service_vrps)
+      return if sub_service_vrps.size != 2
+
       sv_zero = sub_service_vrps[0][:vrp]
       sv_one = sub_service_vrps[1][:vrp]
-      original_matrix_indices = nil
 
       # Transfer the vehicles which do not appear in the routes or the empty vehicles that appear in the routes
       sv_zero.vehicles.each{ |vehicle|
@@ -163,52 +157,21 @@ module Interpreters
         sv_one.vehicles << vehicle
         sv_zero.vehicles -= [vehicle]
         vehicle_points = [vehicle.start_point, vehicle.end_point].compact.uniq
+        vehicle_points.each{ |new_point|
+          existing_point = sv_one.points.find{ |p| p.id == new_point.id }
 
-        update_sv_one_matrix(sv_one, original_vrp, original_matrix_indices, vehicle, vehicle_points)
+          if existing_point
+            vehicle.start_point = existing_point if vehicle.start_point_id == new_point.id
+            vehicle.end_point = existing_point if vehicle.end_point_id == new_point.id
+          else
+            sv_one.points << new_point
+          end
+        }
       }
 
       # Transfer unsued vehicle limit to the other side as well
       sv_zero_unused_vehicle_limit = sv_zero.configuration.resolution.vehicle_limit - solution.count_used_routes
       sv_one.configuration.resolution.vehicle_limit += sv_zero_unused_vehicle_limit
-    end
-
-    def self.update_sv_one_matrix(sv_one, original_vrp, original_matrix_indices, vehicle, vehicle_points)
-      vehicle_points.each{ |new_point|
-        point_exists = sv_one.points.find{ |p| p.id == new_point.id }
-
-        if point_exists
-          vehicle.start_point = point_exists if vehicle.start_point_id == new_point.id
-          vehicle.end_point = point_exists if vehicle.end_point_id == new_point.id
-          next
-        end
-
-        new_point.matrix_index = sv_one.points.size
-
-        original_matrix_indices ||= sv_one.points.map{ |p| original_vrp.points.find{ |pi| pi.id == p.id }.matrix_index }
-        new_point_original_matrix_index = original_vrp.points.find{ |pi| pi.id == new_point.id }.matrix_index
-
-        # Update the matrix
-        sv_one.matrices.each_with_index{ |sv_one_matrix, m_index|
-          %i[time distance value].each{ |dimension|
-            d_matrix = sv_one_matrix.send(dimension)
-            next unless d_matrix
-
-            original_matrix = original_vrp.matrices[m_index].send(dimension)
-
-            # existing points to new_point
-            d_matrix.each_with_index{ |row, r_index|
-              row << original_matrix[original_matrix_indices[r_index]][new_point_original_matrix_index]
-            }
-            # new_point to existing points
-            d_matrix << original_matrix[new_point_original_matrix_index].values_at(*original_matrix_indices)
-            # new_point to new_point
-            d_matrix.last << 0
-          }
-        }
-
-        original_matrix_indices << new_point_original_matrix_index
-        sv_one.points << new_point
-      }
     end
 
     def self.dicho_level_coeff(service_vrp)
@@ -221,14 +184,6 @@ module Interpreters
     def self.set_config(service_vrp)
       # service_vrp[:vrp].configuration.resolution.batch_heuristic = true
       service_vrp[:vrp].configuration.restitution.allow_empty_result = true
-      if service_vrp[:dicho_level]&.positive?
-        # TODO: Time calculation is inccorect due to end_stage. We need a better time limit calculation
-        service_vrp[:vrp].configuration.resolution.duration =
-          service_vrp[:vrp].configuration.resolution.duration ? (service_vrp[:vrp].configuration.resolution.duration / 2.66).to_i : 80000
-        service_vrp[:vrp].configuration.resolution.minimum_duration =
-          service_vrp[:vrp].configuration.resolution.minimum_duration ?
-            (service_vrp[:vrp].configuration.resolution.minimum_duration / 2.66).to_i : 70000
-      end
 
       if service_vrp[:dicho_level]&.zero?
         dicho_level_coeff(service_vrp)
@@ -241,13 +196,12 @@ module Interpreters
       service_vrp[:vrp].configuration.resolution.init_duration = 90000 if service_vrp[:vrp].configuration.resolution.duration > 90000
       service_vrp[:vrp].configuration.resolution.vehicle_limit ||= service_vrp[:vrp][:vehicles].size
       service_vrp[:vrp].configuration.resolution.init_duration =
-        if service_vrp[:vrp].vehicles.size > service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit &&
+        if (service_vrp[:dicho_data].nil? || !service_vrp[:dicho_data][:cannot_split_further]) &&
+           service_vrp[:vrp].vehicles.size > service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit &&
            service_vrp[:vrp].services.size > service_vrp[:vrp].configuration.resolution.dicho_division_service_limit &&
            service_vrp[:vrp].configuration.resolution.vehicle_limit > service_vrp[:vrp].configuration.resolution.dicho_division_vehicle_limit
           1000
         end
-      # A bit slower than local_cheapest_insertion; however, returns better results on ortools-v7.
-      service_vrp[:vrp].configuration.preprocessing.first_solution_strategy = ['parallel_cheapest_insertion']
 
       service_vrp
     end
@@ -343,7 +297,7 @@ module Interpreters
         sub_vrp_configuration_resolution_minimum_duration =
           [(vrp.configuration.resolution.minimum_duration.to_f / 3.99 * rate_vehicles * rate_services).to_i, 100].max
 
-        used_vehicle_count = vehicles_indices.size
+        used_vehicle_count = vehicles_indices.count{ |_v_id, r_index, _v_index| r_index }
 
         if vrp.configuration.resolution.vehicle_limit
           sub_vrp_vehicle_limit = @leftover_vehicle_limit + used_vehicle_count
@@ -400,7 +354,7 @@ module Interpreters
     end
 
     def self.end_stage_insert_unassigned(service_vrp, solution, _job = nil)
-      log "---> dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
+      log "---> dicho::end_stage - level(#{service_vrp[:dicho_level]})"
       return solution if solution.unassigned_stops.empty?
 
       vrp = service_vrp[:vrp]
@@ -425,180 +379,45 @@ module Interpreters
       }
       solution
     ensure
-      log "<--- dicho::end_stage - level(#{service_vrp[:dicho_level]})", level: :debug
+      log "<--- dicho::end_stage - level(#{service_vrp[:dicho_level]})"
     end
 
-    def self.split_vehicles(vrp, services_by_cluster)
-      log "---> dicho::split_vehicles #{vrp.vehicles.size}", level: :debug
-      services_skills_by_clusters = services_by_cluster.map{ |services|
-        services.map{ |s| s.skills.empty? ? nil : s.skills.uniq.sort }.compact.uniq
-      }
-      log "services_skills_by_clusters #{services_skills_by_clusters}", level: :debug
-      vehicles_by_clusters = [[], []]
-      vrp.vehicles.each_with_index{ |v, v_i|
-        cluster_index = nil
-        # Vehicle skills is an array of array of strings
-        unless v.skills.empty?
-          # If vehicle has skills which match with service skills in only one cluster, prefer this cluster for this vehicle
-          preferered_index = []
-          services_skills_by_clusters.each_with_index{ |services_skills, index|
-            preferered_index << index if services_skills.any?{ |skills| v.skills.any?{ |v_skills| (skills & v_skills).size == skills.size } }
-          }
-          cluster_index = preferered_index.first if preferered_index.size == 1
-        end
-        # TODO: prefer cluster with sticky vehicle
-        # TODO: avoid to prefer always same cluster
-        if cluster_index &&
-           ((vehicles_by_clusters[1].size - 1) / services_by_cluster[1].size >
-           (vehicles_by_clusters[0].size + 1) / services_by_cluster[0].size ||
-           (vehicles_by_clusters[1].size + 1) / services_by_cluster[1].size <
-           (vehicles_by_clusters[0].size - 1) / services_by_cluster[0].size)
-          cluster_index = nil
-        end
-        cluster_index ||= if vehicles_by_clusters[0].empty? || vehicles_by_clusters[1].empty?
-                            vehicles_by_clusters[0].size <= vehicles_by_clusters[1].size ? 0 : 1
-                          else
-                            (services_by_cluster[0].size / vehicles_by_clusters[0].size) >=
-                              (services_by_cluster[1].size / vehicles_by_clusters[1].size) ? 0 : 1
-                          end
-        vehicles_by_clusters[cluster_index] << v_i
+    def self.split(service_vrp, job = nil)
+      log "---> dicho::split - level(#{service_vrp[:dicho_level]})"
+
+      service_vrp[:dicho_data], _empties_or_fills = SplitClustering.initialize_split_data(service_vrp, job) unless service_vrp[:dicho_data]
+      dicho_data = service_vrp[:dicho_data]
+
+      enum_current_vehicles = dicho_data[:current_vehicles].select
+
+      sides = SplitClustering.split_balanced_kmeans(
+        { vrp: SplitClustering.create_representative_sub_vrp(dicho_data) }, 2,
+        cut_symbol: :duration, restarts: 1, build_sub_vrps: false, basic_split: true, group_points: false
+      ).sort_by!{ |side|
+        [side.size, side.sum(&:visits_number)] # [number_of_vehicles, number_of_visits]
+      }.reverse!.collect!{ |side|
+        enum_current_vehicles.select{ |v| side.any?{ |s| s.id == "0_representative_vrp_s_#{v.id}" } }
       }
 
-      if vehicles_by_clusters.any?(&:empty?)
-        empty_side = vehicles_by_clusters.find(&:empty?)
-        nonempty_side = vehicles_by_clusters.find(&:any?)
-
-        # Move a vehicle from the skill group with most vehicles (from nonempty side to empty side)
-        empty_side << nonempty_side.delete(
-          nonempty_side.group_by{ |v|
-            vrp.vehicles[v].skills.uniq.sort
-          }.to_a.max_by{ |vec_group|
-            vec_group[1].size
-          }.last.first
-        )
-      end
-
-      if vehicles_by_clusters[1].size > vehicles_by_clusters[0].size
-        services_by_cluster.reverse!
-        vehicles_by_clusters.reverse!
-      end
-
-      log "<--- dicho::split_vehicles #{vehicles_by_clusters.map(&:size)}", level: :debug
-      vehicles_by_clusters
-    end
-
-    def self.split_vehicle_limits(vrp, vehicles_by_cluster)
-      vehicle_shares = vehicles_by_cluster.collect(&:size)
-
-      smaller_side = [1, (vehicle_shares.min.to_f / vehicle_shares.sum * vrp.configuration.resolution.vehicle_limit).round].max
-      bigger_side  = vrp.configuration.resolution.vehicle_limit - smaller_side
-
-      (vehicle_shares[0] < vehicle_shares[1]) ? [smaller_side, bigger_side] : [bigger_side, smaller_side]
-    end
-
-    def self.split(service_vrp, _job = nil)
-      log "---> dicho::split - level(#{service_vrp[:dicho_level]})", level: :debug
-      vrp = service_vrp[:vrp]
-      vrp.configuration.resolution.vehicle_limit ||= vrp.vehicles.size
-      services_by_cluster = kmeans(vrp, :duration).sort_by{ |ss| Helper.services_duration(ss) }
       split_service_vrps = []
-      if services_by_cluster.size == 2
-        # Kmeans return 2 vrps
-        vehicles_by_cluster = split_vehicles(vrp, services_by_cluster)
-        vehicle_limits_by_cluster = split_vehicle_limits(vrp, vehicles_by_cluster)
+      sides.select(&:any?).collect.with_index{ |side, i|
+        local_dicho_data = dicho_data.dup
+        local_dicho_data[:current_vehicles] = side
 
-        [0, 1].each{ |i|
-          sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp,
-                                                              services_by_cluster[i].map(&:id),
-                                                              vehicles_by_cluster[i])[:vrp]
-
-          # TODO: à cause de la grande disparité du split_vehicles par skills, on peut rapidement tomber à 1...
-          sub_vrp.configuration.resolution.vehicle_limit = vehicle_limits_by_cluster[i]
-
-          split_service_vrps << {
-            service: service_vrp[:service],
-            vrp: sub_vrp,
-            dicho_level: service_vrp[:dicho_level] + 1,
-            dicho_denominators: service_vrp[:dicho_denominators] + [2**(service_vrp[:dicho_level] + 1)],
-            dicho_sides: service_vrp[:dicho_sides] + [i]
-          }
-        }
-      else
-        # Kmeans return 1 vrp
-        sub_vrp = SplitClustering.build_partial_service_vrp(service_vrp, services_by_cluster[0].map(&:id))[:vrp]
-        sub_vrp.points = vrp.points
-        sub_vrp.vehicles = vrp.vehicles
-        sub_vrp.vehicles.each{ |vehicle|
-          vehicle.cost_fixed = vehicle.cost_fixed&.positive? ? vehicle.cost_fixed : 1e6
-        }
         split_service_vrps << {
           service: service_vrp[:service],
-          vrp: sub_vrp,
-          dicho_level: service_vrp[:dicho_level],
-          dicho_denominators: service_vrp[:dicho_denominators],
-          dicho_sides: service_vrp[:dicho_sides]
+          vrp: SplitClustering.create_sub_vrp(local_dicho_data),
+          dicho_data: local_dicho_data,
+          dicho_level: service_vrp[:dicho_level] + 1,
+          # dicho_denominators and dicho_sides logic comes from
+          # https://github.com/braktar/optimizer-api/commit/1abb786365b4582c7279540c46e541a80f76a489
+          dicho_denominators: service_vrp[:dicho_denominators] + [2**(service_vrp[:dicho_level] + 1)],
+          dicho_sides: service_vrp[:dicho_sides] + [i],
         }
-      end
-      OutputHelper::Clustering.generate_files(split_service_vrps) if OptimizerWrapper.config[:debug][:output_clusters]
+      }
 
-      log "<--- dicho::split - level(#{service_vrp[:dicho_level]})", level: :debug
+      log "<--- dicho::split - level(#{service_vrp[:dicho_level]})"
       split_service_vrps
-    end
-
-    # TODO: remove this method and use SplitClustering class instead
-    def self.kmeans(vrp, cut_symbol)
-      nb_clusters = 2
-      # Split using balanced kmeans
-      if vrp.services.all?(&:activity)
-        cumulated_metrics = Hash.new(0)
-        data_items = []
-
-        # Collect data for kmeans
-        vrp.points.each{ |point|
-          unit_quantities = Hash.new(0)
-          related_services = vrp.services.select{ |service| service.activity.point.id == point.id }
-          related_services.each{ |service|
-            unit_quantities[:visits] += 1
-            cumulated_metrics[:visits] += 1
-            unit_quantities[:duration] += service.activity.duration
-            cumulated_metrics[:duration] += service.activity.duration
-            service.quantities.each{ |quantity|
-              unit_quantities[quantity.unit_id.to_sym] += quantity.value
-              cumulated_metrics[quantity.unit_id.to_sym] += quantity.value
-            }
-          }
-
-          next if related_services.empty?
-
-          characteristics = { duration_from_and_to_depot: [0, 0] }
-          characteristics[:matrix_index] = point[:matrix_index] unless vrp.matrices.empty?
-          data_items << [point.location.lat, point.location.lon, point.id, unit_quantities, characteristics, [], 0]
-        }
-
-        # No expected characteristics neither strict limitations because we do not
-        # know which vehicles will be used in advance
-        options = { max_iterations: 100, restarts: 5, cut_symbol: cut_symbol, last_iteration_balance_rate: 0.0 }
-        limits = { metric_limit: { limit: cumulated_metrics[cut_symbol] / nb_clusters }, strict_limit: {}}
-
-        options[:distance_matrix] = vrp.matrices[0].time if !vrp.matrices.empty?
-
-        options[:clusters_infos] = SplitClustering.collect_cluster_data(vrp, nb_clusters)
-
-        clusters = SplitClustering.kmeans_process(nb_clusters, data_items, {}, limits, options)
-
-        services_by_cluster = clusters.collect{ |cluster|
-          cluster.data_items.flat_map{ |data|
-            vrp.services.select{ |service| service.activity.point_id == data[2] }
-          }
-        }
-
-        log "Dicho K-Means: split #{vrp.services.size} into #{services_by_cluster.map.with_index{ |subset, s_i| "#{subset.size}(#{clusters[s_i].data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')} (cut symbol: #{options[:cut_symbol]})"
-
-        services_by_cluster
-      else
-        log 'Split not available when services have no activities', level: :error
-        [vrp]
-      end
     end
   end
 end
