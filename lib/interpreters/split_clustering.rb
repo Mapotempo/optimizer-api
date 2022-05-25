@@ -33,10 +33,10 @@ module Interpreters
         end
         split_solutions = splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
           cluster_ref = i + 1
-          solution = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution|
+          solution = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution_|
             add = "split partition process #{cluster_ref}/#{splited_service_vrps.size}"
             msg = OptimizerWrapper.concat_avancement(add, message)
-            block&.call(wrapper, avancement, total, msg, cost, time, solution)
+            block&.call(wrapper, avancement, total, msg, cost, time, solution_)
           }
 
           # add associated cluster as skill
@@ -661,12 +661,11 @@ module Interpreters
         sub_vrp.routes = vrp.routes
       end
 
-      matrix_ids = sub_vrp.vehicles.map(&:matrix_id).uniq
       sub_vrp.matrices = vrp.matrices
       sub_vrp.units = vrp.units
 
       sub_vrp.services = vrp.services.select{ |service| partial_service_ids.include?(service.id) }
-      sub_vrp.rests = sub_vrp.vehicles.flat_map{ |v| v.rests }.uniq
+      sub_vrp.rests = sub_vrp.vehicles.flat_map(&:rests).uniq
       available_vehicle_ids = sub_vrp.vehicles.map(&:id)
 
       sub_vrp.relations = vrp.relations.select{ |r|
@@ -705,7 +704,7 @@ module Interpreters
       sub_vrp = Models::Vrp.create(sub_vrp_hash, check: false)
 
       if !sub_vrp.matrices&.empty?
-        matrix_indices = sub_vrp.points.map{ |point| point.matrix_index }
+        matrix_indices = sub_vrp.points.map(&:matrix_index)
         update_matrix_index(sub_vrp)
         update_matrix(sub_vrp, matrix_indices)
       end

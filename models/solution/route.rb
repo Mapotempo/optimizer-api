@@ -46,7 +46,7 @@ module Models
         hash
       end
 
-      def stops=(stops)
+      redefine_method('stops=') do |stops|
         stops.map!{ |stop|
           stop = Models::Solution::Stop.new(stop) if stop.is_a? Hash
           stop.info.router_mode ||= vehicle&.router_mode
