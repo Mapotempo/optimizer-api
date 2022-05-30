@@ -1,5 +1,9 @@
+# Rest
+
 Inform about the drivers obligations to have some rest within a route
+
 ```json
+{
   "rests": [{
     "id": "Break-1",
     "timewindows": [{
@@ -8,9 +12,11 @@ Inform about the drivers obligations to have some rest within a route
     }],
     "duration": 600
   }]
+}
 ```
 
 ```json
+{
   "vehicles": [{
     "id": "vehicle_id",
     "router_mode": "car",
@@ -27,4 +33,5 @@ Inform about the drivers obligations to have some rest within a route
     "cost_distance_multiplier": 0.0,
     "cost_time_multiplier": 1.0
   }]
+}
 ```

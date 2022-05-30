@@ -1,10 +1,14 @@
-### Service
+# Service and Shipment
+
+## Service
+
 Describe more specifically the activities to be performed.
 Services are single [activities](Activity.md) which are self-sufficient.
+
 ```json
+{
   "services": [{
     "id": "visit",
-    "type": "service",
     "activity": {
       "point_id": "visit-point-1",
       "position": "always_first",
@@ -15,23 +19,76 @@ Services are single [activities](Activity.md) which are self-sufficient.
       "duration": 2100.0
     },
     "sticky_vehicle_ids": ["vehicle_id1", "vehicle_id2"]
-  }
+  }]
+}
 ```
 
-**position** field allows user to provide an indication on when service activity should take place among one route. Several values are available for this parameter : 
-* "neutral" (default value) : service can take place at any position of the route, 
-* "always_first" : service should take place at the beginning of the route that is to say in first position or among other services with this constraint, at the beginning of the route.
-* "always_last" : service should take place at the end of the route that is to say in last position or among other services with this constraint, at the end of the route.
-* "always_middle" : service should not be in first or last positions of the route.
+### exclusion_cost
 
-Complementary options are also available : "never_first", "never_last", "never_middle".
+The `exclusion_cost` always to represent some kind of revenue earned for performing this service. If the service is not part of the solution, then this cost is applied. This means that if a service is not part of the solution, serving it (through time and distance cost) is more expansive to serve it than letting it aside.
 
-**sticky_vehicle_ids** field allows user to specify whenever only a subset of vehicles can be assigned to this service. There can be one or several vehicle ids in the list.
+### priority
 
-### Shipment
-Shipments are a couple of indivisible [activities](Activity.md), the __pickup__ is the action which must take-off a package and the __delivery__ the action which deliver this particular package.
-__pickup__ and __delivery__ are build following the __[activity](Activity.md)__ model
+In most of the case, the points should "theoriticaly be served". Nevertheless, it may not be feasible to have all the services active in the solution. At this purpose, the priority allows to define which services are prefered.
+The priority 0 is the more important, while 8 priority is not important.
+
+### sticky_vehicle_ids
+
+`sticky_vehicle_ids` field allows user to specify whenever only a subset of vehicles can be assigned to this service. There can be one or several vehicle ids in the list.
+### skills
+
+The service skills are the properties required for a vehicle to perform the associated activity. See [Skills.md](Skills.md) for more details.
+
+### activity and activities
+
+A service may be composed of one specific `activity` or a set of alternative `activities`. See [Activity.md](Activity.md) for more details.
+
+### quantities
+
+The `quantities` are the value of each `unit` that are exchanged once the activity is performed. See [Unit.md](Unit.md) for more details
+
+---
+
+The following fields are related to [scheduling problems](Schedule-Optimisation.md)
+
+### visits_number
+
+It defines the number of visits to fulfill the current service needs.
+
+### minimum_lapse
+
+`minimum_lapse` defines the minimum number of days between two visits of this service.
+
+### maxmimum_lapse
+
+`maximum_lapse` defines the maximum number of days between two visits of this service.
+
+### first_possible_day_indices
+
+Each visit may have a particular first day index to be performed. The date based field is `first_possible_dates`
+
+### last_possible_day_indices
+Each visit may have a particular last day index to be performed. The date based field is `last_possible_dates`
+
+### unavailable_visit_indices
+
+In the given time horizon, some visits may not have to be perfomed due to vacancies or holidays.
+
+### unavailable_visit_day_indices
+
+The final customer to be served may have some particular closing days. The date based field is `unavailable_visit_date`
+
+### unavailable_index_ranges
+
+This field is similar to `unavailable_visit_day_indices` but instead of defining these days by days, it is possible to define it through ranges. The date based field is `unavailable_date_ranges`
+
+## Shipment
+
+Shipments are a couple of indivisible [activities](Activity.md), the **pickup** is the action which must take-off a package and the **delivery** the action which deliver this particular package.
+**pickup** and **delivery** are build following the **[activity](Activity.md)** model
+
 ```json
+{
   "shipments": [{
     "id": "shipment",
     "pickup": {
@@ -45,43 +102,15 @@ __pickup__ and __delivery__ are build following the __[activity](Activity.md)__ 
       "point_id": "visit-point-2",
       "duration": 2100.0
     },
-    "sticky_vehicle_ids": ["vehicle_id1"],
+    "sticky_vehicle_ids": ["vehicle_id1"]
   }]
+}
 ```
 
-### Pickup or Delivery
-Services can be set with a __pickup__ or a __delivery__ type which inform the solver about the activity to perform. The __pickup__ allows a reload action within the route, the __delivery__ allows to drop off resources.
-```json
-  "services": [{
-    "id": "visit-pickup",
-    "type": "pickup",
-    "activity": {
-      "point_id": "visit-point-1",
-      "timewindows": [{
-        "start": 3600,
-        "end": 4800
-      }],
-      "duration": 2100.0
-    },
-    "quantities": [{
-      "unit_id": "unit-Kg",
-      "value": 8
-    }]
-  }, {
-    "id": "visit-delivery",
-    "type": "delivery",
-    "activity": {
-      "point_id": "visit-point-2",
-      "position": "always_last",
-      "timewindows": [{
-        "start": 3600,
-        "end": 4800
-      }],
-      "duration": 2100.0
-    },
-    "quantities": [{
-      "unit_id": "unit-Kg",
-      "value": 6
-    }]
-  }]
-```
+### direct
+
+If a `shipment` is marked as `direct`, then the `pickup` and the `delivery` have to be performed in `sequence`.
+
+### maximum_inroute_duration
+
+ the field `maximum_inroute_duration` allows to define a time limit between the `pickup` and the `delivery`.

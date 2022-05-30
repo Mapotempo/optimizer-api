@@ -1,23 +1,34 @@
+# Unit
+
 Describe the dimension used for the goods. ie : kgs, litres, pallets...etc
+
 ```json
+{
   "units": [{
     "id": "unit-Kg",
     "label": "Kilogram"
   }]
+}
 ```
 
 ### Capacity
 
 Define the limit allowed for a defined unit into the vehicle.
+
 ```json
+{
   "capacities": [{
     "unit_id": "unit-Kg",
     "limit": 10,
     "overload_multiplier": 0
   }]
+}
 ```
+
 Which is defined as follows
+
 ```json
+{
   "vehicles": [{
     "id": "vehicle_id",
     "router_mode": "car",
@@ -38,18 +49,24 @@ Which is defined as follows
     "cost_distance_multiplier": 0.0,
     "cost_time_multiplier": 1.0
   }]
+}
 ```
 
 ### Quantity
 
 Inform of the package size, shift within a route once loaded into a vehicle.
+
 ```json
+{
   "quantities": [{
     "unit_id": "unit-Kg",
     "value": 8
   }]
+}
 ```
+
 ```json
+{
   "services": [{
     "id": "visit",
     "type": "service",
@@ -65,9 +82,12 @@ Inform of the package size, shift within a route once loaded into a vehicle.
       "unit_id": "unit-Kg",
       "value": 8
     }]
-  }
+  }]
+}
 ```
+
 ```json
+{
   "shipments": [{
     "id": "pickup_delivery",
     "pickup": {
@@ -90,6 +110,8 @@ Inform of the package size, shift within a route once loaded into a vehicle.
       "unit_id": "unit-Kg",
       "value": 8
     }]
-  }
+  }]
+}
 ```
+
 The "refill" parameters allow to let the optimizer decide how many values of the current quantity can be loaded at the current activity.

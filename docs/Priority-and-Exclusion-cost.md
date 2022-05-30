@@ -1,8 +1,11 @@
+# Priority and Exclusion cost
+
 Priority indicate to the solver which activities are the most important, the priority 0 is two times more important than a priority 1 which is itself two times more important than a priority 2 and so on until the priority 8. The default value is 4.
+
 ```json
+{
  "services": [{
     "id": "visit-1",
-    "type": "service",
     "activity": {
       "point_id": "visit-point-1",
       "late_multiplier": 0.3,
@@ -27,11 +30,17 @@ Priority indicate to the solver which activities are the most important, the pri
       "priority": 2
     }
   }]
+}
 ```
+
 The "exclusion_cost" parameter override the priority and define at which cost the current activity can be unassigned.
+
 ### <a name="quantities-overload"></a>Quantities overload¹
+
 Allow the vehicles to load more than the defined limit, but add a cost at every excess unit.
+
 ```json
+{
   "vehicles": [{
     "id": "vehicle_id",
     "router_mode": "car",
@@ -48,4 +57,5 @@ Allow the vehicles to load more than the defined limit, but add a cost at every 
     "cost_distance_multiplier": 0.0,
     "cost_time_multiplier": 1.0
   }]
+}
 ```
