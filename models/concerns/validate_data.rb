@@ -545,6 +545,10 @@ module ValidateData
   def check_clustering_parameters(configuration)
     return unless configuration && configuration[:preprocessing]
 
+    if configuration[:preprocessing][:force_cluster]
+      log 'force_cluster field has been deprecated and should not be used anymore', level: :warn
+    end
+
     if @hash[:relations].any?{ |relation| relation[:type] == :vehicle_trips }
       if configuration[:preprocessing][:partitions]&.any?
         raise OptimizerWrapper::UnsupportedProblemError.new(

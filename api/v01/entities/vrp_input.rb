@@ -157,7 +157,7 @@ module VrpConfiguration
     optional(:partition_metric, type: Symbol, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
     optional(:kmeans_centroids, type: Array[Integer], documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
     optional(:cluster_threshold, type: Float, desc: 'Regroup close points which constitute a cluster into a single geo-located point')
-    optional(:force_cluster, type: Boolean, desc: 'Force to cluster visits even if containing timewindows and quantities')
+    optional(:force_cluster, type: Boolean, documentation: { hidden: true }, desc: '[ DEPRECATED ] Has no purpose anymore, was used to force to zip cluster (through parameter cluster_threshold) visits even if containing timewindows and quantities')
     optional(:prefer_short_segment, type: Boolean, desc: 'Could allow to pass multiple time in the same street but deliver in a single row')
     optional(:neighbourhood_size, type: Integer, desc: 'Limit the size of the considered neighborhood within the search')
     optional(:partitions, type: Array, desc: 'Describes partition process to perform before solving. Partitions will be performed in provided order') do

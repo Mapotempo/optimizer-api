@@ -27,7 +27,7 @@ class WrapperTest < Minitest::Test
       }]
       s[:skills] = ['A']
     }
-    assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5).size
   end
 
   def test_zip_cluster_with_routes
@@ -40,7 +40,7 @@ class WrapperTest < Minitest::Test
       s[:skills] = ['A']
     }
     problem[:routes] = [{ mission_ids: (1..4).map{ |id| "service_#{id}" }}]
-    assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5).size
   end
 
   def test_no_zip_cluster
@@ -91,7 +91,7 @@ class WrapperTest < Minitest::Test
         }
       }
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+    assert_equal 4, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5).size
   end
 
   def test_no_zip_cluster_tws
@@ -103,47 +103,7 @@ class WrapperTest < Minitest::Test
         maximum_lateness: 0
       }]
     }
-    assert_equal 4, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
-  end
-
-  def test_force_zip_cluster_with_quantities
-    problem = VRP.basic_threshold
-    problem[:units] = [{ id: 'unit0' }, { id: 'unit1' }, { id: 'unit2' }]
-    problem[:vehicles].first[:capacities] = [{ unit_id: 'unit0', limit: 5 },
-                                             { unit_id: 'unit1', limit: 5 },
-                                             { unit_id: 'unit2', limit: 5 }]
-
-    problem[:services].each.with_index{ |s, i|
-      s[:quantities] = [{
-        unit_id: "unit#{i % 3}",
-        value: 1
-      }]
-    }
-    assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, true).size
-  end
-
-  def test_force_zip_cluster_with_timewindows
-    problem = VRP.basic_threshold
-    problem[:services].each.with_index{ |s, i|
-      s[:activity][:timewindows] = [{
-        start: i * 10,
-        end: i * 10 + 10,
-        maximum_lateness: 10
-      }]
-    }
-    assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, true).size
-  end
-
-  def test_zip_cluster_with_timewindows
-    problem = VRP.basic_threshold
-    problem[:services].each.with_index{ |s, i|
-      s[:activity][:timewindows] = [{
-        start: i * 10,
-        end: i * 10 + 10,
-        maximum_lateness: 10
-      }]
-    }
-    assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+    refute OptimizerWrapper.send(:clique_cluster_candidate?, TestHelper.create(problem), 5)
   end
 
   def test_zip_cluster_with_multiple_vehicles
@@ -151,7 +111,7 @@ class WrapperTest < Minitest::Test
     second_vehicle = problem[:vehicles].first.dup
     second_vehicle[:id] = 'vehicle_1'
     problem[:vehicles] << second_vehicle
-    assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+    assert_equal 2, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5).size
   end
 
   def test_zip_cluster_with_real_matrix
@@ -161,12 +121,12 @@ class WrapperTest < Minitest::Test
       s[:activity][:timewindows] = [{ start: 1, end: 2 }]
       s[:activity][:duration] = 0
     }
-    assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+    assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5).size
   end
 
   def test_no_zip_cluster_with_real_matrix
     problem = VRP.real_matrix_threshold
-    assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5, false).size
+    assert_equal 3, OptimizerWrapper.send(:zip_cluster, TestHelper.create(problem), 5).size
   end
 
   def test_with_cluster
@@ -230,13 +190,7 @@ class WrapperTest < Minitest::Test
         {
           id: "service_#{i}",
           activity: {
-            point_id: "point_#{i}",
-            late_multiplier: 3,
-            timewindows: [{
-              maximum_lateness: 10,
-              start: 1,
-              end: 2
-            }]
+            point_id: "point_#{i}"
           }
         }
       },
