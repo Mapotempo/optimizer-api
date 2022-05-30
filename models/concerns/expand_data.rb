@@ -41,7 +41,8 @@ module ExpandData
 
   def expand_unavailable_days
     unavailable_days = self.configuration.schedule&.unavailable_days&.select{ |unavailable_index|
-      unavailable_index >= self.configuration.schedule.range_indices[:start] && unavailable_index <= self.configuration.schedule.range_indices[:end]
+      unavailable_index >= self.configuration.schedule.range_indices[:start] &&
+        unavailable_index <= self.configuration.schedule.range_indices[:end]
     } || []
 
     self.vehicles.each{ |vehicle|
@@ -131,5 +132,4 @@ module ExpandData
       raise err_msg if ENV['APP_ENV'] != 'production'
     end
   end
-
 end

@@ -164,14 +164,17 @@ class Api::V01::OutputTest < Minitest::Test
 
     response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
     result = JSON.parse(response.body)['solutions'].first
-    to_check = result['routes'].flat_map{ |route| route['activities'].select{ |stop| stop['type'] == 'service' } } + result['unassigned']
+    to_check = result['routes'].flat_map{ |route|
+      route['activities'].select{ |stop| stop['type'] == 'service' }
+    } + result['unassigned']
     to_check.each{ |element|
       # each element should have 3 skills added by clustering :
       assert_equal 3, element['detail']['skills'].size
       # - exactly 1 skill corresponding to vehicle_id entity
       assert(element['detail']['skills'].include?('vehicle_0') ^ element['detail']['skills'].include?('vehicle_1'))
       # - exactly 1 skill corresponding to work_day entity
-      assert_equal element['detail']['skills'].size - 1, (element['detail']['skills'] - %w[mon tue wed thu fri sat sun]).size
+      assert_equal element['detail']['skills'].size - 1,
+                   (element['detail']['skills'] - %w[mon tue wed thu fri sat sun]).size
       # - exactly 1 skill corresponding to cluster number
       assert_equal 1, (element['detail']['skills'].count{ |skill| /cluster\ [0-9]/.match?(skill) })
     }
@@ -183,12 +186,15 @@ class Api::V01::OutputTest < Minitest::Test
     vrp[:configuration][:preprocessing][:partitions].delete_if{ |partition| partition[:entity] == :work_day }
     response = post '/0.1/vrp/submit', { api_key: 'demo', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
     result = JSON.parse(response.body)['solutions'].first
-    to_check = result['routes'].flat_map{ |route| route['activities'].select{ |stop| stop['type'] == 'service' } } + result['unassigned']
+    to_check = result['routes'].flat_map{ |route|
+      route['activities'].select{ |stop| stop['type'] == 'service' }
+    } + result['unassigned']
     to_check.each{ |element|
       # each element should have 2 skills added by clustering :
       assert_equal 2, element['detail']['skills'].size
       # - exactly 1 skill corresponding to vehicle_id entity
-      assert(element['detail']['skills'].include?('vehicle_cluster_vehicle_0') ^ element['detail']['skills'].include?('vehicle_cluster_vehicle_1'))
+      assert(element['detail']['skills'].include?('vehicle_cluster_vehicle_0') ^
+             element['detail']['skills'].include?('vehicle_cluster_vehicle_1'))
       # - exactly 1 skill corresponding to cluster number
       assert_equal 1, (element['detail']['skills'].count{ |skill| /cluster\ [0-9]/.match?(skill) })
     }
@@ -434,7 +440,9 @@ class Api::V01::OutputTest < Minitest::Test
                                 ]
     expected_unassigned_keys = %w[point_id id type unassigned_reason]
 
-    [:ortools, :periodic_ortools].each{ |method| methods[method][:problem][:vehicles].first[:timewindow] = { start: 28800, end: 61200 } }
+    [:ortools, :periodic_ortools].each{ |method|
+      methods[method][:problem][:vehicles].first[:timewindow] = { start: 28800, end: 61200 }
+    }
     dimensions = %i[time distance]
 
     methods.each{ |method, data|
@@ -445,17 +453,23 @@ class Api::V01::OutputTest < Minitest::Test
           matrix[dimension] << [2**32] * matrix[dimension].first.size
         }
       }
-      problem[:points] << { id: 'unreachable_point', matrix_index: problem[:matrices].first[:time].first.size - 1, location: { lat: 51.513402, lon: -0.217704 }}
+      problem[:points] << { id: 'unreachable_point', matrix_index: problem[:matrices].first[:time].first.size - 1,
+                            location: { lat: 51.513402, lon: -0.217704 }}
       problem[:services] << { id: 'unfeasible_service', activity: { point_id: 'unreachable_point' }}
       problem[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }} if method == :periodic_ortools
       problem[:configuration][:restitution] = { csv: true }
-      response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: problem }.to_json, 'CONTENT_TYPE' => 'application/json'
+      response = post '/0.1/vrp/submit',
+                      { api_key: 'solvers', vrp: problem }.to_json, 'CONTENT_TYPE' => 'application/json'
       headers = response.body.split("\n").map{ |line| line.split(',') }.first
-      assert_empty (expected_activities_keys - headers), "#{expected_activities_keys - headers} activity keys are missing in #{method}"
-      assert_empty (expected_route_keys - headers - data[:periodic_keys]), "#{expected_route_keys - headers} route keys are missing in #{method} result"
-      assert_empty (expected_unassigned_keys - headers), "#{expected_unassigned_keys - headers} unassigned keys are missing in #{method}"
+      assert_empty (expected_activities_keys - headers),
+                   "#{expected_activities_keys - headers} activity keys are missing in #{method}"
+      assert_empty (expected_route_keys - headers - data[:periodic_keys]),
+                   "#{expected_route_keys - headers} route keys are missing in #{method} result"
+      assert_empty (expected_unassigned_keys - headers),
+                   "#{expected_unassigned_keys - headers} unassigned keys are missing in #{method}"
 
-      undocumented = headers - expected_route_keys - expected_activities_keys - expected_unassigned_keys - data[:periodic_keys]
+      undocumented = headers - expected_route_keys - expected_activities_keys -
+                     expected_unassigned_keys - data[:periodic_keys]
       assert_empty undocumented, "#{undocumented} keys are not documented, found in #{method}"
     }
   end
@@ -582,7 +596,9 @@ class Api::V01::OutputTest < Minitest::Test
     vrp[:configuration][:restitution] = { csv: true }
 
     legacy_basic_headers = %w[vehicle_id id point_id type begin_time end_time setup_duration duration skills]
-    french_basic_headers = ['tournée', 'référence', 'heure', 'fin de la mission', 'durée client', 'durée visite', 'libellés']
+    french_basic_headers = [
+      'tournée', 'référence', 'heure', 'fin de la mission', 'durée client', 'durée visite', 'libellés'
+    ]
 
     asynchronously start_worker: true do
       [

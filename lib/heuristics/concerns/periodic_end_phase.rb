@@ -51,13 +51,17 @@ module PeriodicEndPhase
 
   def add_missing_visits
     @output_tool&.add_comment('ADD_MISSING_VISITS_PHASE')
-
-    insertion_data = compute_first_best_insertion_data # usage : insertion_data[id] = best known insertion candidate until now
+    # usage : insertion_data[id] = best known insertion candidate until now
+    insertion_data = compute_first_best_insertion_data
 
     until insertion_data.empty?
       # select best visit to insert
       max_priority = insertion_data.keys.collect{ |id| @services_data[id][:raw].priority + 1 }.max
-      best_insertion_data = insertion_data.min_by{ |id, info| ((@services_data[id][:raw].priority.to_f + 1) / max_priority) * (info[:additional_route_time] / @services_data[id][:raw].visits_number**2) }
+      best_insertion_data =
+        insertion_data.min_by{ |id, info|
+          ((@services_data[id][:raw].priority.to_f + 1) / max_priority) *
+            (info[:additional_route_time] / @services_data[id][:raw].visits_number**2)
+        }
 
       id = best_insertion_data[0]
       day = best_insertion_data[1][:day]
@@ -79,7 +83,8 @@ module PeriodicEndPhase
     inserted_id = best_insertion_data[0]
     inserted_data = best_insertion_data[1]
     if @services_assignment[inserted_id][:missing_visits].positive?
-      insertion_data[inserted_id] = compute_earliest_insertion_candidate(@candidate_routes[inserted_data[:vehicle]], inserted_id)
+      insertion_data[inserted_id] = compute_earliest_insertion_candidate(@candidate_routes[inserted_data[:vehicle]],
+                                                                         inserted_id)
       insertion_data.delete(inserted_id) unless insertion_data[inserted_id]
     else
       insertion_data.delete(inserted_id)
@@ -101,7 +106,9 @@ module PeriodicEndPhase
   def find_insertion_best_vehicle_day(id)
     @services_assignment[id][:vehicles].map{ |vehicle_id|
       compute_earliest_insertion_candidate(@candidate_routes[vehicle_id], id)
-    }.compact.min_by{ |candidate_data| candidate_data[:additional_route_time] } # TODO : find fair comparison between empty and non empty routes
+    }.compact.min_by{ |candidate_data|
+      candidate_data[:additional_route_time] # TODO : find fair comparison between empty and non empty routes
+    }
   end
 
   # Returns the insertion which can be performed at the earliest day
@@ -185,7 +192,8 @@ module PeriodicEndPhase
           route_data[:stops].each{ |stop|
             remove_visit_from_route(vehicle, day, stop[:id])
             @services_assignment[stop[:id]][:unassigned_reasons] |= ['Corresponding route was poorly populated']
-            @output_tool&.remove_visits([day], @services_assignment[stop[:id]][:days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
+            @output_tool&.remove_visits([day], @services_assignment[stop[:id]][:days], stop[:id],
+                                        @services_data[stop[:id]][:raw].visits_number)
             localy_removed[stop[:id]] += 1
           }
 
@@ -221,36 +229,41 @@ module PeriodicEndPhase
     need_to_stop = false
     until @still_removed.empty? || need_to_stop
       referent_route = nil
-      insertion_candidates = @candidate_routes.collect{ |vehicle_id, all_routes|
-        all_routes.collect{ |day, route_data|
-          if route_data[:stops].empty?
-            []
-          else
-            referent_route ||= route_data
-            insertion_candidates = compute_candidates_for_route(route_data, @still_removed.keys)
-            insertion_candidates.each{ |insertion_data|
-              insertion_data[:vehicle] = vehicle_id
-              insertion_data[:day] = day
-            }
-            insertion_candidates
-          end
+      insertion_candidates =
+        @candidate_routes.collect{ |vehicle_id, all_routes|
+          all_routes.collect{ |day, route_data|
+            if route_data[:stops].empty?
+              []
+            else
+              referent_route ||= route_data
+              insertion_candidates = compute_candidates_for_route(route_data, @still_removed.keys)
+              insertion_candidates.each{ |insertion_data|
+                insertion_data[:vehicle] = vehicle_id
+                insertion_data[:day] = day
+              }
+              insertion_candidates
+            end
+          }
         }
-      }
 
       if insertion_candidates.flatten.empty?
         need_to_stop = true
       else
-        acceptable_insertions = insertion_candidates.flatten.group_by{ |insertion_data| insertion_data[:id] }.collect{ |id, set|
-          # keep insertion insertion_data that minimizes lapse with its other visits
-          if @services_assignment[id][:days].empty?
-            set.first
-          else
-            set.min_by{ |insertion_data| @services_assignment[id][:days].collect{ |day| (day - insertion_data[:day]).abs }.min }
-          end
-        }
+        acceptable_insertions =
+          insertion_candidates.flatten.group_by{ |insertion_data| insertion_data[:id] }.collect{ |id, set|
+            # keep insertion insertion_data that minimizes lapse with its other visits
+            if @services_assignment[id][:days].empty?
+              set.first
+            else
+              set.min_by{ |insertion_data|
+                @services_assignment[id][:days].collect{ |day| (day - insertion_data[:day]).abs }.min
+              }
+            end
+          }
         point_to_add = find_best_candidate(acceptable_insertions, referent_route)
         insert_visit_in_route(@candidate_routes[point_to_add[:vehicle]][point_to_add[:day]], point_to_add, false)
-        @output_tool&.add_single_visit(point_to_add[:day], @services_assignment[point_to_add[:id]][:days], point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
+        @output_tool&.add_single_visit(point_to_add[:day], @services_assignment[point_to_add[:id]][:days],
+                                       point_to_add[:id], @services_data[point_to_add[:id]][:raw].visits_number)
         reduce_removed(point_to_add[:id])
       end
     end
@@ -291,15 +304,17 @@ module PeriodicEndPhase
 
     # prefer vehicle with more empty days already, in order to balance work load among vehicles
     # for now, avoid using a vehicle that was not used at all until now
-    to_consider_routes = big_time_range_vehicles.group_by{ |tab| tab[:vehicle_id] }.max_by{ |vehicle_id, _set|
-      if @candidate_routes[vehicle_id].all?{ |_day, day_data| day_data[:stops].empty? }
-        0
-      else
-        @candidate_routes[vehicle_id].count{ |_day, day_data| day_data[:stops].empty? }
-      end
-    }
+    to_consider_routes =
+      big_time_range_vehicles.group_by{ |tab| tab[:vehicle_id] }.max_by{ |vehicle_id, _set|
+        if @candidate_routes[vehicle_id].all?{ |_day, day_data| day_data[:stops].empty? }
+          0
+        else
+          @candidate_routes[vehicle_id].count{ |_day, day_data| day_data[:stops].empty? }
+        end
+      }
 
-    to_consider_routes[1].min_by{ |empty_route_data| empty_route_data[:day] } # start as soon as possible to maximize number of visits we can assign allong period
+    # start as soon as possible to maximize number of visits we can assign allong period
+    to_consider_routes[1].min_by{ |empty_route_data| empty_route_data[:day] }
   end
 
   def generate_new_routes
@@ -326,7 +341,9 @@ module PeriodicEndPhase
             keep_inserting = false
             empty_routes.delete_if{ |tab| tab[:vehicle_id] == best_route[:vehicle_id] && tab[:day] == best_route[:day] }
             if route_data[:stops].empty? ||
-               route_data[:stops].sum{ |stop| @services_data[stop[:id]][:raw].exclusion_cost.to_f } < route_data[:cost_fixed]
+               route_data[:stops].sum{ |stop|
+                 @services_data[stop[:id]][:raw].exclusion_cost.to_f
+               } < route_data[:cost_fixed]
               route_data[:stops].each{ |stop| @services_assignment[stop[:id]][:missing_visits] += 1 }
               route_data[:stops] = []
               previous_vehicle_filled_info = {
@@ -337,7 +354,8 @@ module PeriodicEndPhase
               previous_was_filled = true
               route_data[:stops].each{ |stop|
                 reduce_removed(stop[:id])
-                @output_tool&.add_single_visit(route_data[:day], @services_assignment[stop[:id]][:days], stop[:id], @services_data[stop[:id]][:raw].visits_number)
+                @output_tool&.add_single_visit(route_data[:day], @services_assignment[stop[:id]][:days],
+                                               stop[:id], @services_data[stop[:id]][:raw].visits_number)
               }
             end
           else
@@ -354,12 +372,18 @@ module PeriodicEndPhase
 
   def reaffect_prohibiting_partial_assignment
     # allow any day to assign visits
-    @candidate_routes.each{ |_vehicle_id, all_routes| all_routes.each{ |_day, route_data| route_data[:available_ids] = @services_data.keys } }
+    @candidate_routes.each{ |_vehicle_id, all_routes|
+      all_routes.each{ |_day, route_data| route_data[:available_ids] = @services_data.keys }
+    }
 
     banned = []
     adapted_still_removed = @still_removed.uniq{ |id, _visit| [id, @services_data[id][:raw].visits_number] }
-    most_prioritary = adapted_still_removed.group_by{ |removed| @services_data[removed.first][:raw].priority }.min_by{ |priority, _set| priority }[1]
-    most_prio_and_frequent = most_prioritary.group_by{ |removed| removed[1] }.max_by{ |visits_number, _set| visits_number }[1]
+    most_prioritary = adapted_still_removed.group_by{ |removed|
+      @services_data[removed.first][:raw].priority
+    }.min_by{ |priority, _set| priority }[1]
+    most_prio_and_frequent = most_prioritary.group_by{ |removed|
+      removed[1]
+    }.max_by{ |visits_number, _set| visits_number }[1]
     until most_prio_and_frequent.empty?
       potential_insertions = most_prio_and_frequent.collect{ |_| {} }
       @candidate_routes.each{ |vehicle_id, all_routes|
@@ -380,27 +404,36 @@ module PeriodicEndPhase
           available_days = data.reject{ |_key, cost| cost.nil? }.keys
           these_sequences = deduce_sequences(id, visits_number, available_days)
 
-          available_sequences += these_sequences.collect{ |seq|
-            cost = seq.collect{ |d| potential_insertions[s_i][vehicle_id][d][:additional_route_time] }.sum
-            { vehicle: vehicle_id, service: id, s_i: s_i, seq: seq, cost: cost }
-          }
+          available_sequences +=
+            these_sequences.collect{ |seq|
+              cost = seq.collect{ |d| potential_insertions[s_i][vehicle_id][d][:additional_route_time] }.sum
+              { vehicle: vehicle_id, service: id, s_i: s_i, seq: seq, cost: cost }
+            }
         }
       }
 
-      sequences = available_sequences.select{ |sequence| !sequence[:seq].empty? && sequence[:seq].none?{ |day| @candidate_routes[sequence[:vehicle]][day][:stops].empty? } }
-      if sequences.empty? && !available_sequences.empty?
-        allowed_non_empty_sequences = available_sequences.reject{ |sequence|
-          sequence[:seq].empty? ||
-            sequence[:seq].count{ |day| @candidate_routes[sequence[:vehicle]][day][:stops].empty? } > @services_data[sequence[:service]][:raw].visits_number / 3.0
+      sequences =
+        available_sequences.select{ |sequence|
+          !sequence[:seq].empty? &&
+            sequence[:seq].none?{ |day| @candidate_routes[sequence[:vehicle]][day][:stops].empty? }
         }
+      if sequences.empty? && !available_sequences.empty?
+        allowed_non_empty_sequences =
+          available_sequences.reject{ |sequence|
+            sequence[:seq].empty? ||
+              sequence[:seq].count{ |day|
+                @candidate_routes[sequence[:vehicle]][day][:stops].empty?
+              } > @services_data[sequence[:service]][:raw].visits_number / 3.0
+          }
 
-        sequences = if allowed_non_empty_sequences.empty?
-          []
-        else
-          allowed_non_empty_sequences.group_by{ |sequence|
-            sequence[:seq].count{ |day| @candidate_routes[sequence[:vehicle]][day][:stops].empty? }
-          }.min_by{ |nb_empty, _set| nb_empty }[1]
-        end
+        sequences =
+          if allowed_non_empty_sequences.empty?
+            []
+          else
+            allowed_non_empty_sequences.group_by{ |sequence|
+              sequence[:seq].count{ |day| @candidate_routes[sequence[:vehicle]][day][:stops].empty? }
+            }.min_by{ |nb_empty, _set| nb_empty }[1]
+          end
       end
 
       if sequences.empty?
@@ -409,9 +442,11 @@ module PeriodicEndPhase
       else
         to_plan = sequences.min_by{ |sequence| sequence[:cost] }
         to_plan[:seq].each{ |day|
-          insert_visit_in_route(@candidate_routes[to_plan[:vehicle]][day], potential_insertions[to_plan[:s_i]][to_plan[:vehicle]][day], false)
+          insert_visit_in_route(@candidate_routes[to_plan[:vehicle]][day],
+                                potential_insertions[to_plan[:s_i]][to_plan[:vehicle]][day], false)
         }
-        @output_tool&.insert_visits(@services_assignment[to_plan[:service]][:days], to_plan[:service], @services_data[to_plan[:service]][:visits_number])
+        @output_tool&.insert_visits(@services_assignment[to_plan[:service]][:days], to_plan[:service],
+                                    @services_data[to_plan[:service]][:visits_number])
 
         most_prio_and_frequent.delete_if{ |service| service.first == to_plan[:service] }
         adapted_still_removed.delete_if{ |service| service.first == to_plan[:service] }
@@ -423,12 +458,16 @@ module PeriodicEndPhase
       break if adapted_still_removed.empty? || (adapted_still_removed - banned).empty?
 
       while most_prio_and_frequent.empty?
-        most_prioritary = (adapted_still_removed - banned).group_by{ |removed| @services_data[removed.first][:raw].priority }.min_by{ |priority, _set| priority }[1]
-        most_prio_and_frequent = most_prioritary.group_by{ |removed| removed[1] }.max_by{ |visits_number, _set| visits_number }[1]
+        most_prioritary = (adapted_still_removed - banned).group_by{ |removed|
+          @services_data[removed.first][:raw].priority
+        }.min_by{ |priority, _set| priority }[1]
+        most_prio_and_frequent = most_prioritary.group_by{ |removed|
+          removed[1]
+        }.max_by{ |visits_number, _set| visits_number }[1]
       end
     end
 
-    # restaure right days to insert
+    # restore right days to insert
     compute_latest_authorized
   end
 
@@ -441,7 +480,9 @@ module PeriodicEndPhase
       available_days = days.slice(days.find_index(first_day)..-1)
       break if available_days.size < visits_number
 
-      sequences += find_sequences_from(days.slice(day_index + 1..-1), visits_number - 1, @services_data[id][:raw].minimum_lapse, @services_data[id][:raw].maximum_lapse, [first_day])
+      sequences += find_sequences_from(days.slice(day_index + 1..-1), visits_number - 1,
+                                       @services_data[id][:raw].minimum_lapse,
+                                       @services_data[id][:raw].maximum_lapse, [first_day])
     }
 
     sequences
@@ -452,12 +493,14 @@ module PeriodicEndPhase
 
     next_days = collect_next_days(days, current_sequence.last, min_lapse, max_lapse)
 
-    return [] if next_days.empty? # unvalid sequences will be ignored
+    return [] if next_days.empty? # invalid sequences will be ignored
 
-    collected = next_days.collect{ |day|
-      c = find_sequences_from(days.slice(days.find_index(day) + 1..-1), visits_left - 1, min_lapse, max_lapse, current_sequence + [day])
-      c
-    }
+    collected =
+      next_days.collect{ |day|
+        c = find_sequences_from(days.slice(days.find_index(day) + 1..-1),
+                                visits_left - 1, min_lapse, max_lapse, current_sequence + [day])
+        c
+      }
 
     collected = collected.first while collected.first.is_a?(Array) && collected.first.first.is_a?(Array)
 

@@ -63,43 +63,59 @@ module OptimizerWrapper
           schedule: !services_vrps.first[:vrp].configuration&.schedule&.range_indices.nil?,
         }
       )
-      self.options['services_vrps'] = nil # The worker is about to launch the optimization, we can delete the vrp from the job
+
+      # The worker is about to launch the optimization, we can delete the vrp from the job
+      self.options['services_vrps'] = nil
 
       # Re-set the job on Redis
       value = JSON.parse(OptimizerWrapper::REDIS.get(Resque::Plugins::Status::Hash.status_key(self.uuid)))
       value['name'] = nil
       value['options']['services_vrps'] = nil
-      OptimizerWrapper::REDIS.set Resque::Plugins::Status::Hash.status_key(self.uuid), Resque::Plugins::Status::Hash.encode(value) # Expire is defined resque config
+      # Expire is defined resque config
+      OptimizerWrapper::REDIS.set(Resque::Plugins::Status::Hash.status_key(self.uuid),
+                                  Resque::Plugins::Status::Hash.encode(value))
 
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].configuration.restitution.csv }
       ask_restitution_geojson = services_vrps.flat_map{ |s_v| s_v[:vrp].configuration.restitution.geometry }.uniq
-      final_solution = OptimizerWrapper.define_main_process(services_vrps, self.uuid) { |wrapper, avancement, total, message, cost, time, solution|
-        if [wrapper, avancement, total, message, cost, time, solution].compact.empty? # if all nil
-          tick # call tick in case job is killed
-          next # if not go back to optimization
-        end
-        at(avancement, total || 1, (message || '') + (avancement ? " #{avancement}" : '') + ((avancement && total) ? "/#{total}" : '') + (cost ? " cost: #{cost}" : ''))
-        @killed && wrapper.kill && return # Stops the worker if the job is killed
-        @wrapper = wrapper
-        log "avancement: #{message} #{avancement}"
-        if avancement && cost
-          p = Result.get(self.uuid) || { graph: [] }
-          p[:graph] ||= []
-          p[:configuration] = {
-            csv: ask_restitution_csv,
-            geometry: ask_restitution_geojson
-          }
-          p[:graph] << { iteration: avancement, cost: cost, time: time }
-          p[:result] = [solution.vrp_result].flatten if solution
-          begin
-            Result.set(self.uuid, p)
-          rescue Redis::BaseError => e
-            log "Could not set an intermediate result due to the following error: #{e}", level: :warning
+      final_solution =
+        OptimizerWrapper.define_main_process(
+          services_vrps, self.uuid
+        ) { |wrapper, avancement, total, message, cost, time, solution|
+          if [wrapper, avancement, total, message, cost, time, solution].compact.empty? # if all nil
+            tick # call tick in case job is killed
+            next # if not go back to optimization
           end
-        end
-      }
+          at(
+            avancement, total || 1,
+            (message || '') +
+              (avancement ? " #{avancement}" : '') +
+              ((avancement && total) ? "/#{total}" : '') +
+              (cost ? " cost: #{cost}" : '')
+          )
+
+          @killed && wrapper.kill && return # Stops the worker if the job is killed
+
+          @wrapper = wrapper
+          log "avancement: #{message} #{avancement}"
+          if avancement && cost
+            p = Result.get(self.uuid) || { graph: [] }
+            p[:graph] ||= []
+            p[:configuration] = {
+              csv: ask_restitution_csv,
+              geometry: ask_restitution_geojson
+            }
+            p[:graph] << { iteration: avancement, cost: cost, time: time }
+            p[:result] = [solution.vrp_result].flatten if solution
+            begin
+              Result.set(self.uuid, p)
+            rescue Redis::BaseError => e
+              log "Could not set an intermediate result due to the following error: #{e}", level: :warning
+            end
+          end
+        }
       log "Ending job... #{options['checksum']}"
-      log "Elapsed time: #{(Time.now - job_started_at).round(2)}s Vrp size: #{services_vrps.size} Key print: #{key_print} Names: #{services_vrps.map{ |sv| sv[:vrp].name }}"
+      log "Elapsed time: #{(Time.now - job_started_at).round(2)}s Vrp size: #{services_vrps.size} "\
+          "Key print: #{key_print} Names: #{services_vrps.map{ |sv| sv[:vrp].name }}"
 
       # Add values related to the current solve status
       p = Result.get(self.uuid) || {}
@@ -115,7 +131,7 @@ module OptimizerWrapper
       begin
         Result.set(self.uuid, p)
       rescue Redis::BaseError => e
-        log "Could not set the last result due to the following error (will try again after sleep): #{e}", level: :warning
+        log "Couldn't set the last result due to the following error (tring again in 2 minutes): #{e}", level: :warning
         sleep 120 # Try setting the result one last time without rescue since this is the last result
         Result.set(self.uuid, p)
       end

@@ -10,6 +10,7 @@ AllCops:
     - 'tmp/**/*'
     - 'vendor/bundle/**/*'
     - 'config/initializers/local.rb'
+    - 'lib/routers/router_wrapper.rb'
 
 Style/FrozenStringLiteralComment:
   Exclude:
@@ -31,6 +32,9 @@ Style/NumericPredicate:
 # Style/UnlessLogicalOperators: # TODO: activate when rubocop gem is upgraded
 #   EnforcedStyle: forbid_logical_operators
 
+Layout/CommentIndentation:
+  Enabled: true
+
 Layout/EmptyLines:
   Severity: warning
 
@@ -42,3 +46,15 @@ Layout/IndentationConsistency:
 
 Layout/IndentationWidth:
   Severity: warning
+
+Layout/MultilineAssignmentLayout:
+  Enabled: true
+
+Layout/LineLength:
+  # These files have long description sections
+  Exclude:
+  - 'api/api_v01.rb'
+  - 'api/v01/api.rb'
+  - 'api/v01/entities/vrp_input.rb'
+  - 'api/v01/entities/vrp_result.rb'
+  - 'api/v01/vrp.rb'

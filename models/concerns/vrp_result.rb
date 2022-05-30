@@ -29,11 +29,12 @@ module Serializers
     end
 
     def vrp_result(options = nil)
-      root = if options && options.key?(:root)
-               options[:root]
-             else
-               include_root_in_json
-             end
+      root =
+        if options && options.key?(:root)
+          options[:root]
+        else
+          include_root_in_json
+        end
 
       hash = serializable_hash(options).vrp_result(options)
       if root
@@ -46,15 +47,15 @@ module Serializers
   end
 end
 
- # Extracted and adapted from activesupport/lib/active_support/core_ext/object/json.rb
+# Extracted and adapted from activesupport/lib/active_support/core_ext/object/json.rb
 class Module
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     name
   end
 end
 
 class Object
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     if respond_to?(:to_hash)
       to_hash.vrp_result(options)
     else
@@ -63,44 +64,44 @@ class Object
   end
 end
 
-class Struct #:nodoc:
+class Struct # :nodoc:
   def vrp_result(options = nil)
     Hash[members.zip(values)].vrp_result(options)
   end
 end
 
 class TrueClass
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     self
   end
 end
 
 class FalseClass
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     self
   end
 end
 
 class NilClass
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     self
   end
 end
 
 class String
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     self
   end
 end
 
 class Symbol
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     to_s
   end
 end
 
 class Numeric
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     self
   end
 end
@@ -108,7 +109,7 @@ end
 class Float
   # Encoding Infinity or NaN to JSON should return "null". The default returns
   # "Infinity" or "NaN" which are not valid JSON.
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     finite? ? self : nil
   end
 end
@@ -123,55 +124,56 @@ class BigDecimal
   # if the other end knows by contract that the data is supposed to be a
   # BigDecimal, it still has the chance to post-process the string and get the
   # real value.
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     finite? ? to_s : nil
   end
 end
 
 class Regexp
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     to_s
   end
 end
 
 module Enumerable
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     to_a.vrp_result(options)
   end
 end
 
 class IO
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     to_s
   end
 end
 
 class Range
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     to_s
   end
 end
 
 class Array
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     map { |v| options ? v.vrp_result(options.dup) : v.vrp_result }
   end
 end
 
 class Hash
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     # create a subset of the hash by applying :only or :except
-    subset = if options
-      if attrs = options[:only]
-        slice(*Array(attrs))
-      elsif attrs = options[:except]
-        except(*Array(attrs))
+    subset =
+      if options
+        if attrs = options[:only]
+          slice(*Array(attrs))
+        elsif attrs = options[:except]
+          except(*Array(attrs))
+        else
+          self
+        end
       else
         self
       end
-    else
-      self
-    end
 
     result = {}
     subset.each do |k, v|
@@ -182,7 +184,7 @@ class Hash
 end
 
 class Time
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     if ActiveSupport::JSON::Encoding.use_standard_json_time_format
       xmlschema(ActiveSupport::JSON::Encoding.time_precision)
     else
@@ -192,7 +194,7 @@ class Time
 end
 
 class Date
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     if ActiveSupport::JSON::Encoding.use_standard_json_time_format
       strftime("%Y-%m-%d")
     else
@@ -202,7 +204,7 @@ class Date
 end
 
 class DateTime
-  def vrp_result(options = nil) #:nodoc:
+  def vrp_result(options = nil) # :nodoc:
     if ActiveSupport::JSON::Encoding.use_standard_json_time_format
       xmlschema(ActiveSupport::JSON::Encoding.time_precision)
     else
@@ -211,13 +213,13 @@ class DateTime
   end
 end
 
-class URI::Generic #:nodoc:
+class URI::Generic # :nodoc:
   def vrp_result(options = nil)
     to_s
   end
 end
 
-class Pathname #:nodoc:
+class Pathname # :nodoc:
   def vrp_result(options = nil)
     to_s
   end
@@ -229,7 +231,7 @@ class IPAddr # :nodoc:
   end
 end
 
-class Process::Status #:nodoc:
+class Process::Status # :nodoc:
   def vrp_result(options = nil)
     { exitstatus: exitstatus, pid: pid }
   end

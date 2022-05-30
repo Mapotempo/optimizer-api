@@ -29,33 +29,38 @@ module Interpreters
       if vrp.configuration.preprocessing.partitions&.any?
         splited_service_vrps = generate_split_vrps(service_vrp, job, block)
         if OptimizerWrapper.config[:debug][:output_clusters] && splited_service_vrps.size > 1
-          OutputHelper::Clustering.generate_files(splited_service_vrps, vrp.configuration.preprocessing.partitions.size == 2, job)
+          OutputHelper::Clustering.generate_files(splited_service_vrps,
+                                                  vrp.configuration.preprocessing.partitions.size == 2, job)
         end
-        split_solutions = splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
-          cluster_ref = i + 1
-          solution = OptimizerWrapper.define_process(split_service_vrp, job) { |wrapper, avancement, total, message, cost, time, solution_|
-            add = "split partition process #{cluster_ref}/#{splited_service_vrps.size}"
-            msg = OptimizerWrapper.concat_avancement(add, message)
-            block&.call(wrapper, avancement, total, msg, cost, time, solution_)
-          }
+        split_solutions =
+          splited_service_vrps.each_with_index.map{ |split_service_vrp, i|
+            cluster_ref = i + 1
+            solution =
+              OptimizerWrapper.define_process(
+                split_service_vrp, job
+              ) { |wrapper, avancement, total, message, cost, time, solution_|
+                add = "split partition process #{cluster_ref}/#{splited_service_vrps.size}"
+                msg = OptimizerWrapper.concat_avancement(add, message)
+                block&.call(wrapper, avancement, total, msg, cost, time, solution_)
+              }
 
-          # add associated cluster as skill
-          next if solution.nil?
+            # add associated cluster as skill
+            next if solution.nil?
 
-          solution.routes.each{ |route|
-            route.stops.each do |stop|
-              next unless stop.service_id
+            solution.routes.each{ |route|
+              route.stops.each do |stop|
+                next unless stop.service_id
+
+                stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}".to_sym]
+              end
+            }
+            solution.unassigned_stops.each do |stop|
+              next if stop.service_id.nil?
 
               stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}".to_sym]
             end
+            solution
           }
-          solution.unassigned_stops.each do |stop|
-            next if stop.service_id.nil?
-
-            stop.skills = stop.skills.to_a + ["cluster #{cluster_ref}".to_sym]
-          end
-          solution
-        }
 
         # merge expanded vehicles, services and relations
         vrp.vehicles = splited_service_vrps.flat_map{ |sv| sv[:vrp].vehicles }
@@ -86,25 +91,29 @@ module Interpreters
         cut_symbol = allowed_metric.include?(partition[:metric]) ? partition[:metric] : :duration
         case partition[:technique]
         when 'balanced_kmeans'
-          generated_service_vrps = current_service_vrps.collect.with_index{ |s_v, s_v_i|
-            block&.call(nil, nil, nil, "clustering phase #{partition_index + 1}/#{partitions.size} - step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
+          generated_service_vrps =
+            current_service_vrps.collect.with_index{ |s_v, s_v_i|
+              block&.call(nil, nil, nil,
+                          "clustering phase #{partition_index + 1}/#{partitions.size} - "\
+                          "step #{s_v_i + 1}/#{current_service_vrps.size}", nil, nil, nil)
 
-            # TODO : global variable to know if work_day entity
-            s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
-                                               s_v[:vrp].vehicles, partition[:entity])
-            options = { cut_symbol: cut_symbol, entity: partition[:entity], centroids: partition[:centroids]}
-            options[:restarts] = partition[:restarts] if partition[:restarts]
-            split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options, &block)
-          }
+              # TODO : global variable to know if work_day entity
+              s_v[:vrp].vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
+                                                 s_v[:vrp].vehicles, partition[:entity])
+              options = { cut_symbol: cut_symbol, entity: partition[:entity], centroids: partition[:centroids]}
+              options[:restarts] = partition[:restarts] if partition[:restarts]
+              split_balanced_kmeans(s_v, s_v[:vrp].vehicles.size, options, &block)
+            }
           current_service_vrps = generated_service_vrps.flatten
         when 'hierarchical_tree'
-          generated_service_vrps = current_service_vrps.collect{ |s_v|
-            current_vrp = s_v[:vrp]
-            current_vrp.vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
-                                                 [current_vrp.vehicles.first], partition[:entity])
-            split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size,
-                               cut_symbol: cut_symbol, entity: partition[:entity])
-          }
+          generated_service_vrps =
+            current_service_vrps.collect{ |s_v|
+              current_vrp = s_v[:vrp]
+              current_vrp.vehicles = list_vehicles(s_v[:vrp].configuration.schedule&.range_indices,
+                                                   [current_vrp.vehicles.first], partition[:entity])
+              split_hierarchical(s_v, current_vrp, current_vrp.vehicles.size,
+                                 cut_symbol: cut_symbol, entity: partition[:entity])
+            }
           current_service_vrps = generated_service_vrps.flatten
         else
           raise OptimizerWrapper::UnsupportedProblemError.new("Unknown partition technique #{partition[:technique]}")
@@ -141,7 +150,9 @@ module Interpreters
         ss_data[:representative_vrp].relations.each{ |rel|
           raise 'There should be only :same_route relations inside the representative_vrp.' if rel.type != :same_route
 
-          current_vehicle_ids << rel.linked_service_ids.join if current_vehicle_ids.reject!{ |id| rel.linked_service_ids.include?(id) }
+          if current_vehicle_ids.reject!{ |id| rel.linked_service_ids.include?(id) }
+            current_vehicle_ids << rel.linked_service_ids.join
+          end
         }
 
         current_vehicle_ids.size > 1 && (ss_data[:current_vehicle_limit] || Helper.fixnum_max) > 1 &&
@@ -152,7 +163,8 @@ module Interpreters
     end
 
     # TODO: Following are ways to improve split_solve performance (2, 3, 4 cpu time) (5 solution quality)
-    # TODO: 2- decrease iteration-complexity by "relaxing" the convergence limits (movement, balance-violation) of k-means for max_split?
+    # TODO: 2- decrease iteration-complexity by "relaxing" the convergence limits (movement, balance-violation)
+    #          of k-means for max_split?
     # TODO: 3- decrease point-complexity by "grouping" by lat/lon more aggressively for this split
     # TODO: 4- decrease vehicle-complexity by improving balanced_vrp_clustering
     #          - by not re-calculating the item-vehicle compatibility every iteration and
@@ -185,7 +197,8 @@ module Interpreters
       vrp = service_vrp[:vrp]
       empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
       vrp.services -= empties_or_fills
-      split_by_vehicle = split_balanced_kmeans(service_vrp, vrp.vehicles.size, cut_symbol: :duration, restarts: 2, build_sub_vrps: false)
+      split_by_vehicle = split_balanced_kmeans(service_vrp, vrp.vehicles.size,
+                                               cut_symbol: :duration, restarts: 2, build_sub_vrps: false)
 
       split_data = {
         current_vehicles: vrp.vehicles.map(&:itself), # new array but original objects
@@ -214,14 +227,15 @@ module Interpreters
         current_vehicle_limit = ss_data[:current_vehicle_limit]
 
         # SPLIT current_vehicles list (by-vehicle-centroids) to create two "sides"
-        sides = split_balanced_kmeans(
-          { vrp: create_representative_sub_vrp(ss_data) }, 2,
-          cut_symbol: :duration, restarts: 3, build_sub_vrps: false, basic_split: true, group_points: false
-        ).sort_by!{ |side|
-          [side.size, side.sum(&:visits_number)] # [number_of_vehicles, number_of_visits]
-        }.reverse!.collect!{ |side|
-          enum_current_vehicles.select{ |v| side.any?{ |s| s.id == "0_representative_vrp_s_#{v.id}" } }
-        }
+        sides =
+          split_balanced_kmeans(
+            { vrp: create_representative_sub_vrp(ss_data) }, 2,
+            cut_symbol: :duration, restarts: 3, build_sub_vrps: false, basic_split: true, group_points: false
+          ).sort_by!{ |side|
+            [side.size, side.sum(&:visits_number)] # [number_of_vehicles, number_of_visits]
+          }.reverse!.collect!{ |side|
+            enum_current_vehicles.select{ |v| side.any?{ |s| s.id == "0_representative_vrp_s_#{v.id}" } }
+          }
 
         if sides.size != 2 || sides.any?(&:empty?)
           # this might happen under certain cases (skills etc can force all points to be on one side)
@@ -239,39 +253,44 @@ module Interpreters
         # This is not necessarily a bad thing but we might want to re-groupe such "tiny" VRPs
         # to prevent inefficient use of vehicles.
 
-        split_service_counts = sides.collect{ |current_vehicles|
-          current_vehicles.sum{ |v| ss_data[:service_vehicle_assignments][v.id].size }
-        }
-        log "--> split_solve_core level: #{split_level} | split services #{split_service_counts.sum}->#{split_service_counts}, vehicles #{enum_current_vehicles.size}->#{sides.collect(&:size)}"
+        split_service_counts =
+          sides.collect{ |current_vehicles|
+            current_vehicles.sum{ |v| ss_data[:service_vehicle_assignments][v.id].size }
+          }
+        log "--> split_solve_core level: #{split_level} | "\
+            "split services #{split_service_counts.sum}->#{split_service_counts}, "\
+            "vehicles #{enum_current_vehicles.size}->#{sides.collect(&:size)}"
 
         # RECURSIVELY CALL split_solve_core AND MERGE SOLUTIONS
-        solutions = sides.collect.with_index{ |side, index|
-          # This is a recursive function and service_vrp[:split_level] needs to be corrected because
-          # it is incremented within the children of the other branch ("left-side") of this level
-          service_vrp[:split_level] = split_level + 1 # This needs to be here!
-          service_vrp[:split_sides][split_level + 1] = index
+        solutions =
+          sides.collect.with_index{ |side, index|
+            # This is a recursive function and service_vrp[:split_level] needs to be corrected because
+            # it is incremented within the children of the other branch ("left-side") of this level
+            service_vrp[:split_level] = split_level + 1 # This needs to be here!
+            service_vrp[:split_sides][split_level + 1] = index
 
-          ss_data[:current_vehicles] = side
+            ss_data[:current_vehicles] = side
 
-          v_limit = current_vehicle_limit.to_f * side.size / enum_current_vehicles.size
-          # Warning: round does not work if there is an even "half" split
-          ss_data[:current_vehicle_limit] = current_vehicle_limit && (index.zero? ? v_limit.ceil : v_limit.floor)
+            v_limit = current_vehicle_limit.to_f * side.size / enum_current_vehicles.size
+            # Warning: round does not work if there is an even "half" split
+            ss_data[:current_vehicle_limit] = current_vehicle_limit && (index.zero? ? v_limit.ceil : v_limit.floor)
 
-          split_solve_core(service_vrp, job = nil) { |wrapper, avancement, total, message, cost, time, solution|
-            avc = service_vrp[:split_denominators].map.with_index{ |lvl, idx|
-              Rational(service_vrp[:split_sides][idx], lvl)
-            }.sum
+            split_solve_core(service_vrp, job = nil) { |wrapper, avancement, total, message, cost, time, solution|
+              avc = service_vrp[:split_denominators].map.with_index{ |lvl, idx|
+                Rational(service_vrp[:split_sides][idx], lvl)
+              }.sum
 
-            msg =
-              if message.include?('max split process')
-                message
-              else
-                add = "max split process #{(service_vrp[:split_denominators].last * avc).to_i}/#{service_vrp[:split_denominators].last}"
-                OptimizerWrapper.concat_avancement(add, message)
-              end
-            block&.call(wrapper, avancement, total, msg, cost, time, solution)
+              msg =
+                if message.include?('max split process')
+                  message
+                else
+                  add = "max split process #{(service_vrp[:split_denominators].last * avc).to_i}/"\
+                        "#{service_vrp[:split_denominators].last}"
+                  OptimizerWrapper.concat_avancement(add, message)
+                end
+              block&.call(wrapper, avancement, total, msg, cost, time, solution)
+            }
           }
-        }
         ss_data[:cannot_split_further] = false
         log "<-- split_solve_core level: #{split_level}"
 
@@ -319,9 +338,10 @@ module Interpreters
       sub_vrp.relations = select_existing_relations(o_vrp.relations, sub_vrp)
 
       # only the non-empty initial routes of current vehicles
-      sub_vrp.routes = o_vrp.routes.select{ |route|
-        route.vehicle && route.mission_ids.any? && sub_vrp.vehicles.any?{ |v| v.id == route.vehicle.id }
-      }
+      sub_vrp.routes =
+        o_vrp.routes.select{ |route|
+          route.vehicle && route.mission_ids.any? && sub_vrp.vehicles.any?{ |v| v.id == route.vehicle.id }
+        }
 
       # it is okay if these stay as original
       sub_vrp.matrices = o_vrp.matrices
@@ -332,13 +352,19 @@ module Interpreters
 
       sub_vrp.configuration = Oj.load(Oj.dump(o_vrp.configuration)) # time and other limits are correct below
       # split the limits
-      sub_vrp.configuration.resolution.vehicle_limit = ss_data[:current_vehicle_limit] + ss_data[:transferred_vehicle_limit] if ss_data[:current_vehicle_limit]
+      s_res = sub_vrp.configuration.resolution
+      if ss_data[:current_vehicle_limit]
+        s_res.vehicle_limit = ss_data[:current_vehicle_limit] + ss_data[:transferred_vehicle_limit]
+      end
       ratio = sub_vrp.services.size.to_f / o_vrp.services.size
-      sub_vrp.configuration.resolution.duration = (o_vrp.configuration.resolution.duration * ratio + ss_data[:transferred_time_limit]).ceil if o_vrp.configuration.resolution.duration
-      sub_vrp.configuration.resolution.minimum_duration = o_vrp.configuration.resolution.minimum_duration&.*(ratio)&.ceil
-      sub_vrp.configuration.resolution.iterations_without_improvment = o_vrp.configuration.resolution.iterations_without_improvment&.*(ratio)&.ceil
+      if o_vrp.configuration.resolution.duration
+        s_res.duration = (o_vrp.configuration.resolution.duration * ratio + ss_data[:transferred_time_limit]).ceil
+      end
+      s_res.minimum_duration = o_vrp.configuration.resolution.minimum_duration&.*(ratio)&.ceil
+      s_res.iterations_without_improvment = o_vrp.configuration.resolution.iterations_without_improvment&.*(ratio)&.ceil
 
-      sub_vrp.name = "#{o_vrp.name}_#{ss_data[:current_level]}_#{Digest::MD5.hexdigest(sub_vrp.vehicles.map(&:id).join)}"
+      sub_vrp.name = "#{o_vrp.name}_#{ss_data[:current_level]}_"\
+                      "#{Digest::MD5.hexdigest(sub_vrp.vehicles.map(&:id).join)}"
 
       sub_vrp
     end
@@ -383,14 +409,17 @@ module Interpreters
         # with close points can stay on the same side.
         next if vehicle_services.size < 5
 
-        vehicle_service_coordinates = vehicle_services.collect{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }
+        vehicle_service_coordinates =
+          vehicle_services.collect{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] }
         extreme_points = Helper.approximate_quadrilateral_polygon(vehicle_service_coordinates).uniq
         linked_service_ids = ["0_representative_vrp_s_#{vehicle_id}"]
         extreme_points.each_with_index{ |lat_lon, index|
-          points << { id: "#{index + 1}_representative_vrp_p_#{vehicle_id}", location: { lat: lat_lon[0], lon: lat_lon[1] }}
+          points <<
+            { id: "#{index + 1}_representative_vrp_p_#{vehicle_id}", location: { lat: lat_lon[0], lon: lat_lon[1] }}
           visit_counts << 1
           services << {
-            id: "#{index + 1}_representative_vrp_s_#{vehicle_id}", # vehicle_id used to find the original service-vehicle assignment
+            # vehicle_id used to find the original service-vehicle assignment
+            id: "#{index + 1}_representative_vrp_s_#{vehicle_id}",
             visits_number: 1,
             activity: {
               point_id: "#{index + 1}_representative_vrp_p_#{vehicle_id}",
@@ -404,7 +433,9 @@ module Interpreters
       }
 
       # go through the original relations and force the services and vehicles to stay in the same sub-vrp if necessary
-      split_solve_data[:original_vrp].relations.select{ |r| Models::Relation::FORCING_RELATIONS.include?(r.type) }.each{ |relation|
+      split_solve_data[:original_vrp].relations.select{ |r|
+        Models::Relation::FORCING_RELATIONS.include?(r.type)
+      }.each{ |relation|
         if relation.linked_vehicle_ids.any? && relation.linked_services.none?
           linked_service_ids = []
           relation.linked_vehicle_ids.map{ |v_id|
@@ -456,14 +487,18 @@ module Interpreters
       representative_vrp = split_solve_data[:representative_vrp]
       r_sub_vrp = ::Models::Vrp.create({ name: 'representative_sub_vrp' }, delete: false)
       r_sub_vrp.vehicles = representative_vrp.vehicles # 2-fake-vehicles
-      r_sub_vrp.services = representative_vrp.services.select{ |representative_service|
-        # the service which represent the services of vehicle `v`, has its id include `v.id`
-        split_solve_data[:current_vehicles].any?{ |v| representative_service.id.end_with?("_representative_vrp_s_#{v.id}") }
-      }
+      r_sub_vrp.services =
+        representative_vrp.services.select{ |representative_service|
+          # the service which represent the services of vehicle `v`, has its id include `v.id`
+          split_solve_data[:current_vehicles].any?{ |v|
+            representative_service.id.end_with?("_representative_vrp_s_#{v.id}")
+          }
+        }
       r_sub_vrp.points = r_sub_vrp.services.map{ |s| s.activity.point }
-      r_sub_vrp.relations = representative_vrp.relations.select{ |relation|
-        r_sub_vrp.services.any?{ |s| s.id == relation.linked_service_ids[0] }
-      }
+      r_sub_vrp.relations =
+        representative_vrp.relations.select{ |relation|
+          r_sub_vrp.services.any?{ |s| s.id == relation.linked_service_ids[0] }
+        }
       r_sub_vrp
     end
 
@@ -476,17 +511,19 @@ module Interpreters
       unused_vehicle_ids = ss_data[:transferred_vehicles].map(&:id)
       current_and_unused_vehicle_ids = ss_data[:current_vehicles].map(&:id) + unused_vehicle_ids
 
-      related_forcing_relations = o_vrp.relations.select{ |r|
-        Models::Relation::FORCING_RELATIONS.include?(r.type) && (r.linked_vehicle_ids.to_a & unused_vehicle_ids).any?
-      }
+      related_forcing_relations =
+        o_vrp.relations.select{ |r|
+          Models::Relation::FORCING_RELATIONS.include?(r.type) && (r.linked_vehicle_ids.to_a & unused_vehicle_ids).any?
+        }
 
       # FIXME: this operation can be done faster by exploiting the fact that some unused vehicles might share a relation
       selected_vehicles_to_use = []
       ss_data[:transferred_vehicles].each{ |transferred_vehicle|
-        can_have_all_its_linked_vehicles_if_transferred = related_forcing_relations.all?{ |relation|
-          relation.linked_vehicle_ids.exclude?(transferred_vehicle.id) ||
-            (relation.linked_vehicle_ids - current_and_unused_vehicle_ids).empty?
-        }
+        can_have_all_its_linked_vehicles_if_transferred =
+          related_forcing_relations.all?{ |relation|
+            relation.linked_vehicle_ids.exclude?(transferred_vehicle.id) ||
+              (relation.linked_vehicle_ids - current_and_unused_vehicle_ids).empty?
+          }
 
         selected_vehicles_to_use << transferred_vehicle if can_have_all_its_linked_vehicles_if_transferred
       }
@@ -518,14 +555,16 @@ module Interpreters
       # empty poorly populated routes only if necessary
       if solution.unassigned_stops.empty? &&
          solution.routes.size == vrp.vehicles.size &&
-         (vrp.configuration.resolution.vehicle_limit.nil? || solution.routes.size == vrp.configuration.resolution.vehicle_limit)
+         (vrp.configuration.resolution.vehicle_limit.nil? ||
+          solution.routes.size == vrp.configuration.resolution.vehicle_limit)
         remove_poorly_populated_routes(vrp, solution, 0.1)
       end
 
       used_vehicle_ids = solution.routes.map{ |r| r.vehicle.original_id }.uniq
-      forcing_vehicle_relations = split_solve_data[:original_vrp].relations.select{ |r|
-        Models::Relation::FORCING_RELATIONS.include?(r.type) && r.linked_vehicle_ids&.any?
-      }
+      forcing_vehicle_relations =
+        split_solve_data[:original_vrp].relations.select{ |r|
+          Models::Relation::FORCING_RELATIONS.include?(r.type) && r.linked_vehicle_ids&.any?
+        }
 
       split_solve_data[:transferred_vehicles].delete_if{ |vehicle|
         # mark used (delete from transferred_vehicles) if used or there is a used linked vehicle from a forcing relation
@@ -536,7 +575,8 @@ module Interpreters
       }
 
       split_solve_data[:transferred_vehicles].concat(split_solve_data[:current_vehicles].select{ |vehicle|
-        # mark unused (add to transferred_vehicles) if not used and there is no used linked vehicle from a forcing relation
+        # mark unused (add to transferred_vehicles)
+        # if not used and there is no used linked vehicle from a forcing relation
         next false if used_vehicle_ids.include?(vehicle.id)
 
         related_relations = forcing_vehicle_relations.select{ |r| r.linked_vehicle_ids.include?(vehicle.id) }
@@ -551,7 +591,7 @@ module Interpreters
       if split_solve_data[:transferred_vehicle_limit]
         split_solve_data[:transferred_vehicle_limit] = vrp.configuration.resolution.vehicle_limit - solution.routes.size
       end
-      split_solve_data[:transferred_time_limit] = [vrp.configuration.resolution.duration.to_f - solution.elapsed, 0].max # to_f incase nil
+      split_solve_data[:transferred_time_limit] = [vrp.configuration.resolution.duration.to_f - solution.elapsed, 0].max
       nil
     end
 
@@ -559,7 +599,9 @@ module Interpreters
       return unless solution
 
       remove_empty_routes(solution)
-      remove_poorly_populated_routes(vrp, solution, 0.1) if !Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :ortools)
+      if !Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :ortools)
+        remove_poorly_populated_routes(vrp, solution, 0.1)
+      end
     end
 
     def self.remove_empty_routes(solution)
@@ -637,24 +679,27 @@ module Interpreters
       Models.delete_all
       tic = Time.now
       vrp = service_vrp[:vrp]
-      sub_vrp = Models::Vrp.create({ name: vrp.name, configuration: vrp.configuration.as_json }, check: false) # Create an empty vrp
+      # Create an empty vrp
+      sub_vrp = Models::Vrp.create({ name: vrp.name, configuration: vrp.configuration.as_json }, check: false)
       if available_vehicles_indices
         sub_vrp.vehicles = vrp.vehicles.select.with_index{ |_v, v_i| available_vehicles_indices.include?(v_i) }
-        sub_vrp.routes = vrp.routes.select{ |r|
-          route_week_day = r.day_index ? r.day_index % 7 : nil
-          sub_vrp.vehicles.any?{ |vehicle|
-            vehicle_week_day_availability =
-              if vehicle.timewindow
-                vehicle.timewindow.day_index || (0..6)
-              else
-                vehicle.sequence_timewindows.collect{ |tw|
-                  tw.day_index || (0..6)
-                }.flatten.uniq
-              end
+        sub_vrp.routes =
+          vrp.routes.select{ |r|
+            route_week_day = r.day_index ? r.day_index % 7 : nil
+            sub_vrp.vehicles.any?{ |vehicle|
+              vehicle_week_day_availability =
+                if vehicle.timewindow
+                  vehicle.timewindow.day_index || (0..6)
+                else
+                  vehicle.sequence_timewindows.collect{ |tw|
+                    tw.day_index || (0..6)
+                  }.flatten.uniq
+                end
 
-            vehicle.id == r.vehicle_id && (route_week_day.nil? || vehicle_week_day_availability.include?(route_week_day))
+              vehicle.id == r.vehicle_id &&
+                (route_week_day.nil? || vehicle_week_day_availability.include?(route_week_day))
+            }
           }
-        }
         sub_vrp
       else
         sub_vrp.vehicles = vrp.vehicles
@@ -668,21 +713,26 @@ module Interpreters
       sub_vrp.rests = sub_vrp.vehicles.flat_map(&:rests).uniq
       available_vehicle_ids = sub_vrp.vehicles.map(&:id)
 
-      sub_vrp.relations = vrp.relations.select{ |r|
-        next if r.type == :same_vehicle && entity == :vehicle
+      sub_vrp.relations =
+        vrp.relations.select{ |r|
+          next if r.type == :same_vehicle && entity == :vehicle
 
-        # Split should respect relations, it is enough to check only the first linked id --  [0..0].all? is to handle empties
-        r.linked_service_ids[0..0].all?{ |sid| partial_service_ids.include?(sid) } &&
-          r.linked_vehicle_ids[0..0].all?{ |vid| available_vehicle_ids.include?(vid) }
-      }
+          # Split should respect relations, it is enough to check only the first linked id --
+          # [0..0].all? is to handle empties
+          r.linked_service_ids[0..0].all?{ |sid| partial_service_ids.include?(sid) } &&
+            r.linked_vehicle_ids[0..0].all?{ |vid| available_vehicle_ids.include?(vid) }
+        }
 
-      split_respects_relations = sub_vrp.relations.all?{ |r|
-        non_matching_linked_service_ids = r.linked_service_ids - partial_service_ids
-        non_matching_linked_vehicle_ids = r.linked_vehicle_ids - available_vehicle_ids
+      split_respects_relations =
+        sub_vrp.relations.all?{ |r|
+          non_matching_linked_service_ids = r.linked_service_ids - partial_service_ids
+          non_matching_linked_vehicle_ids = r.linked_vehicle_ids - available_vehicle_ids
 
-        (non_matching_linked_service_ids.empty? || non_matching_linked_service_ids.size == r.linked_service_ids.size) &&
-          (non_matching_linked_vehicle_ids.empty? || non_matching_linked_vehicle_ids.size == r.linked_vehicle_ids.size)
-      }
+          (non_matching_linked_service_ids.empty? ||
+            non_matching_linked_service_ids.size == r.linked_service_ids.size) &&
+            (non_matching_linked_vehicle_ids.empty? ||
+              non_matching_linked_vehicle_ids.size == r.linked_vehicle_ids.size)
+        }
       unless split_respects_relations
         err_msg = 'Split does not respect relations. Some relations will be silently ignored.'
         log err_msg, level: :warn
@@ -761,7 +811,9 @@ module Interpreters
         values = c.clusters.collect{ |cluster| cluster.data_items.collect{ |i| i[3][options[:cut_symbol]] }.sum.to_i }
         limit_score = (0..c.centroids.size - 1).collect{ |cluster_index|
           centroid_coords = [c.centroids[cluster_index][0], c.centroids[cluster_index][1]]
-          distance_to_centroid = c.clusters[cluster_index].data_items.collect{ |item| Helper.flying_distance([item[0], item[1]], centroid_coords) }.sum
+          distance_to_centroid = c.clusters[cluster_index].data_items.collect{ |item|
+            Helper.flying_distance([item[0], item[1]], centroid_coords)
+          }.sum
           ml = limits[:metric_limit].is_a?(Array) ? c.cut_limit[cluster_index][:limit] : limits[:metric_limit][:limit]
           if c.clusters[cluster_index].data_items.size == 1
             2**32
@@ -771,28 +823,41 @@ module Interpreters
             cluster_metric = c.clusters[cluster_index].data_items.collect{ |i| i[3][options[:cut_symbol]] }.sum.to_f
             # TODO: large clusters having great difference with target metric should have a large (bad) score
             # distance_to_centroid * ((cluster_metric - ml).abs / ml)
-            balancing_coeff = if options[:entity] == :work_day
-                                1.0
-                              else
-                                0.6
-                              end
-            (1.0 - balancing_coeff) * distance_to_centroid + balancing_coeff * ((cluster_metric - ml).abs / ml) * distance_to_centroid
+            balancing_coeff =
+              if options[:entity] == :work_day
+                1.0
+              else
+                0.6
+              end
+            (1.0 - balancing_coeff) * distance_to_centroid +
+              balancing_coeff * ((cluster_metric - ml).abs / ml) * distance_to_centroid
           end
         }.sum
         checksum = Digest::MD5.hexdigest Marshal.dump(values)
         if !score_hash.has_key?(checksum)
-          log "Restart: #{restart} score: #{limit_score} ratio_metric: #{c.cut_limit} iterations: #{c.iterations}", level: :debug
-          log "Balance: #{values.min}   #{values.max}    #{values.min - values.max}    #{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%", level: :debug
-          score_hash[checksum] = { iterations: c.iterations, limit_score: limit_score, restart: restart, ratio_metric: c.cut_limit, min: values.min, max: values.max, sum: values.sum, size: values.size }
+          log "Restart: #{restart} score: #{limit_score} ratio_metric: #{c.cut_limit} iterations: #{c.iterations}",
+              level: :debug
+          log "Balance: #{values.min}   #{values.max}    #{values.min - values.max}    "\
+              "#{(values.sum / values.size).to_i}    #{((values.max - values.min) * 100.0 / values.max).round(2)}%",
+              level: :debug
+          score_hash[checksum] = { iterations: c.iterations, limit_score: limit_score, restart: restart,
+                                   ratio_metric: c.cut_limit, min: values.min, max: values.max,
+                                   sum: values.sum, size: values.size }
         end
         restart += 1
-        empty_clusters_score = c.centroids.size < nb_clusters && (c.centroids.size..nb_clusters - 1).collect{ |cluster_index|
-          limits[:metric_limit].is_a?(Array) ? limits[:metric_limit][cluster_index][:limit] : limits[:metric_limit][:limit]
-        }.reduce(&:+) || 0
+        empty_clusters_score = c.centroids.size < nb_clusters &&
+                               (c.centroids.size..nb_clusters - 1).collect{ |cluster_index|
+                                 limits[:metric_limit].is_a?(Array) ?
+                                  limits[:metric_limit][cluster_index][:limit] :
+                                  limits[:metric_limit][:limit]
+                               }.reduce(&:+) || 0
         limit_score += empty_clusters_score
-        if best_limit_score.nil? || c.clusters.size > biggest_cluster_size || (c.clusters.size >= biggest_cluster_size && limit_score < best_limit_score)
+        if best_limit_score.nil? ||
+           c.clusters.size > biggest_cluster_size ||
+           (c.clusters.size >= biggest_cluster_size && limit_score < best_limit_score)
           best_limit_score = limit_score
-          log best_limit_score.to_s + ' -> New best cluster metric (' + c.centroids.collect{ |centroid| centroid[3][options[:cut_symbol]] }.join(', ') + ')'
+          log best_limit_score.to_s + ' -> New best cluster metric (' +
+              c.centroids.collect{ |centroid| centroid[3][options[:cut_symbol]] }.join(', ') + ')'
           biggest_cluster_size = c.clusters.size
           clusters = c.clusters
         end
@@ -808,7 +873,10 @@ module Interpreters
       log '--> split_balanced_kmeans', level: :debug
 
       if options[:entity] && nb_clusters != service_vrp[:vrp].vehicles.size
-        raise OptimizerWrapper::ClusteringError.new('Usage of options[:entity] requires that number of clusters (nb_clusters) is equal to number of vehicles in the vrp.')
+        raise OptimizerWrapper::ClusteringError.new(
+          'Usage of options[:entity] requires that number of clusters '\
+          '(nb_clusters) is equal to number of vehicles in the vrp.'
+        )
       end
 
       raise OptimizerWrapper::ClusteringError.new('nb_clusters should be a positive integer') if nb_clusters <= 0
@@ -828,9 +896,15 @@ module Interpreters
               options[:distance_matrix] = vrp.matrices[0][:time]
             end
 
-            data_items, cumulated_metrics, grouped_objects, related_item_indices = collect_data_items_metrics(vrp, cumulated_metrics, options)
+            data_items, cumulated_metrics, grouped_objects, related_item_indices =
+              collect_data_items_metrics(vrp, cumulated_metrics, options)
 
-            limits = { metric_limit: centroid_limits(vrp, nb_clusters, cumulated_metrics, options[:cut_symbol], options[:entity]) } # TODO : remove because this is computed in gem. But it is also needed to compute score here. remove cumulated_metrics at the same time
+            # TODO: remove because this is computed in gem.
+            # But it is also needed to compute score here.
+            # remove cumulated_metrics at the same time
+            limits = {
+              metric_limit: centroid_limits(vrp, nb_clusters, cumulated_metrics, options[:cut_symbol], options[:entity])
+            }
 
             if options[:centroids] && options[:centroids].size == nb_clusters && options[:entity] != :work_day
               options[:centroid_indices] = options[:centroids]
@@ -838,7 +912,8 @@ module Interpreters
 
             if vrp.vehicles.any?{ |v| v.skills.count{ |skill| skill.is_a?(Array) && !skill.empty? } > 1 }
               raise OptimizerWrapper::UnsupportedProblemError.new(
-                'Cannot use balanced kmeans if there are vehicles with alternative skills')
+                'Cannot use balanced kmeans if there are vehicles with alternative skills'
+              )
             end
 
             tic = Time.now
@@ -849,7 +924,10 @@ module Interpreters
 
             toc = Time.now
 
-            log "Balanced K-Means (#{toc - tic}sec): split #{data_items.size} data_items into #{clusters.map{ |c| "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})" }.join(' & ')}"
+            log_message = clusters.map{ |c|
+              "#{c.data_items.size}(#{c.data_items.map{ |i| i[3][options[:cut_symbol]] || 0 }.inject(0, :+)})"
+            }.join(' & ')
+            log "Balanced K-Means (#{toc - tic}sec): split #{data_items.size} data_items into #{log_message}"
 
             clusters.collect{ |cluster|
               cluster.data_items.flat_map{ |i|
@@ -867,7 +945,8 @@ module Interpreters
             log_message = 'Split is not possible if the cluster size is 1'
 
             if vrp.vehicles.size == 1
-              # this is normal if there is one vehicle (or one workday) and partitioning by vehicle (or workday) is active
+              # this is normal if
+              # there is one vehicle (or one workday) and partitioning by vehicle (or workday) is active
               log log_message, level: :debug
             else
               log log_message, level: :warn
@@ -876,7 +955,8 @@ module Interpreters
             [vrp.services.dup] # mimics grouped_objects
           end
 
-        log "Balanced K-Means: split #{result_items.sum(&:size)} activities into #{result_items.map(&:size).join(' & ')}"
+        log "Balanced K-Means: split #{result_items.sum(&:size)} "\
+            "activities into #{result_items.map(&:size).join(' & ')}"
 
         if options[:build_sub_vrps]
           result_items.collect.with_index{ |result_item, result_index|
@@ -910,7 +990,6 @@ module Interpreters
         end_timer = Time.now
 
         metric_limit = cumulated_metrics[options[:cut_symbol]] / nb_clusters
-        # raise OptimizerWrapper::DiscordantProblemError.new("Unfitting cluster split metric. Maximum value is greater than average") if max_cut_metrics[options[:cut_symbol]] > metric_limit
 
         graph = Marshal.load(Marshal.dump(clusterer.graph.compact))
 
@@ -950,11 +1029,12 @@ module Interpreters
           grouped_objects[i[2]]
         }.flatten
 
-        log "Hierarchical Tree (#{end_timer - start_timer}sec): split #{data_items.size} into #{clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')}"
+        log "Hierarchical Tree (#{end_timer - start_timer}sec): split #{data_items.size} into "\
+            "#{clusters.collect{ |cluster| cluster.data_items.size }.join(' & ')}"
         # cluster_vehicles = assign_vehicle_to_clusters([[]] * vrp.vehicles.size, vrp.vehicles, vrp.points, clusters)
         adjust_clusters(clusters, limits, options[:cut_symbol], centroids, data_items) if options[:entity] == :work_day
         result_items.collect.with_index{ |result_item, _result_index|
-          build_partial_service_vrp(service_vrp, result_item.collect(&:id)) #, cluster_vehicles && cluster_vehicles[result_index])
+          build_partial_service_vrp(service_vrp, result_item.collect(&:id))
         }
       else
         log 'Split hierarchical not available when services have no activity', level: :error
@@ -971,27 +1051,29 @@ module Interpreters
       r_start = vrp.schedule? ? vrp.configuration.schedule.range_indices[:start] : 0
       r_end = vrp.schedule? ? vrp.configuration.schedule.range_indices[:end] : 0
 
-      vehicles = vrp.vehicles.collect.with_index{ |vehicle, v_i|
-        total_work_days = vrp.schedule? ? vehicle.total_work_days_in_range(r_start, r_end) : 1
-        capacities = {
-          duration: vrp.schedule? ? vrp.total_work_times[v_i] : vehicle.work_duration,
-          visits: vehicle.capacities.find{ |cap| cap[:unit_id] == :visits } & [:limit] || vrp.visits
+      vehicles =
+        vrp.vehicles.collect.with_index{ |vehicle, v_i|
+          total_work_days = vrp.schedule? ? vehicle.total_work_days_in_range(r_start, r_end) : 1
+          capacities = {
+            duration: vrp.schedule? ? vrp.total_work_times[v_i] : vehicle.work_duration,
+            visits: vehicle.capacities.find{ |cap| cap[:unit_id] == :visits } & [:limit] || vrp.visits
+          }
+          vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }
+          tw = [vehicle.timewindow || vehicle.sequence_timewindows].flatten.compact
+          {
+            id: [vehicle.id],
+            depot: {
+              coordinates: [vehicle.start_point&.location&.lat, vehicle.start_point&.location&.lon],
+              matrix_index: vehicle.start_point&.matrix_index
+            },
+            capacities: capacities,
+            # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
+            skills: vehicle.skills.flatten.uniq,
+            day_skills: compute_day_skills(tw),
+            duration: vehicle.total_work_time_in_range(r_start, r_end),
+            total_work_days: total_work_days
+          }
         }
-        vehicle.capacities.each{ |capacity| capacities[capacity.unit.id.to_sym] = capacity.limit * total_work_days }
-        tw = [vehicle.timewindow || vehicle.sequence_timewindows].flatten.compact
-        {
-          id: [vehicle.id],
-          depot: {
-            coordinates: [vehicle.start_point&.location&.lat, vehicle.start_point&.location&.lon],
-            matrix_index: vehicle.start_point&.matrix_index
-          },
-          capacities: capacities,
-          skills: vehicle.skills.flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
-          day_skills: compute_day_skills(tw),
-          duration: vehicle.total_work_time_in_range(r_start, r_end),
-          total_work_days: total_work_days
-        }
-      }
 
       if nb_clusters != vehicles.size
         # for max_split and dichotomous cases
@@ -1001,17 +1083,24 @@ module Interpreters
           depots += [depot_counts.max_by{ |_depot, count| count }[0]]
           depot_counts[depots.last] /= 2
         end
-        vehicles = Array.new(nb_clusters){ |simulated_vehicle|
-          {
-            id: ["generated_vehicle_#{simulated_vehicle}"],
-            depot: depots[simulated_vehicle],
-            capacities: vehicles[simulated_vehicle][:capacities].collect{ |key, value| [key, value * vehicles.size / nb_clusters.to_f] }.to_h, #TODO: capacities needs a better way like depots...
-            skills: [],
-            day_skills: [:'0_day_skill', :'1_day_skill', :'2_day_skill', :'3_day_skill', :'4_day_skill', :'5_day_skill', :'6_day_skill'],
-            duration: 0,
-            total_work_days: 1
+        vehicles =
+          Array.new(nb_clusters){ |simulated_vehicle|
+            {
+              id: ["generated_vehicle_#{simulated_vehicle}"],
+              depot: depots[simulated_vehicle],
+              # TODO: capacities needs a better way like depots...
+              capacities: vehicles[simulated_vehicle][:capacities].collect{ |key, value|
+                [key, value * vehicles.size / nb_clusters.to_f]
+              }.to_h,
+              skills: [],
+              day_skills: [
+                :'0_day_skill', :'1_day_skill', :'2_day_skill', :'3_day_skill',
+                :'4_day_skill', :'5_day_skill', :'6_day_skill'
+              ],
+              duration: 0,
+              total_work_days: 1
+            }
           }
-        }
       end
       vehicles
     end
@@ -1095,19 +1184,24 @@ module Interpreters
         data_items = []
         grouped_objects = {}
 
-        vehicle_units = vrp.vehicles.collect{ |v| v.capacities.to_a.collect{ |capacity| capacity.unit.id } }.flatten.uniq
+        vehicle_units =
+          vrp.vehicles.collect{ |v| v.capacities.to_a.collect{ |capacity| capacity.unit.id } }.flatten.uniq
 
-        decimal = if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty? # If there is a matrix, zip_dataitems will be called so no need to group by lat/lon aggresively
-                    {
-                      digits: 4, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
-                      steps: 5   # digits.steps 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m, 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
-                    }
-                  else
-                    {
-                      digits: 3, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
-                      steps: 8   # digits.steps 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m, 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
-                    }
-                  end
+        decimal =
+          # If there is a matrix, zip_dataitems will be called so no need to group by lat/lon aggresively
+          if !vrp.matrices.empty? && !vrp.matrices[0][:distance]&.empty?
+            {
+              digits: 4, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
+              steps: 5   # digits.steps 4.0: 11.11m, 4.1: 5.6m, 4.2: 3.7m, 4.3: 2.8m,
+              # 4.4: 2.2m, 4.5: 1.9m,  4.6: 1.6m, 4.7: 1.4m, 4.8: 1.2m, 4.9=5.0: 1.111m
+            }
+          else
+            {
+              digits: 3, # 3: 111.1 meters, 4: 11.11m, 5: 1.111m  accuracy
+              steps: 8   # digits.steps 3.0: 111.1m, 3.1: 56m, 3.2: 37m, 3.3: 28m,
+              # 3.4: 22m, 3.5: 19m,  3.6: 16m, 3.7: 14m, 3.8: 12m, 3.9=4.0: 11.11m
+            }
+          end
 
         # TODO(0): instead of an overall minimum vehicle duration we can only consider the vehicles
         # that can serve the sub_set that is about to be merged in theory.
@@ -1151,7 +1245,7 @@ module Interpreters
             if s.activity
               s.activity.point.location
             elsif s.activities.size.positive?
-              raise UnsupportedProblemError, 'Clustering does not support services with multiple activities.'
+              raise UnsupportedProblemError.new('Clustering does not support services with multiple activities.')
             end
 
           # we can group services even if they have are in linking relations if everything else is the same
@@ -1180,39 +1274,53 @@ module Interpreters
 
           merge_index = 0
           while sub_set.any?
-            merged_quantities = Hash.new(0) # merged_x are not multiplied with visits_number because we want to respect the individual vehicle limits
+            # merged_x are not multiplied with visits_number because we want to respect the individual vehicle limits
+            merged_quantities = Hash.new(0)
             unit_quantities = Hash.new(0)
 
-            merge_set = sub_set.take_while.with_index{ |s, i|
-              s_duration = s.activity ? s.activity.duration : (s.pickup ? s.pickup.duration : s.delivery.duration)
+            merge_set =
+              sub_set.take_while.with_index{ |s, i|
+                s_duration =
+                  if s.activity
+                    s.activity.duration
+                  else
+                    s.pickup ? s.pickup.duration : s.delivery.duration
+                  end
 
-              next if i.positive? && (
-                s.quantities.any?{ |quantity|
-                  unit = quantity.unit_id.to_sym
-                  next if min_vehicle_capacities[unit].nil?
+                next if i.positive? && (
+                  s.quantities.any?{ |quantity|
+                    unit = quantity.unit_id.to_sym
+                    next if min_vehicle_capacities[unit].nil?
 
-                  merged_quantities[unit] + quantity.value >= min_vehicle_capacities[unit]
-                } || (merged_quantities[:duration] + s_duration >= min_vehicle_capacities[:duration])
-              )
+                    merged_quantities[unit] + quantity.value >= min_vehicle_capacities[unit]
+                  } || (merged_quantities[:duration] + s_duration >= min_vehicle_capacities[:duration])
+                )
 
-              unit_quantities[:visits] += s.visits_number
-              cumulated_metrics[:visits] += s.visits_number
-              s_setup_duration = s.activity ? s.activity.setup_duration : (s.pickup ? s.pickup.setup_duration : s.delivery.setup_duration)
-              duration = ((i.zero? ? s_setup_duration : 0) + s_duration) * s.visits_number
-              merged_quantities[:duration] += (i.zero? ? s_setup_duration : 0) + s_duration
-              # TODO: If the services are not merged due another reason (for example pickups are at the same location but
-              # the deliveries are not), in the case, we assume the worst case and apply the setup_duration to all.
-              # However, because of this, clustering might return unbalanced clusters (because the duration is skewed).
-              unit_quantities[:duration] += duration
-              cumulated_metrics[:duration] += duration
-              s.quantities.each{ |quantity|
-                next if !vehicle_units.include? quantity.unit.id
+                unit_quantities[:visits] += s.visits_number
+                cumulated_metrics[:visits] += s.visits_number
+                s_setup_duration =
+                  if s.activity
+                    s.activity.setup_duration
+                  else
+                    s.pickup ? s.pickup.setup_duration : s.delivery.setup_duration
+                  end
 
-                merged_quantities[quantity.unit_id.to_sym] += quantity.value
-                unit_quantities[quantity.unit_id.to_sym] += quantity.value * s.visits_number
-                cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+                duration = ((i.zero? ? s_setup_duration : 0) + s_duration) * s.visits_number
+                merged_quantities[:duration] += (i.zero? ? s_setup_duration : 0) + s_duration
+                # TODO: If the services are not merged due another reason (for example pickups are
+                # at the same location but the deliveries are not), in the case, we assume the worst
+                # case and apply the setup_duration to all. However, because of this, clustering
+                # might return unbalanced clusters (because the duration is skewed).
+                unit_quantities[:duration] += duration
+                cumulated_metrics[:duration] += duration
+                s.quantities.each{ |quantity|
+                  next if !vehicle_units.include? quantity.unit.id
+
+                  merged_quantities[quantity.unit_id.to_sym] += quantity.value
+                  unit_quantities[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+                  cumulated_metrics[quantity.unit_id.to_sym] += quantity.value * s.visits_number
+                }
               }
-            }
             sub_set = sub_set.drop(merge_set.size)
 
             # if there are more items left in sub_set this means we stop due to capacity/duration
@@ -1226,7 +1334,8 @@ module Interpreters
             grouped_objects["#{point.id}_#{sub_set_index}_#{merge_index}"] = merge_set
             # TODO : group sticky and skills (in expected characteristics too)
             characteristics[:duration_from_and_to_depot] = [0, 0] if options[:basic_split]
-            data_items << [point.location.lat, point.location.lon, "#{point.id}_#{sub_set_index}_#{merge_index}", unit_quantities, characteristics.dup, nil]
+            data_items << [point.location.lat, point.location.lon,
+                           "#{point.id}_#{sub_set_index}_#{merge_index}", unit_quantities, characteristics.dup, nil]
             merge_index += 1
           end
         }
@@ -1250,8 +1359,11 @@ module Interpreters
           # well, then we need to check only the relations of a single service from each sub_set but
           # we need to make sure that we are checking the same relations in different sub_set. That
           # is why we do select a single service from each sub_set with max_by logic
-          service = sub_set.max_by{ |s| s.relations.max_by{ |r| Models::Relation::LINKING_RELATIONS.include?(r.type) ? r.id : 0 }&.id.to_i }
-          service.relations.select{ |r| Models::Relation::LINKING_RELATIONS.include?(r.type) }.each{ |relation|
+          sub_set.max_by{ |s|
+            s.relations.max_by{ |r| Models::Relation::LINKING_RELATIONS.include?(r.type) ? r.id : 0 }&.id.to_i
+          }.relations.select{ |r|
+            Models::Relation::LINKING_RELATIONS.include?(r.type)
+          }.each{ |relation|
             related_item_indices[relation] << index
           }
         }
@@ -1264,34 +1376,38 @@ module Interpreters
 
         compatible_vehicles = Hash.new{}
         items.each{ |data_item|
-          compatible_vehicles[data_item[2]] = vehicle_characteristics.collect.with_index{ |veh_char, veh_ind| veh_ind if compatible_characteristics?(data_item[4], veh_char) }.compact
+          compatible_vehicles[data_item[2]] =
+            vehicle_characteristics.collect.with_index{ |veh_char, veh_ind|
+              veh_ind if compatible_characteristics?(data_item[4], veh_char)
+            }.compact
         }
 
         max_distance = 50 # meters
 
         c = Ai4r::Clusterers::CompleteLinkageMaxDistance.new
 
-        c.distance_function = lambda do |data_item_a, data_item_b|
-          # If there is no vehicle that can serve both points at the same time, make sure they are not merged
-          if data_item_a[4][:do_not_group] ||
-             data_item_b[4][:do_not_group] ||
-             data_item_a[4][:linked_relation_details] != data_item_b[4][:linked_relation_details] ||
-             (compatible_vehicles[data_item_a[2]] & compatible_vehicles[data_item_b[2]]).empty? ||
-             min_vehicle_capacities.any?{ |unit, limit|
-               next if limit.nil?
+        c.distance_function =
+          lambda do |data_item_a, data_item_b|
+            # If there is no vehicle that can serve both points at the same time, make sure they are not merged
+            if data_item_a[4][:do_not_group] ||
+               data_item_b[4][:do_not_group] ||
+               data_item_a[4][:linked_relation_details] != data_item_b[4][:linked_relation_details] ||
+               (compatible_vehicles[data_item_a[2]] & compatible_vehicles[data_item_b[2]]).empty? ||
+               min_vehicle_capacities.any?{ |unit, limit|
+                 next if limit.nil?
 
-               data_item_a[4][:merged_quantities][unit] + data_item_b[4][:merged_quantities][unit] > limit
-             }
-             # see TODO(0) of collect_data_items_metrics about min_vehicle_capacities
+                 data_item_a[4][:merged_quantities][unit] + data_item_b[4][:merged_quantities][unit] > limit
+               }
+              # see TODO(0) of collect_data_items_metrics about min_vehicle_capacities
 
-            return max_distance + 1
+              return max_distance + 1
+            end
+
+            [
+              vrp.matrices[0][:distance][data_item_a[4][:matrix_index]][data_item_b[4][:matrix_index]],
+              vrp.matrices[0][:distance][data_item_b[4][:matrix_index]][data_item_a[4][:matrix_index]]
+            ].min
           end
-
-          [
-            vrp.matrices[0][:distance][data_item_a[4][:matrix_index]][data_item_b[4][:matrix_index]],
-            vrp.matrices[0][:distance][data_item_b[4][:matrix_index]][data_item_a[4][:matrix_index]]
-          ].min
-        end
 
         # Cluster points closer than max_distance to eachother
         clusterer = c.build(Ai4r::Data::DataSet.new(data_items: items), max_distance)
@@ -1329,21 +1445,39 @@ module Interpreters
       end
 
       def add_duration_from_and_to_depot(vrp, data_items)
-        if vrp.matrices.empty? || vrp.vehicles.any?{ |v| v.matrix_id.nil? } || vrp.matrices.any?{ |m| m[:time].nil? || m[:time].empty? }
-          vehicle_start_locations = vrp.vehicles.select(&:start_point).collect!{ |v| [v.start_point.location.lat, v.start_point.location.lon] }.uniq
-          vehicle_end_locations = vrp.vehicles.select(&:end_point).collect!{ |v| [v.end_point.location.lat, v.end_point.location.lon] }.uniq
+        if vrp.matrices.empty? || vrp.vehicles.any?{ |v| v.matrix_id.nil? } ||
+           vrp.matrices.any?{ |m| m[:time].nil? || m[:time].empty? }
+          vehicle_start_locations = vrp.vehicles.select(&:start_point).collect!{ |v|
+            [v.start_point.location.lat, v.start_point.location.lon]
+          }.uniq
+          vehicle_end_locations = vrp.vehicles.select(&:end_point).collect!{ |v|
+            [v.end_point.location.lat, v.end_point.location.lon]
+          }.uniq
 
           locations = data_items.collect{ |point| [point[0], point[1]] }
 
           tic = Time.now
-          log "matrix computation #{vehicle_start_locations.size}x#{locations.size} + #{locations.size}x#{vehicle_end_locations.size}"
-          time_matrix_from_depot = vrp.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], vehicle_start_locations, locations).first if vehicle_start_locations.any?
-          time_matrix_to_depot = vrp.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time], locations, vehicle_end_locations).first if vehicle_end_locations.any?
+          log "matrix computation #{vehicle_start_locations.size}x#{locations.size} +"\
+              " #{locations.size}x#{vehicle_end_locations.size}"
+          if vehicle_start_locations.any?
+            time_matrix_from_depot = vrp.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time],
+                                                       vehicle_start_locations, locations).first
+          end
+          if vehicle_end_locations.any?
+            time_matrix_to_depot = vrp.router.matrix(OptimizerWrapper.config[:router][:url], :car, [:time],
+                                                     locations, vehicle_end_locations).first
+          end
           log "matrix computed in #{(Time.now - tic).round(2)} seconds"
 
           v_index = {
-            from: vrp.vehicles.collect{ |v| vehicle_start_locations.find_index([v.start_point.location.lat, v.start_point.location.lon]) if v.start_point },
-            to: vrp.vehicles.collect{ |v| vehicle_end_locations.find_index([v.end_point.location.lat, v.end_point.location.lon]) if v.end_point }
+            from: vrp.vehicles.collect{ |v|
+              start_loc = v.start_point&.location
+              vehicle_start_locations.find_index([start_loc.lat, start_loc.lon]) if start_loc
+            },
+            to: vrp.vehicles.collect{ |v|
+              end_loc = v.end_point&.location
+              vehicle_end_locations.find_index([end_loc.lat, end_loc.lon]) if end_loc
+            }
           }
 
           data_items.each_with_index{ |point, p_index|
@@ -1353,7 +1487,9 @@ module Interpreters
               duration_from = time_matrix_from_depot[v_index[:from][v_i]][p_index] if v_index[:from][v_i]
               duration_to = time_matrix_to_depot[p_index][v_index[:to][v_i]] if v_index[:to][v_i]
 
-              point[4][:duration_from_and_to_depot] << (duration_from.to_f + duration_to.to_f) # TODO: investigate why division by vehicle.router_options[:speed_multiplier] detoriarates the performance of periodic
+              # TODO: investigate why division by vehicle.router_options[:speed_multiplier]
+              # detoriarates the performance of periodic
+              point[4][:duration_from_and_to_depot] << (duration_from.to_f + duration_to.to_f)
             }
           }
         else
@@ -1363,11 +1499,15 @@ module Interpreters
 
           vrp.vehicles.each{ |v|
             matrix = vrp.matrices.find{ |m| m.id == v.matrix_id }[:time]
-            time_matrix_from_depot = Helper.unsquared_matrix(matrix, [v.start_point.matrix_index], locations) if v.start_point
+            if v.start_point
+              time_matrix_from_depot = Helper.unsquared_matrix(matrix, [v.start_point.matrix_index], locations)
+            end
             time_matrix_to_depot = Helper.unsquared_matrix(matrix, locations, [v.end_point.matrix_index]) if v.end_point
 
             data_items.each_with_index{ |point, p_index|
-              point[4][:duration_from_and_to_depot] << (v.start_point ? time_matrix_from_depot[0][p_index].to_f : 0.0) + (v.end_point ? time_matrix_to_depot[p_index][0].to_f : 0.0)
+              point[4][:duration_from_and_to_depot] <<
+                (v.start_point ? time_matrix_from_depot[0][p_index].to_f : 0.0) +
+                (v.end_point ? time_matrix_to_depot[p_index][0].to_f : 0.0)
             }
           }
         end
@@ -1378,7 +1518,8 @@ module Interpreters
           tw = [v.timewindow || v.sequence_timewindows].flatten.compact
           {
             id: [v.id],
-            skills: v.skills.flatten.uniq, # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
+            # TODO : improve case with alternative skills. Current implementation collects all skill sets into one
+            skills: v.skills.flatten.uniq,
             day_skills: compute_day_skills(tw)
           }
         }
@@ -1414,8 +1555,11 @@ module Interpreters
           next if cluster == original_cluster
 
           cluster.data_items.each{ |data|
-            next unless dist > Helper.flying_distance(data, data_to_insert) && cluster.data_items.collect{ |data_item| data_item[3][cut_symbol] }.sum < limit &&
-                        cluster.data_items.all?{ |d| data_to_insert[5].nil? || d[5] && (data_to_insert[5] & d[5]).size >= d[5].size }
+            next unless dist > Helper.flying_distance(data, data_to_insert) &&
+                        cluster.data_items.collect{ |data_item| data_item[3][cut_symbol] }.sum < limit &&
+                        cluster.data_items.all?{ |d|
+                          data_to_insert[5].nil? || d[5] && (data_to_insert[5] & d[5]).size >= d[5].size
+                        }
 
             dist = Helper.flying_distance(data, data_to_insert)
             c = cluster
@@ -1466,7 +1610,8 @@ module Interpreters
 
           vrp.vehicles.each{ |vehicle|
             limits << {
-                        limit: cumulated_metrics[cut_symbol].to_f * (vehicle.total_work_time_in_range(r_start, r_end) / total_work_time),
+                        limit: cumulated_metrics[cut_symbol].to_f *
+                               (vehicle.total_work_time_in_range(r_start, r_end) / total_work_time),
                         total_work_time: vehicle.total_work_time_in_range(r_start, r_end),
                         total_work_days: vehicle.total_work_days_in_range(r_start, r_end)
                       }

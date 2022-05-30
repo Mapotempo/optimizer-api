@@ -24,7 +24,8 @@ class InstanceValidityTest < Minitest::Test
       problem[:configuration][:preprocessing][:first_solution_strategy] = []
       problem[:configuration][:resolution][:solver] = false
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_solver_if_not_periodic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_solver_if_not_periodic
     end
 
     def test_reject_if_partial_assignement
@@ -32,7 +33,8 @@ class InstanceValidityTest < Minitest::Test
       problem[:configuration][:resolution][:allow_partial_assignment] = false
       problem[:configuration][:preprocessing][:first_solution_strategy] = nil
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_allow_partial_if_no_heuristic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_no_allow_partial_if_no_heuristic
     end
 
     def test_reject_if_same_point_day
@@ -40,35 +42,40 @@ class InstanceValidityTest < Minitest::Test
       problem[:configuration][:resolution][:same_point_day] = true
       problem[:configuration][:preprocessing][:first_solution_strategy] = nil
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_same_point_day_if_no_heuristic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_no_same_point_day_if_no_heuristic
     end
 
     def test_reject_if_vehicle_shift_preference
       problem = VRP.periodic
       problem[:vehicles].first[:shift_preference] = 'force_start'
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_wrong_vehicle_shift_preference_with_heuristic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_wrong_vehicle_shift_preference_with_heuristic
     end
 
     def test_reject_if_vehicle_overall_duration
       problem = VRP.periodic
       problem[:vehicles].first[:overall_duration] = 10
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_vehicle_overall_duration_if_heuristic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_no_vehicle_overall_duration_if_heuristic
     end
 
     def test_reject_if_vehicle_distance
       problem = VRP.periodic
       problem[:vehicles].first[:distance] = 10
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_vehicle_distance_if_heuristic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_no_vehicle_distance_if_heuristic
     end
 
     def test_reject_if_vehicle_free_approach_return
       problem = VRP.periodic
       problem[:vehicles].first[:free_approach] = true
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_vehicle_free_approach_or_return_if_heuristic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_no_vehicle_free_approach_or_return_if_heuristic
     end
 
     def test_reject_if_vehicle_limit
@@ -82,28 +89,32 @@ class InstanceValidityTest < Minitest::Test
         matrix_id: 'matrix_0'
       }]
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_vehicle_limit_if_heuristic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_no_vehicle_limit_if_heuristic
     end
 
     def test_reject_if_no_vehicle_tw_but_heuristic
       problem = VRP.periodic
       problem[:vehicles].first[:timewindow] = nil
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_vehicle_tw_if_periodic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_vehicle_tw_if_periodic
     end
 
     def test_reject_if_periodic_heuristic_without_schedule
       problem = VRP.periodic
       problem[:configuration][:schedule] = nil
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_if_periodic_heuristic_then_schedule
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_if_periodic_heuristic_then_schedule
     end
 
     def test_no_solution_evaluation
       problem = VRP.periodic
       problem[:configuration][:resolution][:evaluate_only] = true
 
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_no_periodic_if_evaluation
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_no_periodic_if_evaluation
     end
 
     def test_assert_route_date_or_indice_if_periodic
@@ -112,14 +123,16 @@ class InstanceValidityTest < Minitest::Test
         vehicle_id: 'vehicle_0',
         mission_ids: ['service_1', 'service_3']
       }]
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_route_date_or_indice_if_periodic
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_route_date_or_indice_if_periodic
 
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
         indice: 0,
         mission_ids: ['service_1', 'service_3']
       }]
-      refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_route_date_or_indice_if_periodic
+      refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_route_date_or_indice_if_periodic
     end
 
     def test_not_too_many_visits_provided_in_route
@@ -129,14 +142,16 @@ class InstanceValidityTest < Minitest::Test
         indice: 0,
         mission_ids: ['service_1']
       }]
-      refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_not_too_many_visits_in_route
+      refute_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_not_too_many_visits_in_route
 
       problem[:routes] = [{
         vehicle_id: 'vehicle_0',
         indice: 0,
         mission_ids: ['service_1', 'service_1']
       }]
-      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)), :assert_not_too_many_visits_in_route
+      assert_includes OptimizerWrapper.config[:services][:ortools].inapplicable_solve?(TestHelper.create(problem)),
+                      :assert_not_too_many_visits_in_route
     end
 
   end

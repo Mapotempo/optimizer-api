@@ -60,8 +60,7 @@ class Api::V01::VrpTest < Minitest::Test
     problem = VRP.basic
     [nil, [], [[]],
      'skill1', [['skill1']],
-     'skill1,skill2', [['skill1', 'skill2']]
-    ].each_with_index{ |skill_set, v_i|
+     'skill1,skill2', [['skill1', 'skill2']]].each_with_index{ |skill_set, v_i|
       problem[:vehicles] << problem[:vehicles].first.dup unless v_i == 0
       problem[:vehicles][v_i][:id] = "vehicle_#{v_i}"
       problem[:vehicles][v_i][:skills] = skill_set
@@ -74,8 +73,7 @@ class Api::V01::VrpTest < Minitest::Test
         vrp = services_vrps[0][:vrp]
         [[[]], [[]], [[]],
          [[:skill1]], [[:skill1]],
-         [[:skill1, :skill2]], [[:skill1, :skill2]]
-        ].each_with_index{ |expected_skills, v_i|
+         [[:skill1, :skill2]], [[:skill1, :skill2]]].each_with_index{ |expected_skills, v_i|
           assert_equal vrp.vehicles[v_i].skills, expected_skills
         }
         [vrp.empty_solution({})]
@@ -107,7 +105,9 @@ class Api::V01::VrpTest < Minitest::Test
     vrp[:configuration][:resolution][:solver_parameter] = 0
     post '/0.1/vrp/submit', api_key: 'demo', vrp: vrp
     assert_equal 400, last_response.status, last_response.body
-    assert_includes JSON.parse(last_response.body)['message'], 'vrp[configuration][resolution][solver], vrp[configuration][resolution][solver_parameter] are mutually exclusive'
+    assert_includes JSON.parse(last_response.body)['message'],
+                    'vrp[configuration][resolution][solver], '\
+                    'vrp[configuration][resolution][solver_parameter] are mutually exclusive'
   end
 
   def test_time_parameters
@@ -291,7 +291,8 @@ class Api::V01::VrpTest < Minitest::Test
     lines_with_avancement = ''
     Dir.mktmpdir('temp_', 'test/') { |tmpdir|
       begin
-        previous = { log_level: ENV['LOG_LEVEL'], log_device: ENV['LOG_DEVICE'], repetition: OptimizerWrapper.config[:solve][:repetition] }
+        previous = { log_level: ENV['LOG_LEVEL'], log_device: ENV['LOG_DEVICE'],
+                     repetition: OptimizerWrapper.config[:solve][:repetition] }
         output = Tempfile.new('avencement-output', tmpdir)
         output.sync = true
         ENV['LOG_LEVEL'] = 'info'
@@ -322,8 +323,10 @@ class Api::V01::VrpTest < Minitest::Test
     assert_msg = "\nThe structure of avancement message has changed! If the modification is on purpose " \
                  "fix this test \n(#{self.class.name}::#{self.name}) to represent the actual functionality."
     # Currently the expected output is in the following form
-    # [date time_with_ms_and_zone] jobid - INFO: avancement: repetition (1..2)/2 - clustering phase (y: 1..2)/2 - step (1..y)/(y)
-    # [date time_with_ms_and_zone] jobid - INFO: avancement: repetition (1..2)/2 - process (1..9)/10 - solving periodic heuristic
+    # [date time_with_ms_and_zone] jobid - INFO:
+    #                                   avancement: repetition (1..2)/2 - clustering phase (y: 1..2)/2 - step (1..y)/(y)
+    # [date time_with_ms_and_zone] jobid - INFO:
+    #                                   avancement: repetition (1..2)/2 - process (1..9)/10 - solving periodic heuristic
 
     lines_with_avancement.each{ |line|
       date_time_jobid_pattern = '\[(?<date>[0-9-]*)T(?<time_with_ms_and_zone>[0-9:.+]*)\] (?<job_id>[0-9a-z]*)'
@@ -343,7 +346,8 @@ class Api::V01::VrpTest < Minitest::Test
       remaining_log = Regexp.last_match(:remaining_log)
 
       # The remaining_log needs to be either clustering or heuristic solution
-      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ remaining_log || %r{process [1-9]/8 - periodic heuristic } =~ remaining_log
+      %r{clustering phase [1-2]/2 - step [1-2]/[1-2] } =~ remaining_log ||
+        %r{process [1-9]/8 - periodic heuristic } =~ remaining_log
 
       refute_nil Regexp.last_match, assert_msg
     }
@@ -354,15 +358,19 @@ class Api::V01::VrpTest < Minitest::Test
     vrp_no_sched_start[:configuration][:schedule] = { range_indices: { start: 0 } }
     post '/0.1/vrp/submit', {api_key: 'demo', vrp: vrp_no_sched_start}.to_json, 'CONTENT_TYPE' => 'application/json'
     assert_equal 400, last_response.status
-    assert_includes(JSON.parse(last_response.body)['message'], 'vrp[configuration][schedule][range_indices][end] is missing')
+    assert_includes(JSON.parse(last_response.body)['message'],
+                    'vrp[configuration][schedule][range_indices][end] is missing')
   end
 
   def test_ask_for_geometry
-    [false, true, true, # boolean
-     ['polylines'], [:polylines], [:polylines, 'partitions'], ['unexistant'], # array of string or symbol
-     'partitions', 'polylines,partitions', 'polylines, encoded_polylines' # string to be converted into an array
+    [
+      false, true, true, # boolean
+      ['polylines'], [:polylines], [:polylines, 'partitions'], ['unexistant'], # array of string or symbol
+      'partitions', 'polylines,partitions', 'polylines, encoded_polylines' # string to be converted into an array
     ].each_with_index{ |geometry_field, case_index|
-      OptimizerWrapper.stub(:define_main_process, lambda { |services_vrps, _job|
+      OptimizerWrapper.stub(
+        :define_main_process,
+        lambda { |services_vrps, _job|
           case case_index
           when 0
             assert_empty services_vrps.first[:vrp].configuration.restitution.geometry

@@ -25,13 +25,18 @@ class HeuristicTest < Minitest::Test
       vrps.each{ |vrp|
         vrp = Models::Vrp.create(vrp.as_json)
         vrp.configuration.preprocessing.partitions = nil
-        solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil) # marshal dump needed, otherwise we create relations (min/maximum lapse)
+        # marshal dump needed, otherwise we create relations (min/maximum lapse)
+        solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},
+                                                 Marshal.load(Marshal.dump(vrp)), nil)
         unassigned = solutions[0].unassigned_stops.size
 
         vrp = Models::Vrp.create(vrp.as_json)
         vrp.configuration.resolution.solver = true
-        solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
-        assert unassigned >= solutions[0].unassigned_stops.size, "Increased number of unassigned with ORtools : had #{unassigned}, has #{solutions[0].unassigned_stops.size} now"
+        solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},
+                                                 Marshal.load(Marshal.dump(vrp)), nil)
+        assert unassigned >= solutions[0].unassigned_stops.size,
+               "Increased number of unassigned with ORtools : had #{unassigned}, "\
+               "has #{solutions[0].unassigned_stops.size} now"
       }
     end
 
@@ -39,7 +44,8 @@ class HeuristicTest < Minitest::Test
       vrp = TestHelper.load_vrp(self, fixture_file: 'two_phases_clustering_sched_with_freq_and_same_point_day_5veh')
       vrp.configuration.resolution.solver = true
       vrp.configuration.preprocessing.partitions.each{ |p| p.restarts = 1 }
-      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, Marshal.load(Marshal.dump(vrp)), nil)
+      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},
+                                               Marshal.load(Marshal.dump(vrp)), nil)
 
       vrp.services.group_by{ |s| s.activity.point.id }.each{ |point_id, services_set|
         expected_number_of_days = services_set.collect{ |service| service[:visits_number] }.max
@@ -50,8 +56,7 @@ class HeuristicTest < Minitest::Test
 
       # check performance :
       limit = vrp.visits * 6 / 100.0
-      assert_operator solutions[0].unassigned_stops.size, :<, limit,
-                      "#{solutions[0].unassigned_stops.size * 100.0 / vrp.visits}% unassigned instead of #{limit}% authorized"
+      assert_operator solutions[0].unassigned_stops.size, :<, limit, 'Too many unassigned'
       assert solutions[0].unassigned_stops.none?{ |un| un.reason.include?(' vehicle ') },
              'Some services could not be assigned to a vehicle'
     end
@@ -59,29 +64,35 @@ class HeuristicTest < Minitest::Test
     def test_performance_12vl_with_solver
       vrps = TestHelper.load_vrps(self, fixture_file: 'performance_12vl')
 
-      unassigned_visits = vrps.each.with_index.inject(0){ |unassigned_nb, (vrp, vrp_i)|
-        puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
-        vrp.configuration.preprocessing.partitions = nil
-        vrp.configuration.resolution.solver = true
-        solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-        unassigned_nb + solutions[0].unassigned_stops.size
-      }
+      unassigned_visits =
+        vrps.each.with_index.inject(0){ |unassigned_nb, (vrp, vrp_i)|
+          puts "Solving problem #{vrp_i + 1}/#{vrps.size}..."
+          vrp.configuration.preprocessing.partitions = nil
+          vrp.configuration.resolution.solver = true
+          solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+          unassigned_nb + solutions[0].unassigned_stops.size
+        }
       assert_operator unassigned_visits, :<=, 248, 'Expecting less unassigned visits'
     end
 
     def test_performance_britanny_with_solver
-      unassigned_count = Array.new(3){
-        vrp = TestHelper.load_vrp(self, fixture_file: 'performance_britanny')
-        solutions = nil
-        Interpreters::SplitClustering.stub(:kmeans_process, lambda{ |nb_clusters, data_items, related_item_indices, limits, options|
-          options.delete(:distance_matrix)
-          options[:restarts] = 4
-          Interpreters::SplitClustering.send(:__minitest_stub__kmeans_process, nb_clusters, data_items, related_item_indices, limits, options) # call original method
-        }) do
-          solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-        end
-        solutions[0].unassigned_stops.size
-      }
+      unassigned_count =
+        Array.new(3){
+          vrp = TestHelper.load_vrp(self, fixture_file: 'performance_britanny')
+          solutions = nil
+          Interpreters::SplitClustering.stub(
+            :kmeans_process,
+            lambda{ |nb_clusters, data_items, related_item_indices, limits, options|
+              options.delete(:distance_matrix)
+              options[:restarts] = 4
+              Interpreters::SplitClustering.send(:__minitest_stub__kmeans_process, nb_clusters, data_items,
+                                                 related_item_indices, limits, options) # call original method
+            }
+          ) do
+            solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+          end
+          solutions[0].unassigned_stops.size
+        }
 
       # should almost never violated (if happens twice, most probably there is a perf degredation)
       assert_operator unassigned_count.mean, :<=, 180, "#{unassigned_count}.mean should be smaller"

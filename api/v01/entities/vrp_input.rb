@@ -65,7 +65,7 @@ module VrpInput
 
   # Input as expected in CSV
   params :request_files do
-                           # We expect here to keep the definition of the high level model in a single place
+    # We expect here to keep the definition of the high level model in a single place
     optional :points, type: Array,
                       documentation: { hidden: true, desc: 'Warning : CSV Format expected here ! Particular place in the map.' },
                       coerce_with: ->(path) { path.is_a?(Array) ? path : Api::V01::CSVParser.call(File.open(path[:tempfile], 'r:bom|utf-8').read, nil) } do

@@ -41,7 +41,9 @@ class Api::V01::ApiTest < Minitest::Test
   def test_should_not_access_if_expired
     get '/0.1/vrp/submit', api_key: 'expired'
     assert_equal 402, last_response.status
-    assert_equal 'Subscription expired. Please contact support (support@mapotempo.com) or sales (sales@mapotempo.com) to extend your access period.', JSON.parse(last_response.body)['error']
+    assert_equal 'Subscription expired. Please contact support (support@mapotempo.com) '\
+                 'or sales (sales@mapotempo.com) to extend your access period.',
+                 JSON.parse(last_response.body)['error']
   end
 
   def test_count_optimizations
@@ -50,17 +52,23 @@ class Api::V01::ApiTest < Minitest::Test
       { method: 'post', uri: 'submit', operation: :optimize, options: { vrp: VRP.toy }},
       { method: 'get', uri: "jobs/#{@job_id}.json", operation: :get_job, options: {}},
       { method: 'get', uri: 'jobs', operation: :get_job_list, options: {}},
-      { method: 'delete', uri: "jobs/#{@job_id}.json", operation: :delete_job, options: {}} # delete must be the last one!
+      # delete must be the last one!
+      { method: 'delete', uri: "jobs/#{@job_id}.json", operation: :delete_job, options: {}}
     ].each do |obj|
       (1..2).each do |cpt|
         send(obj[:method], "/0.1/vrp/#{obj[:uri]}", { api_key: 'demo' }.merge(obj[:options]))
 
-        keys = OptimizerWrapper.config[:redis_count].keys("optimizer:#{obj[:operation]}:#{Time.now.utc.to_s[0..9]}_key:demo_ip*")
+        keys = OptimizerWrapper.config[:redis_count].keys(
+          "optimizer:#{obj[:operation]}:#{Time.now.utc.to_s[0..9]}_key:demo_ip*"
+        )
 
         case obj[:operation]
         when :optimize
           assert_equal 1, keys.count
-          assert_equal({ 'hits' => cpt.to_s, 'transactions' => (VRP.toy[:vehicles].count * VRP.toy[:points].count * cpt).to_s }, OptimizerWrapper.config[:redis_count].hgetall(keys.first)) # only one key
+          assert_equal(
+            { 'hits' => cpt.to_s, 'transactions' => (VRP.toy[:vehicles].count * VRP.toy[:points].count * cpt).to_s },
+            OptimizerWrapper.config[:redis_count].hgetall(keys.first)
+          ) # only one key
         else
           assert_equal 0, keys.count
         end
@@ -77,9 +85,12 @@ class Api::V01::ApiTest < Minitest::Test
     assert_equal 429, last_response.status
 
     assert_includes JSON.parse(last_response.body)['message'], 'Too many daily requests'
-    assert_equal ["application/json; charset=UTF-8", 4, 0, Time.now.utc.to_date.next_day.to_time.to_i], last_response.headers.select{ |key|
-      key =~ /(Content-Type|X-RateLimit-Limit|X-RateLimit-Remaining|X-RateLimit-Reset)/
-    }.values
+    assert_equal(
+      ["application/json; charset=UTF-8", 4, 0, Time.now.utc.to_date.next_day.to_time.to_i],
+      last_response.headers.select{ |key|
+        key =~ /(Content-Type|X-RateLimit-Limit|X-RateLimit-Remaining|X-RateLimit-Reset)/
+      }.values
+    )
   end
 
   def test_use_quota_nil

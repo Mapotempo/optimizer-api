@@ -203,7 +203,11 @@ class FiltersTest < Minitest::Test
           if true_capacities[vrp.units[index].id].nil?
             assert_equal(-2147483648, cap.limit)
           else
-            assert_equal((true_capacities[vrp.units[index].id] / vrp.units[index].precision_coef * (vrp.units[index].counting ? 1 : 1000.0)).round, cap.limit)
+            assert_equal(
+              (true_capacities[vrp.units[index].id] / vrp.units[index].precision_coef *
+                (vrp.units[index].counting ? 1 : 1000.0)).round,
+              cap.limit
+            )
             # assert_equal(true_capacities[vrp.units[index].id], cap.limit)
           end
         }
@@ -211,7 +215,11 @@ class FiltersTest < Minitest::Test
           if true_quantities[vrp.units[index].id].nil?
             assert_equal(0, qan_value)
           else
-            assert_equal((true_quantities[vrp.units[index].id] / vrp.units[index].precision_coef * (vrp.units[index].counting ? 1 : 1000.0)).round, qan_value)
+            assert_equal(
+              (true_quantities[vrp.units[index].id] / vrp.units[index].precision_coef *
+                (vrp.units[index].counting ? 1 : 1000.0)).round,
+              qan_value
+            )
             # assert_equal(true_quantities[vrp.units[index].id], qan_value)
           end
         }

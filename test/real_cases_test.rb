@@ -319,13 +319,15 @@ class RealCasesTest < Minitest::Test
       solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
       # Check stops
       service_with_endless_tw = vrp.services[15]
-      stop_with_endless_tw = solutions[0].routes[0].stops.find{ |stop|
-        stop.service_id == service_with_endless_tw.id # service_with_endless_tw
-      }
-      endless_tw_respected = stop_with_endless_tw.activity.timewindows.one?{ |tw|
-        stop_with_endless_tw.info.begin_time >= (tw.start || 0) &&
-          stop_with_endless_tw.info.begin_time <= (tw.end || Float::INFINITY)
-      }
+      stop_with_endless_tw =
+        solutions[0].routes[0].stops.find{ |stop|
+          stop.service_id == service_with_endless_tw.id # service_with_endless_tw
+        }
+      endless_tw_respected =
+        stop_with_endless_tw.activity.timewindows.one?{ |tw|
+          stop_with_endless_tw.info.begin_time >= (tw.start || 0) &&
+            stop_with_endless_tw.info.begin_time <= (tw.end || Float::INFINITY)
+        }
       assert endless_tw_respected, 'Service does not respect endless TW'
       assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.stops.count(&:service_id) })
 

@@ -29,7 +29,9 @@ module Parsers
       }.compact.to_h
 
       dup_activity = Models::Activity.new(activity_hash)
-      dup_activity[:simplified_setup_duration] = activity[:simplified_setup_duration] if activity[:simplified_setup_duration]
+      if activity[:simplified_setup_duration]
+        dup_activity[:simplified_setup_duration] = activity[:simplified_setup_duration]
+      end
 
       {
         id: service.original_id,

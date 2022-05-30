@@ -19,10 +19,11 @@ namespace :resque do
       next unless job.status == Resque::Plugins::Status::STATUS_WORKING && job.time < Time.now - 10.seconds
 
       # Protect the jobs running on other queues
-      running_job_ids = Resque.workers.map{ |w|
-        j = w.job(false)
-        j['payload'] && j['payload']['args'].first
-      }
+      running_job_ids =
+        Resque.workers.map{ |w|
+          j = w.job(false)
+          j['payload'] && j['payload']['args'].first
+        }
       next if running_job_ids.include?(job.uuid)
 
       puts "#{Time.now} #{job.uuid} removed because it is interrupted by restarting queues"

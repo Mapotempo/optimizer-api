@@ -93,13 +93,14 @@ module ValidateData
       end
     else
       max_matrix_index = @hash[:points].max{ |p| p[:matrix_index] || -1 }[:matrix_index] || -1
-      matrix_not_big_enough = @hash[:matrices].any?{ |matrix_group|
-        Models::Matrix.dimensions.any?{ |dimension|
-          matrix_group[dimension] &&
-            (matrix_group[dimension].size <= max_matrix_index ||
-              matrix_group[dimension].any?{ |col| col.size <= max_matrix_index })
+      matrix_not_big_enough =
+        @hash[:matrices].any?{ |matrix_group|
+          Models::Matrix.dimensions.any?{ |dimension|
+            matrix_group[dimension] &&
+              (matrix_group[dimension].size <= max_matrix_index ||
+                matrix_group[dimension].any?{ |col| col.size <= max_matrix_index })
+          }
         }
-      }
       if matrix_not_big_enough
         raise OptimizerWrapper::DiscordantProblemError.new(
           'All matrices should have at least maximum(point[:matrix_index]) number of rows and columns'
@@ -149,7 +150,8 @@ module ValidateData
       next unless periodic_heuristic
 
       if v[:skills].to_a.size > 1
-        raise OptimizerWrapper::DiscordantProblemError.new('Periodic heuristic does not support vehicle alternative skills')
+        raise OptimizerWrapper::DiscordantProblemError.new('Periodic heuristic does not support '\
+                                                           'vehicle alternative skills')
       end
     }
   end
@@ -166,7 +168,8 @@ module ValidateData
       end
 
       if mission[:quantities]&.any?{ |q| q[:empty] && q[:value] == 0 }
-        raise OptimizerWrapper::DiscordantProblemError.new('Value of an empty operation cannot be 0 -- value signifies the maximum amount to empty')
+        raise OptimizerWrapper::DiscordantProblemError.new('Value of an empty operation cannot be 0 -- '\
+                                                           'value signifies the maximum amount to empty')
       end
     }
   end
@@ -178,7 +181,8 @@ module ValidateData
       end
 
       unless relation[:linked_vehicle_ids]&.uniq&.size == relation[:linked_vehicle_ids]&.size
-        raise OptimizerWrapper::DiscordantProblemError.new('Same vehicle ID is provided multiple times in one relation.')
+        raise OptimizerWrapper::DiscordantProblemError.new('Same vehicle ID is provided multiple '\
+                                                           'times in one relation.')
       end
     }
   end
@@ -204,9 +208,10 @@ module ValidateData
     @hash[:relations].each{ |relation|
       next unless Models::Relation::POSITION_TYPES.include?(relation[:type])
 
-      services = relation[:linked_service_ids].map{ |linked_id|
-        @hash[:services].find{ |service| service[:id] == linked_id }
-      }
+      services =
+        relation[:linked_service_ids].map{ |linked_id|
+          @hash[:services].find{ |service| service[:id] == linked_id }
+        }
       previous_service = nil
       previous_activities = []
       services.each{ |service|
@@ -226,19 +231,21 @@ module ValidateData
 
     return unless inconsistent_position_services.any?
 
-    raise OptimizerWrapper::DiscordantProblemError.new("Inconsistent positions in relations: #{inconsistent_position_services.uniq}")
+    raise OptimizerWrapper::DiscordantProblemError.new("Inconsistent positions in relations: "\
+                                                       "#{inconsistent_position_services.uniq}")
   end
 
   def calculate_day_availabilities(vehicles, timewindow_arrays)
-    vehicles_days = timewindow_arrays.collect{ |timewindows|
-      if timewindows.empty?
-        (0..6).to_a
-      else
-        days = timewindows.flat_map{ |tw| tw[:day_index] || (0..6).to_a }
-        days.compact!
-        days.uniq
-      end
-    }
+    vehicles_days =
+      timewindow_arrays.collect{ |timewindows|
+        if timewindows.empty?
+          (0..6).to_a
+        else
+          days = timewindows.flat_map{ |tw| tw[:day_index] || (0..6).to_a }
+          days.compact!
+          days.uniq
+        end
+      }
 
     vehicles_unavailable_indices = vehicles.collect{ |v| v[:unavailable_work_day_indices] }
     vehicles_unavailable_indices.compact!
@@ -384,16 +391,20 @@ module ValidateData
       shipment_relations = @hash[:relations].select{ |r| r[:type] == :shipment }
       service_ids = @hash[:services].map{ |s| s[:id] }
 
-      shipments_with_invalid_linked_ids = shipment_relations.reject{ |r| r[:linked_service_ids].all?{ |s_id| service_ids.include?(s_id) } }
+      shipments_with_invalid_linked_ids =
+        shipment_relations.reject{ |r| r[:linked_service_ids].all?{ |s_id| service_ids.include?(s_id) } }
       unless shipments_with_invalid_linked_ids.empty?
         raise OptimizerWrapper::DiscordantProblemError.new(
           'Shipment relations need to have two valid services -- a pickup and a delivery. ' \
           'The following services of shipment relations are invalid: ' \
-          "#{shipments_with_invalid_linked_ids.flat_map{ |r| r[:linked_service_ids].select{ |s_id| service_ids.exclude?(s_id) } }.uniq.sort.join(', ')}"
+          "#{shipments_with_invalid_linked_ids.flat_map{ |r|
+               r[:linked_service_ids].select{ |s_id| service_ids.exclude?(s_id) }
+             }.uniq.sort.join(', ')}"
         )
       end
 
-      shipments_not_having_exactly_two_linked_ids = shipment_relations.reject{ |r| r[:linked_service_ids].uniq.size == 2 }
+      shipments_not_having_exactly_two_linked_ids =
+        shipment_relations.reject{ |r| r[:linked_service_ids].uniq.size == 2 }
       unless shipments_not_having_exactly_two_linked_ids.empty?
         raise OptimizerWrapper::DiscordantProblemError.new(
           'Shipment relations need to have two services -- a pickup and a delivery. ' \
@@ -421,7 +432,8 @@ module ValidateData
     check_relation_compatibility_with_alternatives
 
     if periodic_heuristic
-      incompatible_relation_types = @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end same_vehicle]
+      incompatible_relation_types =
+        @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end same_vehicle]
       err_msg = "#{incompatible_relation_types} relations not available with specified first_solution_strategy"
       raise OptimizerWrapper::UnsupportedProblemError.new(err_msg) if incompatible_relation_types.any?
     end
@@ -458,7 +470,8 @@ module ValidateData
     @hash[:relations]&.each{ |relation|
       next if relations_not_needing_matching_visits_number_and_lapses.include?(relation[:type])
 
-      services_in_relation = relation[:linked_service_ids]&.collect{ |s_id| @hash[:services].find{ |s| s[:id] == s_id } } || []
+      services_in_relation =
+        relation[:linked_service_ids]&.collect{ |s_id| @hash[:services].find{ |s| s[:id] == s_id } } || []
       if services_in_relation.uniq{ |s| s[:visits_number] || 1 }.size > 1
         raise OptimizerWrapper::UnsupportedProblemError.new(
           'Services in relations should have the same visits_number. '\
@@ -562,14 +575,14 @@ module ValidateData
     } && configuration[:schedule]
 
     if @hash[:services].any?{ |s|
-        min_lapse = s[:minimum_lapse]&.floor || 1
-        max_lapse = s[:maximum_lapse]&.ceil || configuration[:schedule][:range_indices][:end]
+         min_lapse = s[:minimum_lapse]&.floor || 1
+         max_lapse = s[:maximum_lapse]&.ceil || configuration[:schedule][:range_indices][:end]
 
-        s[:visits_number].to_i > 1 && (
-          configuration[:schedule][:range_indices][:end] <= 6 ||
-          (min_lapse..max_lapse).none?{ |intermediate_lapse| (intermediate_lapse % 7).zero? }
-       )
-      }
+         s[:visits_number].to_i > 1 && (
+           configuration[:schedule][:range_indices][:end] <= 6 ||
+           (min_lapse..max_lapse).none?{ |intermediate_lapse| (intermediate_lapse % 7).zero? }
+         )
+       }
 
       raise OptimizerWrapper::DiscordantProblemError.new(
         'Work day partition implies that lapses of all services can be a multiple of 7.

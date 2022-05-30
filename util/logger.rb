@@ -37,29 +37,34 @@ class OptimizerLogger
   @@logger = Logger.new(@@log_device)
   @@logger.level = @@level_map[@@level]
 
-  @@logger.formatter = proc do |severity, datetime, progname, msg|
-    datetime = OptimizerLogger.with_datetime ? datetime.strftime("[%FT%T.%N%:z]") : nil # iso8601 time with 9 decimals
-    job_id = OptimizerWrapper::Job.current_job_id ? "#{OptimizerWrapper::Job.current_job_id} -" : nil
-    progname = progname&.empty? ? nil : "- #{progname}"
+  @@logger.formatter =
+    proc do |severity, datetime, progname, msg|
+      datetime = OptimizerLogger.with_datetime ? datetime.strftime("[%FT%T.%N%:z]") : nil # iso8601 time with 9 decimals
+      job_id = OptimizerWrapper::Job.current_job_id ? "#{OptimizerWrapper::Job.current_job_id} -" : nil
+      progname = progname&.empty? ? nil : "- #{progname}"
 
-    [datetime, job_id, severity, progname].compact.join(' ') + ": #{msg}\n"
-  end
+      [datetime, job_id, severity, progname].compact.join(' ') + ": #{msg}\n"
+    end
 
   def self.define_progname(progname)
     location = nil
     if @@caller_location
-      call_obj = (caller_locations.second.base_label == 'log') ? caller_locations.third : caller_locations.second
+      call_obj = caller_locations.second.base_label == 'log' ? caller_locations.third : caller_locations.second
 
-      file =  case @@caller_location
-              when :filename
-                call_obj.path.scan(/(\w+).rb/)[0][0]
-              when :absolute
-                call_obj.absolute_path
-              when :relative
-                ".#{call_obj.path.scan(/optimizer-api(.*\.rb)/)[0][0]}"
-              else
-                raise NotImplementedError, "Unknown option (#{@@caller_location}) OptimizerLogger.caller_location parameter -- :absolute || :relative || :filename || nil"
-              end
+      file =
+        case @@caller_location
+        when :filename
+          call_obj.path.scan(/(\w+).rb/)[0][0]
+        when :absolute
+          call_obj.absolute_path
+        when :relative
+          ".#{call_obj.path.scan(/optimizer-api(.*\.rb)/)[0][0]}"
+        else
+          raise NotImplementedError.new(
+            "Unknown option (#{@@caller_location}) OptimizerLogger.caller_location parameter -- "\
+            ":absolute || :relative || :filename || nil"
+          )
+        end
 
       lineno = call_obj.lineno
 

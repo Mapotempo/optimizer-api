@@ -128,7 +128,7 @@ class MultiTripsTest < Minitest::Test
 
       linked_vehicle_ids = [vrp[:vehicles].last[:id]]
       1.upto(3).each{ |trip|
-        vrp[:vehicles] << vrp[:vehicles][-trip].dup.merge({ id: "#{vrp[:vehicles][-trip][:id]}_#{trip+1}_trip" })
+        vrp[:vehicles] << vrp[:vehicles][-trip].dup.merge({ id: "#{vrp[:vehicles][-trip][:id]}_#{trip + 1}_trip" })
         linked_vehicle_ids << vrp[:vehicles].last[:id]
       }
       vrp[:relations] << { type: :vehicle_trips, linked_vehicle_ids: linked_vehicle_ids }

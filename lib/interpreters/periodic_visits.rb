@@ -25,8 +25,15 @@ module Interpreters
       @epoch = Date.new(1970, 1, 1)
 
       if vrp.schedule?
-        have_services_day_index = !vrp.services.empty? && vrp.services.any?{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.timewindows.any?(&:day_index) } }
-        have_vehicles_day_index = vrp.vehicles.any?{ |vehicle| (vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows ).any?(&:day_index) }
+        have_services_day_index = !vrp.services.empty? && vrp.services.any?{ |service|
+          (service.activity ? [service.activity] : service.activities).any?{ |activity|
+            activity.timewindows.any?(&:day_index)
+          }
+        }
+        have_vehicles_day_index =
+          vrp.vehicles.any?{ |vehicle|
+            (vehicle.timewindow ? [vehicle.timewindow] : vehicle.sequence_timewindows).any?(&:day_index)
+          }
         have_rest_day_index = vrp.rests.any?{ |rest| rest.timewindows.any?(&:day_index) }
         @have_day_index = have_services_day_index || have_vehicles_day_index || have_rest_day_index
 
@@ -42,9 +49,14 @@ module Interpreters
 
       vehicles_linking_relations = save_vehicle_linking_relations(vrp)
       vrp.rests = []
-      vrp.vehicles = generate_vehicles(vrp).sort{ |a, b|
-        (a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index) ? a.global_day_index <=> b.global_day_index : a.id <=> b.id
-      }
+      vrp.vehicles =
+        generate_vehicles(vrp).sort{ |a, b|
+          if a.global_day_index && b.global_day_index && a.global_day_index != b.global_day_index
+            a.global_day_index <=> b.global_day_index
+          else
+            a.id <=> b.id
+          end
+        }
 
       if vrp.periodic_heuristic?
         periodic_heuristic = Wrappers::PeriodicHeuristic.new(vrp, job)
@@ -79,7 +91,7 @@ module Interpreters
       timewindows_set.flat_map{ |timewindow|
         if @have_day_index && fixed_day_index
           [Models::Timewindow.create(start: timewindow.start + fixed_day_index * 86400,
-                                    end: (timewindow.end || 86400) + fixed_day_index * 86400)]
+                                     end: (timewindow.end || 86400) + fixed_day_index * 86400)]
         elsif @have_day_index
           first_day =
             if timewindow.day_index
@@ -107,13 +119,15 @@ module Interpreters
         end
 
         # keep the original relation if it is another type of relation or if it doesn't belong to an unexpanded service.
-        next relation if relation.linked_services.empty? || @expanded_services[relation.linked_service_ids.first]&.size.to_i == 0
+        next relation if relation.linked_services.empty? ||
+                         @expanded_services[relation.linked_service_ids.first]&.size.to_i == 0
 
         Array.new(@expanded_services[relation.linked_service_ids.first]&.size.to_i){ |visit_index|
           linked_service_ids = relation.linked_service_ids.collect{ |s_id| @expanded_services[s_id][visit_index].id }
 
           Models::Relation.create(
-            type: relation.type, linked_service_ids: linked_service_ids, lapses: relation.lapses, periodicity: relation.periodicity
+            type: relation.type, linked_service_ids: linked_service_ids, lapses: relation.lapses,
+            periodicity: relation.periodicity
           )
         }
       }
@@ -128,7 +142,8 @@ module Interpreters
           current_lapse = (index - 1) * mission.minimum_lapse.to_i
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
-            linked_service_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
+            linked_service_ids: ["#{mission.id}_1_#{mission.visits_number}",
+                                 "#{mission.id}_#{index}_#{mission.visits_number}"],
             lapses: [current_lapse]
           )
         }
@@ -136,7 +151,8 @@ module Interpreters
           current_lapse = (index - 1) * mission.maximum_lapse.to_i
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
-            linked_service_ids: ["#{mission.id}_1_#{mission.visits_number}", "#{mission.id}_#{index}_#{mission.visits_number}"],
+            linked_service_ids: ["#{mission.id}_1_#{mission.visits_number}",
+                                 "#{mission.id}_#{index}_#{mission.visits_number}"],
             lapses: [current_lapse]
           )
         }
@@ -144,14 +160,18 @@ module Interpreters
         if mission.minimum_lapse
           vrp.relations << Models::Relation.create(
             type: :minimum_day_lapse,
-            linked_service_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
+            linked_service_ids: 1.upto(mission.visits_number).map{ |index|
+                                  "#{mission.id}_#{index}_#{mission.visits_number}"
+                                },
             lapses: [mission.minimum_lapse.to_i]
           )
         end
         if mission.maximum_lapse
           vrp.relations << Models::Relation.create(
             type: :maximum_day_lapse,
-            linked_service_ids: 1.upto(mission.visits_number).map{ |index| "#{mission.id}_#{index}_#{mission.visits_number}" },
+            linked_service_ids: 1.upto(mission.visits_number).map{ |index|
+                                  "#{mission.id}_#{index}_#{mission.visits_number}"
+                                },
             lapses: [mission.maximum_lapse.to_i]
           )
         end
@@ -182,7 +202,9 @@ module Interpreters
             first_possible_days: [service.first_possible_days[visit_index]],
             last_possible_days: [service.last_possible_days[visit_index]]
           )
-          new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}".to_sym] if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
+          if !service.minimum_lapse && !service.maximum_lapse && service.visits_number > 1
+            new_service.skills += ["#{visit_index + 1}_f_#{service.visits_number}".to_sym]
+          end
 
           @expanded_services[service.id] ||= []
           @expanded_services[service.id] << new_service
@@ -204,14 +226,16 @@ module Interpreters
       new_vehicle_hash[:timewindow] = vehicle_timewindow.as_json
       new_vehicle = Models::Vehicle.create(new_vehicle_hash)
 
-    # Current depot points may not be currently in the active_hash base due to
-    # the delete_all in build_partial_service_vrp
+      # Current depot points may not be currently in the active_hash base due to
+      # the delete_all in build_partial_service_vrp
       new_vehicle.start_point = vehicle.start_point
       new_vehicle.end_point = vehicle.end_point
 
       @equivalent_vehicles[vehicle.original_id] << [new_vehicle.id, new_vehicle.global_day_index]
       vrp.rests += new_vehicle.rests
-      vrp.services.select{ |service| service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle } }.each{ |service|
+      vrp.services.select{ |service|
+        service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle }
+      }.each{ |service|
         service.sticky_vehicles.insert(-1, new_vehicle)
       }
       new_vehicle
@@ -223,7 +247,8 @@ module Interpreters
       vrp.vehicles.each{ |vehicle|
         @equivalent_vehicles[vehicle.id] = [] # equivalent_vehicle_ids !
         @equivalent_vehicles[vehicle.original_id] = []
-        vrp.configuration.schedule.range_indices[:start].upto(vrp.configuration.schedule.range_indices[:end]){ |vehicle_day_index|
+        range_indices = vrp.configuration.schedule.range_indices
+        range_indices[:start].upto(range_indices[:end]){ |vehicle_day_index|
           next if vehicle.unavailable_days.include?(vehicle_day_index)
 
           timewindows = [vehicle.timewindow || vehicle.sequence_timewindows].flatten
@@ -231,9 +256,11 @@ module Interpreters
             new_vehicles << build_vehicle(vrp, vehicle, vehicle_day_index, nil, rests_durations)
           else
             timewindows.each{ |associated_timewindow|
-              next unless associated_timewindow.day_index.nil? || associated_timewindow.day_index == vehicle_day_index % 7
+              next unless associated_timewindow.day_index.nil? ||
+                          associated_timewindow.day_index == vehicle_day_index % 7
 
-              new_timewindow = Models::Timewindow.create(start: associated_timewindow.start || 0, end: associated_timewindow.end || 86400)
+              new_timewindow = Models::Timewindow.create(start: associated_timewindow.start || 0,
+                                                         end: associated_timewindow.end || 86400)
               new_vehicle = build_vehicle(vrp, vehicle, vehicle_day_index, new_timewindow, rests_durations)
               if @have_day_index
                 new_vehicle.timewindow.start += vehicle_day_index * 86400
@@ -291,13 +318,13 @@ module Interpreters
       }
       vrp = Models::Vrp.create(problem)
       progress = 0
-      result = vroom.solve(vrp){ |_avancement, _total|
-        progress += 1
-      }
+      result =
+        vroom.solve(vrp){ |_avancement, _total|
+          progress += 1
+        }
       travel_time = 0
-      first = true
-      result[:routes][0][:activities].each{ |a|
-        first ? first = false : travel_time += (a[:detail][:setup_duration] ? a[:travel_time] + a[:detail][:duration] + a[:detail][:setup_duration] : a[:travel_time] + a[:detail][:duration])
+      result[:routes][0][:activities][1..-1].each{ |a|
+        travel_time += a[:travel_time] + a[:detail][:duration] + a[:detail][:setup_duration].to_f
       }
 
       time_back_to_depot = 0
@@ -309,7 +336,8 @@ module Interpreters
       if !residual_time_for_vehicle[route[:vehicle][:id]]
         true
       else
-        additional_time = travel_time + time_back_to_depot - residual_time_for_vehicle[route[:vehicle].id][:last_computed_time]
+        additional_time =
+          travel_time + time_back_to_depot - residual_time_for_vehicle[route[:vehicle].id][:last_computed_time]
         if additional_time <= residual_time[residual_time_for_vehicle[route[:vehicle].id][:idx]]
           residual_time[residual_time_for_vehicle[route[:vehicle].id][:idx]] -= additional_time
           residual_time_for_vehicle[route[:vehicle].id][:last_computed_time] += additional_time
@@ -337,12 +365,13 @@ module Interpreters
       }
 
       # route creation
-      routes = vrp.vehicles.collect{ |vehicle|
-        {
-          mission_ids: [],
-          vehicle: vehicle
+      routes =
+        vrp.vehicles.collect{ |vehicle|
+          {
+            mission_ids: [],
+            vehicle: vehicle
+          }
         }
-      }
       vrp.services.each{ |service|
         service_sequence_data = /(.+)_([0-9]+)\_([0-9]+)/.match(service.id).to_a
         service_id = service_sequence_data[1]
@@ -354,22 +383,28 @@ module Interpreters
         }.compact
         previous_service_index = related_indices.max
         gap_with_previous = current_index - previous_service_index if previous_service_index
-        previous_service_route = routes.find{ |sub_route|
-          !sub_route[:mission_ids].empty? && sub_route[:mission_ids].find{ |id|
-            id == "#{service_id}_#{previous_service_index}_#{sequence_size}"
+        previous_service_route =
+          routes.find{ |sub_route|
+            !sub_route[:mission_ids].empty? && sub_route[:mission_ids].find{ |id|
+              id == "#{service_id}_#{previous_service_index}_#{sequence_size}"
+            }
           }
-        }
-        candidate_route = routes.find{ |route|
-          # looking for the first vehicle possible
-          # days are compatible
-          !service.unavailable_days.include?(route[:vehicle].global_day_index) &&
-            (current_index == 1 || current_index > 1 && service.minimum_lapse &&
-            previous_service_index && previous_service_route && route[:vehicle].global_day_index >= previous_service_route[:vehicle].global_day_index + (gap_with_previous * service.minimum_lapse).truncate ||
-            !service.minimum_lapse && (route[:vehicle].skills & service.skills).size == service.skills.size) &&
-          # we do not exceed vehicles max duration
-            (!residual_time_for_vehicle[route[:vehicle][:id]] || check_with_vroom(vrp, route, service, residual_time, residual_time_for_vehicle))
-          # Verify timewindows too
-        }
+        candidate_route =
+          routes.find{ |route|
+            # looking for the first vehicle possible days are compatible
+            !service.unavailable_days.include?(route[:vehicle].global_day_index) &&
+              (current_index == 1 || current_index > 1 && service.minimum_lapse &&
+              previous_service_index &&
+              previous_service_route &&
+              route[:vehicle].global_day_index >= previous_service_route[:vehicle].global_day_index +
+                                                  (gap_with_previous * service.minimum_lapse).truncate ||
+              !service.minimum_lapse &&
+              (route[:vehicle].skills & service.skills).size == service.skills.size) &&
+              # we do not exceed vehicles max duration
+              (!residual_time_for_vehicle[route[:vehicle][:id]] ||
+              check_with_vroom(vrp, route, service, residual_time, residual_time_for_vehicle))
+            # Verify timewindows too
+          }
         if candidate_route
           candidate_route[:mission_ids] << service.id
         else
@@ -397,10 +432,13 @@ module Interpreters
 
     def associate_skills(new_vehicle, vehicle_day_index)
       if new_vehicle.skills.empty?
-        new_vehicle.skills = [@periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}".to_sym }]
+        new_vehicle.skills = [
+          @periods.collect{ |p| "#{(vehicle_day_index * p / (@schedule_end + 1)).to_i + 1}_f_#{p}".to_sym }
+        ]
       else
         new_vehicle.skills.collect!{ |alternative_skill|
-          alternative_skill + @periods.collect{ |period| "#{(vehicle_day_index * period / (@schedule_end + 1)).to_i + 1}_f_#{period}".to_sym }
+          alternative_skill +
+            @periods.collect{ |p| "#{(vehicle_day_index * p / (@schedule_end + 1)).to_i + 1}_f_#{p}".to_sym }
         }
       end
     end
@@ -414,7 +452,9 @@ module Interpreters
         # first possible day
         computed_first_possible_days = []
         while day <= @schedule_end && nb_services_seen < service.visits_number
-          day += 1 while service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) } && day <= @schedule_end
+          day += 1 while service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v|
+                           v.available_at(day)
+                         }                                                                    && day <= @schedule_end
           break if day > @schedule_end
 
           computed_first_possible_days << day
@@ -428,19 +468,26 @@ module Interpreters
         day = [service.last_possible_days[service.visits_number - nb_services_seen - 1], @schedule_end].compact.min
         computed_last_possible_days = []
         while day >= @schedule_start && nb_services_seen < service.visits_number
-          day -= 1 while service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v| v.available_at(day) } && day >= @schedule_start
+          day -= 1 while service.unavailable_days.include?(day) || vrp.vehicles.none?{ |v|
+                           v.available_at(day)
+                         }                                                                    && day >= @schedule_start
           break if day < @schedule_start
 
           computed_last_possible_days << day
           nb_services_seen += 1
-          day = [day - (service.minimum_lapse || 1), service.last_possible_days[service.visits_number - nb_services_seen - 1], @schedule_end].compact.min
+          day = [
+            day - (service.minimum_lapse || 1),
+            service.last_possible_days[service.visits_number - nb_services_seen - 1],
+            @schedule_end
+          ].compact.min
         end
         service.last_possible_days = computed_last_possible_days.reverse
       }
     end
 
     def save_vehicle_linking_relations(vrp)
-      vehicle_linking_relations, vrp.relations = vrp.relations.partition{ |r|
+      vehicle_linking_relations, vrp.relations =
+        vrp.relations.partition{ |r|
         [:vehicle_group_duration, :vehicle_group_duration_on_weeks, :vehicle_group_duration_on_months,
          :vehicle_trips].include?(r.type)
       }
@@ -492,7 +539,8 @@ module Interpreters
           schedule_week_indices = collect_weeks_in_schedule
           cut_linking_vehicle_relation_by_period(relation, schedule_week_indices, :vehicle_group_duration)
         when :vehicle_group_duration_on_months
-          cut_linking_vehicle_relation_by_period(relation, vrp.configuration.schedule.months_indices, :vehicle_group_duration)
+          cut_linking_vehicle_relation_by_period(relation, vrp.configuration.schedule.months_indices,
+                                                 :vehicle_group_duration)
         when :vehicle_trips
           # we want want vehicle_trip relation per day :
           all_days = (@schedule_start..@schedule_end).to_a

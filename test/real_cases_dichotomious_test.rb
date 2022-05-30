@@ -37,7 +37,8 @@ class RealCasesTest < Minitest::Test
       log "duration_elapsed =  #{t2 - t1}", level: :debug
 
       # Check activities
-      assert solutions[0].unassigned_stops.size < 50, "Too many unassigned services #{solutions[0].unassigned_stops.size}"
+      assert solutions[0].unassigned_stops.size < 50,
+             "Too many unassigned services #{solutions[0].unassigned_stops.size}"
 
       # Check time
       duration_min = vrp.configuration.resolution.minimum_duration / 1000.to_f
@@ -46,12 +47,15 @@ class RealCasesTest < Minitest::Test
       duration_elapsed =  t2 - t1
 
       # Check time elapsed inside optimization
-      optim_time_info_str = "#{duration_optimization}s -- optimisation duration demanded between [#{duration_min}, #{duration_max}]"
-      assert duration_optimization > duration_min * 0.90, "Not enough time spent in optimization: #{optim_time_info_str}"
+      optim_time_info_str =
+        "#{duration_optimization}s -- optimisation duration demanded between [#{duration_min}, #{duration_max}]"
+      assert duration_optimization > duration_min * 0.90,
+             "Not enough time spent in optimization: #{optim_time_info_str}"
       assert duration_optimization < duration_max * 1.01, "Too much time spent in optimization: #{optim_time_info_str}"
 
       # Check time spent inside api
-      elapsed_time_info_str = "#{duration_elapsed}s for an optimisation of #{duration_optimization}s ([#{duration_min}, #{duration_max}])"
+      elapsed_time_info_str =
+        "#{duration_elapsed}s for an optimisation of #{duration_optimization}s ([#{duration_min}, #{duration_max}])"
       assert duration_elapsed > duration_min * 0.90, "Too little time spent inside api: #{elapsed_time_info_str}"
       assert duration_elapsed < duration_max * 1.55, "Too much time spent inside api: #{elapsed_time_info_str}"
     end
@@ -73,7 +77,8 @@ class RealCasesTest < Minitest::Test
       log "duration_elapsed =  #{t2 - t1}", level: :debug
 
       # Check activities
-      assert solutions[0].unassigned_stops.size < 50, "Too many unassigned services #{solutions[0].unassigned_stops.size}"
+      assert solutions[0].unassigned_stops.size < 50,
+             "Too many unassigned services #{solutions[0].unassigned_stops.size}"
 
       # Check routes
       assert solutions[0].routes.size < 48, "Too many routes: #{solutions[0].routes.size}"
@@ -85,12 +90,15 @@ class RealCasesTest < Minitest::Test
       duration_elapsed =  t2 - t1
 
       # Check time elapsed inside optimization
-      optim_time_info_str = "#{duration_optimization}s -- optimisation duration demanded between [#{duration_min}, #{duration_max}]"
-      assert duration_optimization > duration_min * 0.90, "Not enough time spent in optimization: #{optim_time_info_str}"
+      optim_time_info_str =
+        "#{duration_optimization}s -- optimisation duration demanded between [#{duration_min}, #{duration_max}]"
+      assert duration_optimization > duration_min * 0.90,
+             "Not enough time spent in optimization: #{optim_time_info_str}"
       assert duration_optimization < duration_max * 1.01, "Too much time spent in optimization: #{optim_time_info_str}"
 
       # Check time spent inside api
-      elapsed_time_info_str = "#{duration_elapsed}s for an optimisation of #{duration_optimization}s ([#{duration_min}, #{duration_max}])"
+      elapsed_time_info_str =
+        "#{duration_elapsed}s for an optimisation of #{duration_optimization}s ([#{duration_min}, #{duration_max}])"
       assert duration_elapsed > duration_min * 0.90, "Too little time spent inside api: #{elapsed_time_info_str}"
       assert duration_elapsed < duration_max * 1.55, "Too much time spent inside api: #{elapsed_time_info_str}"
     end

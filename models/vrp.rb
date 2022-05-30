@@ -62,7 +62,8 @@ module Models
       hash[:relations] ||= []
 
       vrp = super({})
-      # moved filter here to make sure we do have configuration.schedule.indices (not date) to do work_day check with lapses
+      # moved filter here to make sure we do have
+      # configuration.schedule.indices (not date) to do work_day check with lapses
       self.ensure_retrocompatibility(hash)
       self.filter(hash) if options[:check] # TODO : add filters.rb here
       vrp.check_consistency(hash) if options[:check]
@@ -218,7 +219,8 @@ module Models
         max_lapse = shipment[:maximum_inroute_duration]
         next unless max_lapse
 
-        hash[:relations] << { type: :maximum_duration_lapse, linked_service_ids: @linked_ids[shipment[:id]], lapses: [max_lapse] }
+        hash[:relations] << { type: :maximum_duration_lapse, linked_service_ids: @linked_ids[shipment[:id]],
+                              lapses: [max_lapse] }
       }
       convert_shipment_within_routes(hash)
       hash.delete(:shipments)
@@ -240,7 +242,8 @@ module Models
           }
         when :sequence, :order
           if relation[:linked_service_ids].any?{ |id| id == shipment_id }
-            msg = 'Relation between shipment pickup and delivery should be explicitly specified for `:sequence` and `:order` relations.'
+            msg = 'Relation between shipment pickup and delivery should be explicitly '\
+                  'specified for `:sequence` and `:order` relations.'
             raise OptimizerWrapper::DiscordantProblemError.new(msg)
           end
         else
@@ -280,19 +283,23 @@ module Models
       vrp.add_relation_references
       vrp.add_sticky_vehicle_if_routes_and_partitions
       vrp.expand_unavailable_days
-      vrp.provide_original_info # TODO: this should be done on hash in order to be sure to have the original information
-      vrp.sticky_as_skills # TODO: this should be done on hash in order to completely remove sticky_vehicles from service model
-      vrp.accumulate_skills_of_services_in_linking_relations # WARN: needs to be after provide_original_info + sticky_as_skills
+      # TODO: this should be done on hash in order to be sure to have the original information
+      vrp.provide_original_info
+      # TODO: this should be done on hash in order to completely remove sticky_vehicles from service model
+      vrp.sticky_as_skills
+      # WARN: this needs to be after provide_original_info and  sticky_as_skills
+      vrp.accumulate_skills_of_services_in_linking_relations
     end
 
     def self.convert_position_relations(hash)
       relations_to_remove = []
+      error_msg = ' relation with service with activities. Use position field instead.'
       hash[:relations]&.each_with_index{ |r, r_i|
         case r[:type]
         when :force_first
           r[:linked_service_ids].each{ |id|
             to_modify = hash[:services].find{ |s| s[:id] == id }
-            raise OptimizerWrapper::DiscordantProblemError, 'Force first relation with service with activities. Use position field instead.' unless to_modify[:activity]
+            raise OptimizerWrapper::DiscordantProblemError.new(r[:type].to_s + error_msg) unless to_modify[:activity]
 
             to_modify[:activity][:position] = :always_first
           }
@@ -300,7 +307,7 @@ module Models
         when :never_first
           r[:linked_service_ids].each{ |id|
             to_modify = hash[:services].find{ |s| s[:id] == id }
-            raise OptimizerWrapper::DiscordantProblemError, 'Never first relation with service with activities. Use position field instead.' unless to_modify[:activity]
+            raise OptimizerWrapper::DiscordantProblemError.new(r[:type].to_s + error_msg) unless to_modify[:activity]
 
             to_modify[:activity][:position] = :never_first
           }
@@ -308,7 +315,7 @@ module Models
         when :force_end
           r[:linked_service_ids].each{ |id|
             to_modify = hash[:services].find{ |s| s[:id] == id }
-            raise OptimizerWrapper::DiscordantProblemError, 'Force end relation with service with activities. Use position field instead.' unless to_modify[:activity]
+            raise OptimizerWrapper::DiscordantProblemError.new(r[:type].to_s + error_msg) unless to_modify[:activity]
 
             to_modify[:activity][:position] = :always_last
           }
@@ -332,7 +339,9 @@ module Models
       resolution = hash[:configuration] && hash[:configuration][:resolution]
       return unless resolution && resolution[:initial_time_out]
 
-      log 'initial_time_out and minimum_duration parameters are mutually_exclusive', level: :warn if resolution[:minimum_duration]
+      if resolution[:minimum_duration]
+        log 'initial_time_out and minimum_duration parameters are mutually_exclusive', level: :warn
+      end
       resolution[:minimum_duration] = resolution[:initial_time_out]
       resolution.delete(:initial_time_out)
     end
@@ -345,9 +354,14 @@ module Models
         resolution[:solver] = false
         resolution.delete(:solver_parameter)
       elsif resolution[:solver_parameter]
-        correspondant = { 0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion', 3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides' }
+        correspondant = {
+          0 => 'path_cheapest_arc', 1 => 'global_cheapest_arc', 2 => 'local_cheapest_insertion',
+          3 => 'savings', 4 => 'parallel_cheapest_insertion', 5 => 'first_unbound', 6 => 'christofides'
+        }
         hash[:configuration][:preprocessing] ||= {}
-        hash[:configuration][:preprocessing][:first_solution_strategy] = [correspondant[hash[:configuration][:resolution][:solver_parameter]]]
+        hash[:configuration][:preprocessing][:first_solution_strategy] = [
+          correspondant[hash[:configuration][:resolution][:solver_parameter]]
+        ]
         resolution[:solver] = true
         resolution.delete(:solver_parameter)
       end
@@ -426,8 +440,14 @@ module Models
 
       hash[:units].delete_if{ |u| needed_units.exclude? u[:id] }
 
-      rejected_capacities = hash[:capacities]&.select{ |capacity| needed_units.exclude? capacity[:unit_id] }&.map{ |capacity| capacity[:id] } || []
-      rejected_quantities = hash[:quantities]&.select{ |quantity| needed_units.exclude? quantity[:unit_id] }&.map{ |quantity| quantity[:id] } || []
+      rejected_capacities =
+        hash[:capacities]&.select{ |capacity|
+          needed_units.exclude? capacity[:unit_id]
+        }&.map{ |capacity| capacity[:id] } || []
+      rejected_quantities =
+        hash[:quantities]&.select{ |quantity|
+          needed_units.exclude? quantity[:unit_id]
+        }&.map{ |quantity| quantity[:id] } || []
 
       hash[:vehicles]&.each{ |v| rejected_capacities.each{ |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
       hash[:subtours]&.each{ |v| rejected_capacities.each{ |r_c| v[:capacity_ids]&.gsub!(/\b#{r_c}\b/, '') } }
@@ -492,12 +512,13 @@ module Models
       return unless element[:unavailable_date_ranges]
 
       element[:unavailable_index_ranges] ||= []
-      element[:unavailable_index_ranges] += element[:unavailable_date_ranges].collect{ |range|
-        {
-          start: find_relative_index(range[:start], start_value),
-          end: find_relative_index(range[:end], start_value),
+      element[:unavailable_index_ranges] +=
+        element[:unavailable_date_ranges].collect{ |range|
+          {
+            start: find_relative_index(range[:start], start_value),
+            end: find_relative_index(range[:end], start_value),
+          }
         }
-      }
       element.delete(:unavailable_date_ranges)
     end
 
@@ -518,8 +539,10 @@ module Models
     def self.deduce_possible_days(hash, element, start_index)
       convert_possible_dates_into_indices(element, hash, start_index)
 
-      element[:first_possible_days] = element[:first_possible_day_indices].to_a.slice(0..(element[:visits_number] || 1) - 1)
-      element[:last_possible_days] = element[:last_possible_day_indices].to_a.slice(0..(element[:visits_number] || 1) - 1)
+      element[:first_possible_days] =
+        element[:first_possible_day_indices].to_a.slice(0..(element[:visits_number] || 1) - 1)
+      element[:last_possible_days] =
+        element[:last_possible_day_indices].to_a.slice(0..(element[:visits_number] || 1) - 1)
 
       %i[first_possible_day_indices first_possible_dates last_possible_day_indices last_possible_dates].each{ |k|
         element.delete(k)
@@ -530,23 +553,27 @@ module Models
       return unless hash[:configuration][:schedule][:range_date]
 
       start_value = find_relative_index(hash[:configuration][:schedule][:range_date][:start], start_index)
-      element[:first_possible_day_indices] ||= element[:first_possible_dates].to_a.collect{ |date|
-        find_relative_index(date, start_value)
-      }
+      element[:first_possible_day_indices] ||=
+        element[:first_possible_dates].to_a.collect{ |date|
+          find_relative_index(date, start_value)
+        }
 
-      element[:last_possible_day_indices] ||= element[:last_possible_dates].to_a.collect{ |date|
-        find_relative_index(date, start_value)
-      }
+      element[:last_possible_day_indices] ||=
+        element[:last_possible_dates].to_a.collect{ |date|
+          find_relative_index(date, start_value)
+        }
     end
 
     def self.detect_date_indices_inconsistency(hash)
       missions_and_vehicles = hash[:services] + hash[:vehicles]
-      has_date = missions_and_vehicles.any?{ |m|
-        (m[:unavailable_date_ranges] || m[:unavailable_work_date])&.any?
-      }
-      has_index = missions_and_vehicles.any?{ |m|
-        (m[:unavailable_index_ranges] || m[:unavailable_work_day_indices])&.any?
-      }
+      has_date =
+        missions_and_vehicles.any?{ |m|
+          (m[:unavailable_date_ranges] || m[:unavailable_work_date])&.any?
+        }
+      has_index =
+        missions_and_vehicles.any?{ |m|
+          (m[:unavailable_index_ranges] || m[:unavailable_work_day_indices])&.any?
+        }
       if (hash[:configuration][:schedule][:range_indices] && has_date) ||
          (hash[:configuration][:schedule][:range_date] && has_index)
         raise OptimizerWrapper::DiscordantProblemError.new(
@@ -591,10 +618,11 @@ module Models
 
       # provide months
       months_indices = []
-      current_month = hash[:configuration][:schedule][:range_date][:start].to_date.month
+      hash_range_date = hash[:configuration][:schedule][:range_date]
+      current_month = hash_range_date[:start].to_date.month
       current_indices = []
       current_index = start_index
-      (hash[:configuration][:schedule][:range_date][:start].to_date..hash[:configuration][:schedule][:range_date][:end].to_date).each{ |date|
+      (hash_range_date[:start].to_date..hash_range_date[:end].to_date).each{ |date|
         if date.month == current_month
           current_indices << current_index
         else
@@ -612,8 +640,7 @@ module Models
       hash[:routes]&.each{ |route|
         next if route[:day_index]
 
-        route[:day_index] = (route[:date].to_date -
-                            hash[:configuration][:schedule][:range_date][:start].to_date).to_i + start_index
+        route[:day_index] = (route[:date].to_date - hash_range_date[:start].to_date).to_i + start_index
         route.delete(:date)
       }
 
@@ -622,7 +649,7 @@ module Models
         start: start_index,
         end: end_index
       }
-      hash[:configuration][:schedule][:start_date] = hash[:configuration][:schedule][:range_date][:start]
+      hash[:configuration][:schedule][:start_date] = hash_range_date[:start]
       hash[:configuration][:schedule].delete(:range_date)
 
       hash
@@ -639,9 +666,10 @@ module Models
     def total_work_times
       schedule_start = self.configuration.schedule.range_indices[:start]
       schedule_end = self.configuration.schedule.range_indices[:end]
-      work_times = self.vehicles.collect{ |vehicle|
-        vehicle.total_work_time_in_range(schedule_start, schedule_end)
-      }
+      work_times =
+        self.vehicles.collect{ |vehicle|
+          vehicle.total_work_time_in_range(schedule_start, schedule_end)
+        }
       work_times
     end
 
@@ -671,9 +699,12 @@ module Models
         solution = TSPHelper.solve(tsp)
         total_travel_time = solution.info.total_travel_time
 
-        total_vehicle_work_time = vehicles.map{ |vehicle| vehicle.duration || vehicle.timewindow.end - vehicle.timewindow.start }.reduce(:+)
+        total_vehicle_work_time =
+          vehicles.sum{ |vehicle|
+            vehicle.duration || vehicle.timewindow.end - vehicle.timewindow.start
+          }
         average_vehicles_work_time = total_vehicle_work_time / vehicles.size.to_f
-        total_service_time = services.map{ |service| service.activity.duration.to_i }.reduce(:+)
+        total_service_time = services.sum{ |service| service.activity.duration.to_i }
 
         # TODO: It assumes there is only one uniq location for all vehicle starts and ends
         depot = vehicles.collect(&:start_point).compact[0]
@@ -681,9 +712,10 @@ module Models
           if depot.nil?
             0
           else
-            average_loc = points.inject([0, 0]) { |sum, point|
-              [sum[0] + point.location.lat, sum[1] + point.location.lon]
-            }
+            average_loc =
+              points.inject([0, 0]) { |sum, point|
+                [sum[0] + point.location.lat, sum[1] + point.location.lon]
+              }
             average_loc = [average_loc[0] / points.size, average_loc[1] / points.size]
 
             approximate_number_of_vehicles_used =
@@ -710,9 +742,9 @@ module Models
         average_service_load = total_time_load / services.size.to_f
         average_number_of_services_per_vehicle = average_vehicles_work_time / average_service_load
         inclusion_rate = configuration.resolution.dicho_inclusion_rate * average_number_of_services_per_vehicle
-         # Angle needs to be in between 0° and 45°:
-         # - 0°  means only uniform cost is used
-         # - 45° means only variable cost is used
+        # Angle needs to be in between 0° and 45°:
+        # - 0°  means only uniform cost is used
+        # - 45° means only variable cost is used
         angle = configuration.resolution.dicho_exclusion_scaling_angle
         tan_variable = Math.tan(angle * Math::PI / 180)
         tan_uniform = Math.tan((45 - angle) * Math::PI / 180)

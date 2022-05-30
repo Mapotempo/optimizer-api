@@ -36,7 +36,8 @@ module Models
       # If the maximum_lateness of the timewindow is not defined, by default, it is 100% of the timewindow or
       # if ENV['OPTIM_DEFAULT_MAX_LATENESS_RATIO'] is defined, this value takes the precedence in the calculation
       # (if there is no end to the timewindow, the maximum lateness is 0 since tardiness is not possible in any case)
-      hash[:maximum_lateness] ||= hash[:end] ? (DEFAULT_MAX_LATENESS_RATIO.to_f * (hash[:end] - hash[:start].to_i)).round : 0
+      hash[:maximum_lateness] ||=
+        hash[:end] ? (DEFAULT_MAX_LATENESS_RATIO.to_f * (hash[:end] - hash[:start].to_i)).round : 0
 
       super(hash)
     end

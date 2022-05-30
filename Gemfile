@@ -4,7 +4,9 @@ ruby '~> 2.5'
 gem 'require_all'
 
 gem 'puma'
-gem 'rack', github: 'senhalil/rack', branch: 'improved-asserts' # remove the custom github definition after the following PR commit is on the stable branch https://github.com/rack/rack/commit/1970771c7e01d54cb631dae0bc7618e2561ad1c7
+# remove the following custom github definition after the following PR commit is merged to the stable branch
+# https://github.com/rack/rack/commit/1970771c7e01d54cb631dae0bc7618e2561ad1c7
+gem 'rack', github: 'senhalil/rack', branch: 'improved-asserts'
 gem 'rack-contrib', require: 'rack/contrib'
 gem 'rack-cors', require: 'rack/cors'
 gem 'rack-server-pages', '~> 0.1.0'
@@ -20,7 +22,9 @@ gem 'grape_logging'
 
 # Models
 gem 'actionpack', require: 'action_dispatch'
-gem 'active_hash', github: 'senhalil/active_hash', branch: 'dev' # waiting for the following PRs to get merged and "released!" https://github.com/zilkey/active_hash/pull/231 and https://github.com/zilkey/active_hash/pull/233
+# waiting for the following PRs to get merged and "released!"
+# https://github.com/zilkey/active_hash/pull/231 and https://github.com/zilkey/active_hash/pull/233
+gem 'active_hash', github: 'senhalil/active_hash', branch: 'dev'
 gem 'activemodel'
 gem 'activesupport', require: 'active_support'
 gem 'google-protobuf', '>=3', require: 'google/protobuf'
@@ -96,4 +100,3 @@ end
 group :production do
   gem 'redis-activesupport'
 end
-

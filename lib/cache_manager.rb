@@ -38,11 +38,13 @@ class CacheManager
       end
     end
   rescue StandardError => e
-    raise CacheError, "Got error #{e} attempting to read cache #{name}." if !cache.is_a? ActiveSupport::Cache::NullStore
+    if !cache.is_a? ActiveSupport::Cache::NullStore
+      raise CacheError.new("Got error #{e} attempting to read cache #{name}.")
+    end
   end
 
   def write(name, value, options = { mode: 'w' })
-    raise CacheError, 'Stored value is not a String' if !value.is_a? String
+    raise CacheError.new('Stored value is not a String') if !value.is_a? String
 
     File.open(File.join(@cache, name.to_s.parameterize(separator: '')), options[:mode]) do |f|
       compressed = Zlib::Deflate.deflate(value)
@@ -53,12 +55,14 @@ class CacheManager
       end
     end
   rescue StandardError => e
-    raise CacheError, "Got error #{e} attempting to write cache #{name}." if !cache.is_a? ActiveSupport::Cache::NullStore
+    if !cache.is_a? ActiveSupport::Cache::NullStore
+      raise CacheError.new("Got error #{e} attempting to write cache #{name}.")
+    end
   end
 
   def cleanup(options = nil)
     @cache.cleanup(options)
   rescue StandardError => e
-    raise CacheError, "Got error #{e} attempting to clean cache." if !cache.is_a? ActiveSupport::Cache::NullStore
+    raise CacheError.new("Got error #{e} attempting to clean cache.") if !cache.is_a? ActiveSupport::Cache::NullStore
   end
 end

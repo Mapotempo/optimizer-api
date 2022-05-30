@@ -80,7 +80,11 @@ module Wrappers
 
     def solve_synchronous?(vrp)
       compatible_routers = %i[car truck_medium]
-      vrp.points.size < 200 && !Interpreters::SplitClustering.split_solve_candidate?({ vrp: vrp }) && vrp.vehicles.all?{ |vehicle| compatible_routers.include?(vehicle.router_mode&.to_sym) } # WARNING: this should change accordingly with router evolution
+      vrp.points.size < 200 &&
+        !Interpreters::SplitClustering.split_solve_candidate?({ vrp: vrp }) &&
+        vrp.vehicles.all?{ |vehicle|
+          compatible_routers.include?(vehicle.router_mode&.to_sym)
+        } # WARNING: this should change accordingly with router evolution
     end
 
     def solve(vrp, job = nil, _thread_proc = nil)
@@ -98,38 +102,40 @@ module Wrappers
       return if !result
 
       cost = (result['summary']['cost'])
-      routes = result['routes'].map{ |route|
-        @previous = nil
-        vehicle = vrp.vehicles[route['vehicle']]
-        cost += vehicle.cost_fixed if route['steps'].any?
-        stops = route['steps'].map{ |step|
-          read_step(vrp, vehicle, step)
-        }.compact
-        initial_loads = route['steps'].first['load']&.map&.with_index{ |load, l_index|
-          Models::Solution::Load.new(quantity: Models::Quantity.new(unit: vrp.units[l_index]), current: load)
-        }
-        Models::Solution::Route.new(
-          initial_loads: initial_loads,
-          stops: stops,
-          vehicle: vehicle,
-          info: Models::Solution::Route::Info.new(
-            start_time: stops.first.info.begin_time,
-            end_time: stops.last.info.begin_time + stops.last.activity.duration
+      routes =
+        result['routes'].map{ |route|
+          @previous = nil
+          vehicle = vrp.vehicles[route['vehicle']]
+          cost += vehicle.cost_fixed if route['steps'].any?
+          stops = route['steps'].map{ |step|
+            read_step(vrp, vehicle, step)
+          }.compact
+          initial_loads =
+            route['steps'].first['load']&.map&.with_index{ |load, l_index|
+              Models::Solution::Load.new(quantity: Models::Quantity.new(unit: vrp.units[l_index]), current: load)
+            }
+          Models::Solution::Route.new(
+            initial_loads: initial_loads,
+            stops: stops,
+            vehicle: vehicle,
+            info: Models::Solution::Route::Info.new(
+              start_time: stops.first.info.begin_time,
+              end_time: stops.last.info.begin_time + stops.last.activity.duration
+            )
           )
-        )
-      }
+        }
 
       unassigneds = result['unassigned'].map{ |step| read_unassigned(vrp, step) }
 
       log 'Solution cost: ' + cost.to_s + ' & unassigned: ' + unassigneds.size.to_s, level: :info
 
       solution =
-      Models::Solution.new(
-        elapsed: elapsed_time,
-        solvers: [:vroom],
-        routes: routes,
-        unassigned_stops: unassigneds
-      )
+        Models::Solution.new(
+          elapsed: elapsed_time,
+          solvers: [:vroom],
+          routes: routes,
+          unassigned_stops: unassigneds
+        )
       solution.parse(vrp)
     end
 
@@ -207,12 +213,13 @@ module Wrappers
         end_time: begin_time && (begin_time + act_step['service']),
         departure_time: begin_time && (begin_time + act_step['service'])
       }.merge(route_data)
-      loads = vrp.units.map.with_index{ |unit, u_index|
-        Models::Solution::Load.new(
-          quantity: Models::Quantity.new(unit: unit),
-          current: act_step['load'] && (act_step['load'][u_index].to_f / CUSTOM_QUANTITY_BIGNUM) || 0
-        )
-      }
+      loads =
+        vrp.units.map.with_index{ |unit, u_index|
+          Models::Solution::Load.new(
+            quantity: Models::Quantity.new(unit: unit),
+            current: act_step['load'] && (act_step['load'][u_index].to_f / CUSTOM_QUANTITY_BIGNUM) || 0
+          )
+        }
       job_data = Models::Solution::Stop.new(service, info: Models::Solution::Stop::Info.new(times), loads: loads)
       @previous = point
       job_data
@@ -284,8 +291,10 @@ module Wrappers
       @object_id_map ||= {}
       # handles both services in shipment relation and model:shipments
       # activity_objects [array] contains the two services (pickup and delivery) or the shipment
-      # activities [array] contains the model:activity of the services (pickup.activity, delivery.activity) or the shipment (shipment.pickup, shipment.delivery)
-      # types [array] contains the type of the objects -- i.e., [:service, :service] for services in shipment relation or [:pickup, :delivery] for model:shipment
+      # activities [array] contains the model:activity of the
+      # services (pickup.activity, delivery.activity) or the shipment (shipment.pickup, shipment.delivery)
+      # types [array] contains the type of the objects -- i.e., [:service, :service]
+      # for services in shipment relation or [:pickup, :delivery] for model:shipment
       pickup_index = @object_id_map.size
       delivery_index = pickup_index + 1
 
@@ -303,13 +312,13 @@ module Wrappers
           id: pickup_index,
           service: pickup_service.activity.duration,
           location_index: pickup_service.activity.point.matrix_index,
-          time_windows: pickup_service.activity.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
+          time_windows: pickup_service.activity.timewindows.map{ |tw| [tw.start, tw.end || 2**30] }
         }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? },
         delivery: {
           id: delivery_index,
           service: delivery_service.activity.duration,
           location_index: delivery_service.activity.point.matrix_index,
-          time_windows: delivery_service.activity.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] }
+          time_windows: delivery_service.activity.timewindows.map{ |tw| [tw.start, tw.end || 2**30] }
         }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
       }.delete_if{ |_k, v|
         v.nil? || v.is_a?(Array) && v.empty?
@@ -349,18 +358,19 @@ module Wrappers
       @total_quantities = Hash.new { 0 }
       # WARNING: only first alternative set of skills is used
       vrp_skills = vrp.vehicles.flat_map{ |vehicle| vehicle.skills.first }.uniq
-      vrp_units = vrp.units.select{ |unit|
-        vrp.vehicles.map{ |vehicle|
-          vehicle.capacities.find{ |capacity|
-            capacity.unit.id == unit.id
-          }&.limit
-        }&.compact&.max&.positive?
-      }
+      vrp_units =
+        vrp.units.select{ |unit|
+          vrp.vehicles.map{ |vehicle|
+            vehicle.capacities.find{ |capacity|
+              capacity.unit.id == unit.id
+            }&.limit
+          }&.compact&.max&.positive?
+        }
       problem[:jobs] = collect_jobs(vrp, vrp_skills, vrp_units)
       problem[:vehicles] = collect_vehicles(vrp, vrp_skills, vrp_units)
       problem[:shipments] = collect_shipments(vrp, vrp_skills, vrp_units)
       matrix_indices = (problem[:jobs].map{ |job| job[:location_index] } +
-        problem[:shipments].flat_map{ |shipment| [shipment[:pickup][:location_index], shipment[:delivery][:location_index]] } +
+        problem[:shipments].flat_map{ |s| [s[:pickup][:location_index], s[:delivery][:location_index]] } +
         problem[:vehicles].flat_map{ |vec| [vec[:start_index], vec[:end_index]].uniq.compact }).uniq.sort
       matrix = vrp.matrices.find{ |current_matrix| current_matrix.id == vrp.vehicles.first.matrix_id }
       size_matrix = matrix_indices.size
@@ -370,8 +380,10 @@ module Wrappers
         job[:location_index] = matrix_indices.find_index{ |ind| ind == job[:location_index] }
       }
       problem[:shipments].each{ |shipment|
-        shipment[:pickup][:location_index] = matrix_indices.find_index{ |index| index == shipment[:pickup][:location_index] }
-        shipment[:delivery][:location_index] = matrix_indices.find_index{ |index| index == shipment[:delivery][:location_index] }
+        shipment[:pickup][:location_index] =
+          matrix_indices.find_index{ |index| index == shipment[:pickup][:location_index] }
+        shipment[:delivery][:location_index] =
+          matrix_indices.find_index{ |index| index == shipment[:delivery][:location_index] }
       }
       problem[:vehicles].each{ |vec|
         vec[:start_index] = matrix_indices.find_index{ |ind| ind == vec[:start_index] } if vec[:start_index]
@@ -381,10 +393,12 @@ module Wrappers
         end
       }
 
-      agglomerate_matrix = vrp.vehicles.first.matrix_blend(matrix, matrix_indices, dimensions,
-                                                           cost_time_multiplier: vrp.vehicles.first.cost_time_multiplier.positive? ? 1 : 0,
-                                                           cost_distance_multiplier: vrp.vehicles.first.cost_distance_multiplier.positive? ? 1 : 0,
-                                                           cost_value_multiplier: vrp.vehicles.first.cost_value_multiplier.positive? ? 1 : 0)
+      agglomerate_matrix = vrp.vehicles.first.matrix_blend(
+        matrix, matrix_indices, dimensions,
+        cost_time_multiplier: vrp.vehicles.first.cost_time_multiplier.positive? ? 1 : 0,
+        cost_distance_multiplier: vrp.vehicles.first.cost_distance_multiplier.positive? ? 1 : 0,
+        cost_value_multiplier: vrp.vehicles.first.cost_value_multiplier.positive? ? 1 : 0
+      )
       (0..size_matrix - 1).each{ |i|
         (0..size_matrix - 1).each{ |j|
           agglomerate_matrix[i][j] = [agglomerate_matrix[i][j].round, 2**28].min
