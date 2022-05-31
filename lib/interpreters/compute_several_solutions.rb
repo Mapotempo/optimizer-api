@@ -259,7 +259,11 @@ module Interpreters
               }
         end
       }
-      size_mtws = services.count{ |service| service.activity.timewindows.size > 1 }
+      size_mtws = services.count{ |service|
+        service.activity&.timewindows&.size.to_i > 1 || 
+          # No timewindow means an implicit infinite timewindow
+          service.activities.sum{ |act| [act.timewindows.size, 1].max } > 1
+      }
       size_rest = vehicles.sum{ |vehicle| vehicle.rests.size }
       unique_configuration = vehicles.uniq(&:router_mode).size == 1 &&
                              vehicles.uniq(&:router_dimension).size == 1 &&
