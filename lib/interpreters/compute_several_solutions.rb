@@ -20,7 +20,7 @@ module Interpreters
   class SeveralSolutions
     def self.duplicate_service_vrp(service_vrp, vrp_hash = nil)
       vrp_hash ||= service_vrp[:vrp].as_json
-      service_vrp.dup.tap{ |hash| hash[:vrp] = Models::Vrp.create(vrp_hash) }
+      service_vrp.dup.tap{ |hash| hash[:vrp] = Models::Vrp.create(vrp_hash, check: false) }
     end
 
     def self.check_triangle_inequality(matrix)
