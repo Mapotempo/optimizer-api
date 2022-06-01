@@ -8,6 +8,7 @@
 - Calculate a vehicle_compatibility hash for each service and use it for unfeasible service detection [#318](https://github.com/Mapotempo/optimizer-api/pull/318)
 - Add an enpoint able to validate the vrp send and return it "filtered" [#349](https://github.com/Mapotempo/optimizer-api/pull/349)
 - Activity positions and linking relations tolerates alternatives [#392](https://github.com/Mapotempo/optimizer-api/pull/392)
+- Dichotomous heuristic uses SplitClustering.split logic to respect relations and improve the clustering performance in terms of time and unassigned services [#416](https://github.com/Mapotempo/optimizer-api/pull/416)
 
 ### Changed
 
