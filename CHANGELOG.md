@@ -1,6 +1,6 @@
 # Changelog
 
-## [v1.9.0-dev] - Unreleased
+## [v1.9.0] - 2022-06-07
 
 ### Added
 
