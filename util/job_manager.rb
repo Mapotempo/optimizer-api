@@ -89,7 +89,7 @@ module OptimizerWrapper
             avancement, total || 1,
             (message || '') +
               (avancement ? " #{avancement}" : '') +
-              ((avancement && total) ? "/#{total}" : '') +
+              (avancement && total ? "/#{total}" : '') +
               (cost ? " cost: #{cost}" : '')
           )
 

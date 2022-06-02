@@ -67,12 +67,12 @@ module Interpreters
         vrp.services = splited_service_vrps.flat_map{ |sv| sv[:vrp].services }
         vrp.relations = splited_service_vrps.flat_map{ |sv| sv[:vrp].relations }
 
-        return split_solutions.reduce(&:+)
+        split_solutions.reduce(&:+) # return
       elsif split_solve_candidate?(service_vrp)
-        return split_solve(service_vrp, &block)
+        split_solve(service_vrp, &block) # return
       else
         service_vrp[:dicho_level] ||= 0
-        return nil
+        nil # return
       end
     end
 
@@ -834,7 +834,7 @@ module Interpreters
           end
         }.sum
         checksum = Digest::MD5.hexdigest Marshal.dump(values)
-        if !score_hash.has_key?(checksum)
+        if !score_hash.key?(checksum)
           log "Restart: #{restart} score: #{limit_score} ratio_metric: #{c.cut_limit} iterations: #{c.iterations}",
               level: :debug
           log "Balance: #{values.min}   #{values.max}    #{values.min - values.max}    "\
@@ -1089,9 +1089,9 @@ module Interpreters
               id: ["generated_vehicle_#{simulated_vehicle}"],
               depot: depots[simulated_vehicle],
               # TODO: capacities needs a better way like depots...
-              capacities: vehicles[simulated_vehicle][:capacities].collect{ |key, value|
-                [key, value * vehicles.size / nb_clusters.to_f]
-              }.to_h,
+              capacities: vehicles[simulated_vehicle][:capacities].transform_values{ |value|
+                value * vehicles.size / nb_clusters.to_f
+              },
               skills: [],
               day_skills: [
                 :'0_day_skill', :'1_day_skill', :'2_day_skill', :'3_day_skill',
@@ -1570,7 +1570,7 @@ module Interpreters
       end
 
       def remove_from_upper(graph, node, symbol, value_to_remove)
-        if graph.has_key?(node)
+        if graph.key?(node)
           graph[node][:unit_metrics][symbol] -= value_to_remove
           remove_from_upper(graph, graph[node][:parent], symbol, value_to_remove)
         end

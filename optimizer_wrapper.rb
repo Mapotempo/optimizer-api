@@ -556,7 +556,7 @@ module OptimizerWrapper
     solutions.each{ |solution|
       if solution.routes.any?{ |route| route.stops.any?{ |a| a.info.waiting_time < 0 } }
         log 'Computed waiting times are invalid', level: :warn
-        raise RuntimeError, 'Computed waiting times are invalid' if ENV['APP_ENV'] != 'production'
+        raise 'Computed waiting times are invalid' if ENV['APP_ENV'] != 'production'
       end
 
       waiting_times = solution.routes.map{ |route| route.info.total_waiting_time }.compact
@@ -594,7 +594,7 @@ module OptimizerWrapper
           durations: durations.flatten.reduce(&:+)
         }
         log log_string, tags.merge(level: :warn)
-        raise RuntimeError, 'Computed times are invalid' if ENV['APP_ENV'] != 'production'
+        raise 'Computed times are invalid' if ENV['APP_ENV'] != 'production'
       end
 
       nb_assigned = solution.count_assigned_services
@@ -603,7 +603,7 @@ module OptimizerWrapper
       if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
         tags = { expected: expected_value, assigned: nb_assigned, unassigned: nb_unassigned }
         log 'Wrong number of visits returned in result', tags.merge(level: :warn)
-        raise RuntimeError, 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
+        raise 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
       end
     }
   end

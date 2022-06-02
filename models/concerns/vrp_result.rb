@@ -30,7 +30,7 @@ module Serializers
 
     def vrp_result(options = nil)
       root =
-        if options && options.key?(:root)
+        if options&.key?(:root)
           options[:root]
         else
           include_root_in_json

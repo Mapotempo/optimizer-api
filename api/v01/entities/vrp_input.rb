@@ -20,7 +20,7 @@ module VrpInput
   extend Grape::API::Helpers
 
   params :input do
-    optional(:vrp, type: Hash, allow_blank: false, documentation: { param_type: 'body' }, coerce_with: ->(c) { c.has_key?('filename') ? JSON.parse(c[:tempfile].read) : c }) do
+    optional(:vrp, type: Hash, allow_blank: false, documentation: { param_type: 'body' }, coerce_with: ->(c) { c.key?('filename') ? JSON.parse(c[:tempfile].read) : c }) do
       use :request_object
     end
     use :request_files
@@ -531,7 +531,7 @@ module VrpVehicles
     optional(:maximum_ride_time, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum ride duration between two route activities')
     optional(:maximum_ride_distance, type: Integer, values: ->(v) { v.positive? }, desc: 'Maximum ride distance between two route activities')
     optional :skills, type: Array[Array[Symbol]],
-                      coerce_with: ->(val) {
+                      coerce_with: lambda { |val|
                         val.is_a?(String) ?
                         [val.split(/,/).map!(&:strip).map!(&:to_sym)] :
                         val&.map{ |set| set.map(&:to_sym) }

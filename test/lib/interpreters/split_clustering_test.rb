@@ -157,7 +157,7 @@ class SplitClusteringTest < Minitest::Test
 
       Routers::RouterWrapper.stub_any_instance(
         :matrix,
-        ->(_url, _router_mode, _router_dimension, src, dst){
+        lambda { |_url, _router_mode, _router_dimension, src, dst|
           return [Array.new(src.size){ |i| Array.new(dst.size){ (i + 1) * 100 } }]
         }
       ) do

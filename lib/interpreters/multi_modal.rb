@@ -54,7 +54,7 @@ module Interpreters
                                                                  current_point.location.lat))
           }
         isoline[:inside_points].each{ |current_point|
-          if !@associated_table.nil? && @associated_table.has_key?(current_point.id)
+          if !@associated_table.nil? && @associated_table.key?(current_point.id)
             @associated_table[current_point.id] += [isoline[:stop_id]]
             @original_vrp.points.find{ |local_point|
               local_point.id == current_point.id
@@ -113,7 +113,7 @@ module Interpreters
         sub_vrp.relations = @original_vrp.relations
         sub_vrp.points = []
         sub_vrp.services.select!{ |service|
-          if @associated_table.has_key?(service.activity.point.id)
+          if @associated_table.key?(service.activity.point.id)
             pattern_size = (pattern & @associated_table[service.activity.point.id]).size
             pattern_size == @associated_table[service.activity.point.id].size
           end

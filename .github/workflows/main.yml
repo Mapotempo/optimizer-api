@@ -47,6 +47,8 @@ jobs:
         run: bundle exec rubocop --parallel -f c --config .rubocop.yml --fail-level W --display-only-fail-level-offenses
       - name: Run Layout cops
         run: bundle exec rubocop --parallel -f c --config .rubocop.yml --only Layout # run `bundle exec rubocop --fix-layout` to fix layout issues
+      - name: Run Style cops
+        run: bundle exec rubocop --parallel -f c --config .rubocop.yml --only Style  # run `bundle exec rubocop --auto-correct --only Style` to fix style issues
 
   build:
     if: github.event.pull_request.draft == false

@@ -39,7 +39,7 @@ module OptimizerWrapper
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
 
   PARAMS_LIMIT = { points: 100000, vehicles: 1000 }.freeze
-  QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }] # Only taken into account if REDIS_COUNT
+  QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }].freeze # Only taken into account if REDIS_COUNT
   REDIS_COUNT = ENV['REDIS_COUNT_HOST'] && Redis.new(host: ENV['REDIS_COUNT_HOST'])
 
   DUMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'dump')

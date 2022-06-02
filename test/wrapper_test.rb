@@ -3121,7 +3121,7 @@ class WrapperTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
     assert_empty solutions[0].unassigned_stops, 'There should be no unsigned services'
-    assert_equal 1, solutions[0].routes.count{ |r| r.stops.any?{ |a| a.service_id } },
+    assert_equal 1, solutions[0].routes.count{ |r| r.stops.any?(&:service_id) },
                  'All services must be assigned to one vehicle'
 
     planned_order = solutions[0].routes[0].stops.map(&:service_id).compact

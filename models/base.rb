@@ -38,13 +38,13 @@ module Models
       # Make sure default values are not the same object for all
       self.attributes.each{ |k, v|
         # If the key doesn't exist in the hash and its relevant substructures then it must be a default value
-        next if hash.has_key?(k) ||
+        next if hash.key?(k) ||
                 !v.duplicable? ||
                 ["#{k}_id", "#{ActiveSupport::Inflector.singularize(k.to_s)}_ids"].any?{ |key|
-                  hash.has_key?(key.to_sym)
+                  hash.key?(key.to_sym)
                 } ||
                 hash[:configuration] && [:preprocessing, :restitution, :schedule, :resolution].any?{ |symbol|
-                  hash[:configuration][symbol]&.has_key?(k[symbol.size + 1..-1]&.to_sym)
+                  hash[:configuration][symbol]&.key?(k[symbol.size + 1..-1]&.to_sym)
                 }
 
         self[k] = v.dup # dup to make sure they are different objects
@@ -169,8 +169,8 @@ module Models
             val&.to_sym
           elsif val.is_a?(c)
             val
-          else
-            c.create(val) if !val.empty?
+          elsif !val.empty?
+            c.create(val)
           end
         }&.compact || []
         self[ids_function_name] = self[name]&.map(&:id) if c.module_parent == Models

@@ -1146,7 +1146,7 @@ module Wrappers
       # when @duration_in_tw is disabled, only arrival time of first point at a given location matters in tw
       (@same_point_day || @relaxed_same_point_day) &&
         !@duration_in_tw &&
-        @services_data.has_key?(previous_service_id) && # not coming from depot
+        @services_data.key?(previous_service_id) && # not coming from depot
         # same location as previous
         @services_data[previous_service_id][:points_ids].first == @services_data[service_id][:points_ids].first
       # reminder : services in (relaxed_)same_point_day relation have only one point_id

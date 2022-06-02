@@ -2578,14 +2578,14 @@ class Wrappers::OrtoolsTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem),
                                              nil)
     assert_equal [['service_1_1_1'], ['service_2_1_1'], ['service_3_1_1'], [], []],
-                 (solutions[0].routes.collect{ |r| r.stops.collect{ |a| a.service_id } })
+                 (solutions[0].routes.collect{ |r| r.stops.collect(&:service_id) })
 
     problem[:relations] = relation
     problem[:relations].first[:lapses] = [1]
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem),
                                              nil)
     assert_equal [['service_1_1_1'], ['service_3_1_1'], ['service_2_1_1'], [], []],
-                 (solutions[0].routes.collect{ |r| r.stops.collect{ |a| a.service_id } })
+                 (solutions[0].routes.collect{ |r| r.stops.collect(&:service_id) })
   end
 
   def test_counting_quantities
@@ -5040,7 +5040,7 @@ class Wrappers::OrtoolsTest < Minitest::Test
     ) do
       Interpreters::SeveralSolutions.stub(
         :collect_heuristics,
-        lambda{ |_, _| %w[global_cheapest_arc parallel_cheapest_insertion local_cheapest_insertion savings] }
+        ->(_, _){ %w[global_cheapest_arc parallel_cheapest_insertion local_cheapest_insertion savings] }
       ) do
         service_vrp = Interpreters::SeveralSolutions.find_best_heuristic({ service: :ortools, vrp: vrp })
         assert_equal vrp[:vehicles].size, service_vrp[:vrp].vehicles.collect(&:id).uniq.size,
