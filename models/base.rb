@@ -124,7 +124,7 @@ module Models
       super(name, options)
     end
 
-    def self.has_many(name, options = {})
+    def self.has_many(name, options = {}) # rubocop: disable Naming/PredicateName, Style/CommentedKeyword
       field_names << name
 
       # respect English spelling rules:

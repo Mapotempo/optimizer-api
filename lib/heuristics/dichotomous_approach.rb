@@ -189,7 +189,7 @@ module Interpreters
       service_vrp[:vrp].configuration.resolution.dicho_level_coeff = 2**power
     end
 
-    def self.set_config(service_vrp)
+    def self.set_config(service_vrp) # rubocop: disable Naming/AccessorMethodName, Style/CommentedKeyword
       # service_vrp[:vrp].configuration.resolution.batch_heuristic = true
       config = service_vrp[:vrp].configuration
       config.restitution.allow_empty_result = true
