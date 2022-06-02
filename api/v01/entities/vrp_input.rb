@@ -596,7 +596,7 @@ module VrpVehicles
     optional :router_dimension, type: String, values: ['time', 'distance'], desc: 'time or dimension, choose between a matrix based on minimal route duration or on minimal route distance'
     optional :speed_multiplier, type: Float, default: 1.0, desc: 'Multiplies the vehicle speed, default : 1.0. Specifies if this vehicle is faster or slower than average speed.'
     optional :area, type: Array, coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |b| b.split(',').collect{ |f| Float(f) } } : c }, desc: 'List of latitudes and longitudes separated with commas. Areas separated with pipes (available only for truck mode at this time).'
-    optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c }, desc: 'Speed multiplier per area, 0 to avoid area. Areas separated with pipes (available only for truck mode at this time).'
+    optional :speed_multiplier_area, type: Array[Float], coerce_with: ->(c) { c.is_a?(String) ? c.split(/;|\|/).collect{ |f| Float(f) } : c.map(&:to_f) }, desc: 'Speed multiplier per area, 0 to avoid area. Areas separated with pipes (available only for truck mode at this time).'
     optional :traffic, type: Boolean, desc: 'Take into account traffic or not'
     optional :departure, type: DateTime, desc: 'Departure date time (only used if router supports traffic)'
     optional :track, type: Boolean, default: true, desc: 'Use track or not'
