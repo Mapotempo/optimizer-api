@@ -80,8 +80,8 @@ end
 
 group :rubocop do
   # Linting
-  gem 'rubocop', '< 0.82'
   gem 'mapotempo_rubocop', github: 'Mapotempo/mapotempo_rubocop'
+  gem 'rubocop'
 end
 
 group :test do
