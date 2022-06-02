@@ -1289,7 +1289,7 @@ module Interpreters
 
                 next if i.positive? && (
                   s.quantities.any?{ |quantity|
-                    unit = quantity.unit_id.to_sym
+                    (unit = quantity.unit_id.to_sym)
                     next if min_vehicle_capacities[unit].nil?
 
                     merged_quantities[unit] + quantity.value >= min_vehicle_capacities[unit]

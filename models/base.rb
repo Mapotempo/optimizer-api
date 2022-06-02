@@ -91,7 +91,7 @@ module Models
       hash
     end
 
-    def vrp_result(options = {})
+    def vrp_result(_options = {})
       hash = {}
       self.class.vrp_result_fields.each{ |field_name|
         hash[field_name] = self.send(field_name).vrp_result if self.respond_to?(field_name)

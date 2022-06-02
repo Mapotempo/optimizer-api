@@ -59,7 +59,7 @@ module Models
         stops.count(&:service_id)
       end
 
-      def insert_stop(vrp, stop, index, idle_time = 0)
+      def insert_stop(_vrp, stop, index, idle_time = 0)
         stops.insert(index, stop)
         shift_route_times(idle_time + stop.activity.duration, index)
       end

@@ -550,262 +550,264 @@ module OptimizerWrapper
     end
   end
 
-  private
+  class << self
+    private
 
-  def self.check_solutions_consistency(expected_value, solutions)
-    solutions.each{ |solution|
-      if solution.routes.any?{ |route| route.stops.any?{ |a| a.info.waiting_time < 0 } }
-        log 'Computed waiting times are invalid', level: :warn
-        raise 'Computed waiting times are invalid' if ENV['APP_ENV'] != 'production'
-      end
-
-      waiting_times = solution.routes.map{ |route| route.info.total_waiting_time }.compact
-      durations =
-        solution.routes.map{ |route|
-          route.stops.map{ |stop|
-            stop.info.departure_time && (stop.info.departure_time - stop.info.begin_time)
-          }.compact
-        }
-      previous_point_id = nil
-      setup_durations =
-        solution.routes.map{ |route|
-          route.stops.map{ |stop|
-            next if stop.type == :rest
-
-            setup = (previous_point_id.nil? || previous_point_id != stop.activity.point_id) &&
-                    stop.activity.setup_duration_on(route.vehicle) || 0
-            previous_point_id = stop.activity.point_id
-            setup
-          }.compact
-        }
-      total_time = solution.info.total_time || 0
-      total_travel_time = solution.info.total_travel_time || 0
-      if total_time != (total_travel_time || 0) +
-                       waiting_times.sum +
-                       (setup_durations.flatten.reduce(&:+) || 0) +
-                       (durations.flatten.reduce(&:+) || 0)
-
-        log_string = 'Computed times are invalid'
-        tags = {
-          total_time: total_time,
-          total_travel_time: total_travel_time,
-          waiting_time: waiting_times.sum,
-          setup_durations: setup_durations.flatten.reduce(&:+),
-          durations: durations.flatten.reduce(&:+)
-        }
-        log log_string, tags.merge(level: :warn)
-        raise 'Computed times are invalid' if ENV['APP_ENV'] != 'production'
-      end
-
-      nb_assigned = solution.count_assigned_services
-      nb_unassigned = solution.count_unassigned_services
-
-      if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
-        tags = { expected: expected_value, assigned: nb_assigned, unassigned: nb_unassigned }
-        log 'Wrong number of visits returned in result', tags.merge(level: :warn)
-        raise 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
-      end
-    }
-  end
-
-  def self.adjust_vehicles_duration(vrp)
-    vrp.vehicles.select{ |v| v.duration? && !v.rests.empty? }.each{ |v|
-      v.rests.each{ |r|
-        v.duration += r.duration
-      }
-    }
-  end
-
-  def self.apply_zones(vrp)
-    vrp.zones.each{ |zone|
-      next if zone.allocations.empty?
-
-      zone.vehicles =
-        if zone.allocations.size == 1
-          zone.allocations[0].collect{ |vehicle_id| vrp.vehicles.find{ |vehicle| vehicle.id == vehicle_id } }.compact
-        else
-          zone.allocations.collect{ |allocation| vrp.vehicles.find{ |vehicle| vehicle.id == allocation.first } }.compact
+    def check_solutions_consistency(expected_value, solutions)
+      solutions.each{ |solution|
+        if solution.routes.any?{ |route| route.stops.any?{ |a| a.info.waiting_time < 0 } }
+          log 'Computed waiting times are invalid', level: :warn
+          raise 'Computed waiting times are invalid' if ENV['APP_ENV'] != 'production'
         end
 
-      next if zone.vehicles.compact.empty?
-
-      zone.vehicles.each{ |vehicle|
-        vehicle.skills.each{ |skillset| skillset << zone[:id].to_sym }
-      }
-    }
-
-    return unless vrp.points.all?(&:location)
-
-    vrp.zones.each{ |zone|
-      related_ids = vrp.services.collect{ |service|
-        activity_loc = service.activity.point.location
-
-        next unless zone.inside(activity_loc.lat, activity_loc.lon)
-
-        service.skills += [zone[:id].to_sym]
-        service.id
-      }.compact
-
-      # Remove zone allocation verification if we need to assign zone without vehicle affectation together
-      next unless zone.allocations.size > 1 && related_ids.size > 1
-
-      vrp.relations += [{
-        type: :same_route,
-        linked_ids: related_ids.flatten,
-      }]
-    }
-  end
-
-  def self.clique_cluster_candidate?(vrp, cluster_threshold)
-    cluster_threshold && vrp.matrices.any? && vrp.services.all?(&:activity) && vrp.rests.empty? &&
-      !vrp.schedule? && (vrp.relations.map(&:type) - RELATION_ZIP_CLUSTER_CAN_HANDLE).empty? &&
-      vrp.services.none?{ |s| s.activity.timewindows.any? }
-  end
-
-  def self.clique_cluster(vrp, cluster_threshold)
-    zip_condition = clique_cluster_candidate?(vrp, cluster_threshold)
-
-    if zip_condition
-      if vrp.services.any?{ |s| s.activities.any? }
-        raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.')
-      end
-
-      original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
-      clusters = zip_cluster(vrp, cluster_threshold)
-    end
-    solution = yield(vrp)
-
-    if zip_condition
-      vrp.services = original_services
-      unzip_cluster(solution, clusters, vrp)
-    else
-      solution
-    end
-  end
-
-  def self.zip_cluster(vrp, cluster_threshold)
-    return nil if vrp.services.empty?
-
-    c = Ai4r::Clusterers::CompleteLinkageMaxDistance.new
-
-    matrix = vrp.matrices[0][vrp.vehicles[0].router_dimension.to_sym]
-    used_units = {}
-    vrp.services.each{ |s| s.quantities.each{ |q| used_units[q.unit.id] = true if q.value != 0 } }
-    no_useful_capacities =
-      vrp.vehicles.none?{ |v|
-        v.capacities.any?{ |capa| capa.limit && used_units.key?(capa.unit.id) }
-      }
-
-    c.distance_function =
-      lambda do |a, b|
-        aa = vrp.services[a[0]]
-        bb = vrp.services[b[0]]
-        (no_useful_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) && aa.skills == bb.skills ?
-        matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] : Float::INFINITY
-      end
-
-    data_set = Ai4r::Data::DataSet.new(data_items: (0..(vrp.services.length - 1)).collect{ |i| [i] })
-
-    clusterer = c.build(data_set, cluster_threshold)
-
-    new_size = clusterer.clusters.size
-
-    # Build replacement list
-    new_services = Array.new(new_size)
-    clusterer.clusters.each_with_index do |cluster, i|
-      new_services[i] = vrp.services[cluster.data_items[0][0]]
-      cluster_ids = cluster.data_items.map{ |arr| vrp.services[arr[0]].id }
-      route_index = vrp.routes.index{ |route| route.mission_ids & cluster_ids }
-      if route_index
-        ref_id =
-          vrp.routes[route_index].mission_ids.find{ |mission_id|
-            cluster_ids.include?(mission_id)
+        waiting_times = solution.routes.map{ |route| route.info.total_waiting_time }.compact
+        durations =
+          solution.routes.map{ |route|
+            route.stops.map{ |stop|
+              stop.info.departure_time && (stop.info.departure_time - stop.info.begin_time)
+            }.compact
           }
-        vrp.routes.each{ |route|
-          route.mission_ids.delete_if{ |mission_id|
-            cluster_ids.include?(mission_id) unless mission_id == ref_id
+        previous_point_id = nil
+        setup_durations =
+          solution.routes.map{ |route|
+            route.stops.map{ |stop|
+              next if stop.type == :rest
+
+              setup = (previous_point_id.nil? || previous_point_id != stop.activity.point_id) &&
+                      stop.activity.setup_duration_on(route.vehicle) || 0
+              previous_point_id = stop.activity.point_id
+              setup
+            }.compact
           }
+        total_time = solution.info.total_time || 0
+        total_travel_time = solution.info.total_travel_time || 0
+        if total_time != (total_travel_time || 0) +
+                         waiting_times.sum +
+                         (setup_durations.flatten.reduce(&:+) || 0) +
+                         (durations.flatten.reduce(&:+) || 0)
+
+          log_string = 'Computed times are invalid'
+          tags = {
+            total_time: total_time,
+            total_travel_time: total_travel_time,
+            waiting_time: waiting_times.sum,
+            setup_durations: setup_durations.flatten.reduce(&:+),
+            durations: durations.flatten.reduce(&:+)
+          }
+          log log_string, tags.merge(level: :warn)
+          raise 'Computed times are invalid' if ENV['APP_ENV'] != 'production'
+        end
+
+        nb_assigned = solution.count_assigned_services
+        nb_unassigned = solution.count_unassigned_services
+
+        if expected_value != nb_assigned + nb_unassigned # rubocop:disable Style/Next for error handling
+          tags = { expected: expected_value, assigned: nb_assigned, unassigned: nb_unassigned }
+          log 'Wrong number of visits returned in result', tags.merge(level: :warn)
+          raise 'Wrong number of visits returned in result' if ENV['APP_ENV'] != 'production'
+        end
+      }
+    end
+
+    def adjust_vehicles_duration(vrp)
+      vrp.vehicles.select{ |v| v.duration? && !v.rests.empty? }.each{ |v|
+        v.rests.each{ |r|
+          v.duration += r.duration
         }
-        vrp.routes[route_index].mission_ids.map!{ |mission_id|
-          if cluster_ids.include?(mission_id)
-            new_services[i].id
+      }
+    end
+
+    def apply_zones(vrp)
+      vrp.zones.each{ |zone|
+        next if zone.allocations.empty?
+
+        zone.vehicles =
+          if zone.allocations.size == 1
+            zone.allocations[0].collect{ |vehicle_id| vrp.vehicles.find{ |vehicle| vehicle.id == vehicle_id } }.compact
           else
-            mission_id
+            zone.allocations.collect{ |alloc| vrp.vehicles.find{ |vehicle| vehicle.id == alloc.first } }.compact
           end
-        }
-      end
 
-      new_services[i].activity.duration =
-        cluster.data_items.map{ |di| vrp.services[di[0]].activity.duration }.reduce(&:+)
-      new_services[i].priority = cluster.data_items.map{ |di| vrp.services[di[0]].priority }.min
+        next if zone.vehicles.compact.empty?
+
+        zone.vehicles.each{ |vehicle|
+          vehicle.skills.each{ |skillset| skillset << zone[:id].to_sym }
+        }
+      }
+
+      return unless vrp.points.all?(&:location)
+
+      vrp.zones.each{ |zone|
+        related_ids = vrp.services.collect{ |service|
+          activity_loc = service.activity.point.location
+
+          next unless zone.inside(activity_loc.lat, activity_loc.lon)
+
+          service.skills += [zone[:id].to_sym]
+          service.id
+        }.compact
+
+        # Remove zone allocation verification if we need to assign zone without vehicle affectation together
+        next unless zone.allocations.size > 1 && related_ids.size > 1
+
+        vrp.relations += [{
+          type: :same_route,
+          linked_ids: related_ids.flatten,
+        }]
+      }
     end
 
-    # Fill new vrp
-    vrp.services = new_services
+    def clique_cluster_candidate?(vrp, cluster_threshold)
+      cluster_threshold && vrp.matrices.any? && vrp.services.all?(&:activity) && vrp.rests.empty? &&
+        !vrp.schedule? && (vrp.relations.map(&:type) - RELATION_ZIP_CLUSTER_CAN_HANDLE).empty? &&
+        vrp.services.none?{ |s| s.activity.timewindows.any? }
+    end
 
-    clusterer.clusters
-  end
+    def clique_cluster(vrp, cluster_threshold)
+      zip_condition = clique_cluster_candidate?(vrp, cluster_threshold)
 
-  def self.unzip_cluster(solution, clusters, original_vrp)
-    return solution unless clusters
+      if zip_condition
+        if vrp.services.any?{ |s| s.activities.any? }
+          raise UnsupportedProblemError('Threshold is not supported yet if one service has serveral activies.')
+        end
 
-    new_routes =
-      solution.routes.map{ |route|
-        previous_stop = nil
-        new_stops =
-          route.stops.flat_map.with_index{ |stop, act_index|
-            if stop.service_id
-              service_index = original_vrp.services.index{ |s| s.id == stop.service_id }
-              cluster_index = clusters.index{ |z| z.data_items.flatten.include? service_index }
-              if cluster_index && clusters[cluster_index].data_items.size > 1
-                cluster_data_indices = clusters[cluster_index].data_items.collect{ |i| i[0] }
-                cluster_services = cluster_data_indices.map{ |index| original_vrp.services[index] }
-                next_stop = route.stops[act_index + 1..route.stops.size].find{ |act| act.activity.point }
-                tsp = TSPHelper.create_tsp(original_vrp,
-                                           vehicle: route.vehicle,
-                                           services: cluster_services,
-                                           start_point: previous_stop.activity.point,
-                                           end_point: next_stop&.activity&.point,
-                                           begin_time: previous_stop.info.end_time)
-                tsp_solution = TSPHelper.solve(tsp)
-                previous_stop = tsp_solution.routes[0].stops.reverse.find(&:service_id)
-                service_stops = tsp_solution.routes[0].stops.select{ |a| a.type == :service }
-                service_stops.map!{ |service_stop|
-                  original_service = original_vrp.services.find{ |service| service.id == service_stop.id }
-                  stop = Models::Solution::Stop.new(original_service, info: service_stop.info)
-                }
-                shift = tsp_solution.routes[0].info.total_travel_time - stop.info.travel_time -
-                        next_stop&.info&.travel_time || 0
-                route.shift_route_times(shift, act_index + 1) if act_index < route.stops.size
-                service_stops
-              else
-                stop
-              end
+        original_services = Array.new(vrp.services.size){ |i| vrp.services[i].clone }
+        clusters = zip_cluster(vrp, cluster_threshold)
+      end
+      solution = yield(vrp)
+
+      if zip_condition
+        vrp.services = original_services
+        unzip_cluster(solution, clusters, vrp)
+      else
+        solution
+      end
+    end
+
+    def zip_cluster(vrp, cluster_threshold)
+      return nil if vrp.services.empty?
+
+      c = Ai4r::Clusterers::CompleteLinkageMaxDistance.new
+
+      matrix = vrp.matrices[0][vrp.vehicles[0].router_dimension.to_sym]
+      used_units = {}
+      vrp.services.each{ |s| s.quantities.each{ |q| used_units[q.unit.id] = true if q.value != 0 } }
+      no_useful_capacities =
+        vrp.vehicles.none?{ |v|
+          v.capacities.any?{ |capa| capa.limit && used_units.key?(capa.unit.id) }
+        }
+
+      c.distance_function =
+        lambda do |a, b|
+          aa = vrp.services[a[0]]
+          bb = vrp.services[b[0]]
+          (no_useful_capacities || (aa.quantities&.empty? && bb.quantities&.empty?)) && aa.skills == bb.skills ?
+          matrix[aa.activity.point.matrix_index][bb.activity.point.matrix_index] : Float::INFINITY
+        end
+
+      data_set = Ai4r::Data::DataSet.new(data_items: (0..(vrp.services.length - 1)).collect{ |i| [i] })
+
+      clusterer = c.build(data_set, cluster_threshold)
+
+      new_size = clusterer.clusters.size
+
+      # Build replacement list
+      new_services = Array.new(new_size)
+      clusterer.clusters.each_with_index do |cluster, i|
+        new_services[i] = vrp.services[cluster.data_items[0][0]]
+        cluster_ids = cluster.data_items.map{ |arr| vrp.services[arr[0]].id }
+        route_index = vrp.routes.index{ |route| route.mission_ids & cluster_ids }
+        if route_index
+          ref_id =
+            vrp.routes[route_index].mission_ids.find{ |mission_id|
+              cluster_ids.include?(mission_id)
+            }
+          vrp.routes.each{ |route|
+            route.mission_ids.delete_if{ |mission_id|
+              cluster_ids.include?(mission_id) unless mission_id == ref_id
+            }
+          }
+          vrp.routes[route_index].mission_ids.map!{ |mission_id|
+            if cluster_ids.include?(mission_id)
+              new_services[i].id
             else
-              previous_stop = stop.activity.point ? stop : previous_stop
-              stop
+              mission_id
             end
           }
-        Models::Solution::Route.new(stops: new_stops, vehicle: route.vehicle)
-      }
-    new_unassigned =
-      solution.unassigned_stops.flat_map{ |un|
-        if un.service_id
-          service_index = original_vrp.services.index{ |s| s.id == un.service_id }
-          cluster_index = clusters.index{ |z| z.data_items.flatten.include? service_index }
-          if cluster_index && clusters[cluster_index].data_items.size > 1
-            cluster_data_indices = clusters[cluster_index].data_items.collect{ |i| i[0] }
-            cluster_data_indices.map{ |index|
-              Models::Solution::Stop.new(original_vrp.services[index])
+        end
+
+        new_services[i].activity.duration =
+          cluster.data_items.map{ |di| vrp.services[di[0]].activity.duration }.reduce(&:+)
+        new_services[i].priority = cluster.data_items.map{ |di| vrp.services[di[0]].priority }.min
+      end
+
+      # Fill new vrp
+      vrp.services = new_services
+
+      clusterer.clusters
+    end
+
+    def unzip_cluster(solution, clusters, original_vrp)
+      return solution unless clusters
+
+      new_routes =
+        solution.routes.map{ |route|
+          previous_stop = nil
+          new_stops =
+            route.stops.flat_map.with_index{ |stop, act_index|
+              if stop.service_id
+                service_index = original_vrp.services.index{ |s| s.id == stop.service_id }
+                cluster_index = clusters.index{ |z| z.data_items.flatten.include? service_index }
+                if cluster_index && clusters[cluster_index].data_items.size > 1
+                  cluster_data_indices = clusters[cluster_index].data_items.collect{ |i| i[0] }
+                  cluster_services = cluster_data_indices.map{ |index| original_vrp.services[index] }
+                  next_stop = route.stops[act_index + 1..route.stops.size].find{ |act| act.activity.point }
+                  tsp = TSPHelper.create_tsp(original_vrp,
+                                             vehicle: route.vehicle,
+                                             services: cluster_services,
+                                             start_point: previous_stop.activity.point,
+                                             end_point: next_stop&.activity&.point,
+                                             begin_time: previous_stop.info.end_time)
+                  tsp_solution = TSPHelper.solve(tsp)
+                  previous_stop = tsp_solution.routes[0].stops.reverse.find(&:service_id)
+                  service_stops = tsp_solution.routes[0].stops.select{ |a| a.type == :service }
+                  service_stops.map!{ |service_stop|
+                    original_service = original_vrp.services.find{ |service| service.id == service_stop.id }
+                    stop = Models::Solution::Stop.new(original_service, info: service_stop.info)
+                  }
+                  shift = tsp_solution.routes[0].info.total_travel_time - stop.info.travel_time -
+                          next_stop&.info&.travel_time || 0
+                  route.shift_route_times(shift, act_index + 1) if act_index < route.stops.size
+                  service_stops
+                else
+                  stop
+                end
+              else
+                previous_stop = stop.activity.point ? stop : previous_stop
+                stop
+              end
             }
+          Models::Solution::Route.new(stops: new_stops, vehicle: route.vehicle)
+        }
+      new_unassigned =
+        solution.unassigned_stops.flat_map{ |un|
+          if un.service_id
+            service_index = original_vrp.services.index{ |s| s.id == un.service_id }
+            cluster_index = clusters.index{ |z| z.data_items.flatten.include? service_index }
+            if cluster_index && clusters[cluster_index].data_items.size > 1
+              cluster_data_indices = clusters[cluster_index].data_items.collect{ |i| i[0] }
+              cluster_data_indices.map{ |index|
+                Models::Solution::Stop.new(original_vrp.services[index])
+              }
+            else
+              un
+            end
           else
             un
           end
-        else
-          un
-        end
-      }
-    solution = Models::Solution.new(routes: new_routes, unassigned_stops: new_unassigned)
-    solution.parse(original_vrp, compute_dimensions: true)
+        }
+      solution = Models::Solution.new(routes: new_routes, unassigned_stops: new_unassigned)
+      solution.parse(original_vrp, compute_dimensions: true)
+    end
   end
 end

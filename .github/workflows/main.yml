@@ -26,8 +26,8 @@ jobs:
           bundler-cache: true
       - name: Run RuboCop Error
         run: bundle exec rubocop --parallel -f c --config .rubocop.yml --fail-level E --display-only-fail-level-offenses
-      - name: Run Linter cops
-        run: bundle exec rubocop --parallel -f c --config .rubocop.yml -l # Run only lint cops
+      - name: Run Lint and Security cops
+        run: bundle exec rubocop --parallel -f c --config .rubocop.yml --only Lint,Security
       - name: Run Performance cops
         run: bundle exec rubocop --parallel -f c --config .rubocop.yml --only Performance
       - name: Run Bundler cops

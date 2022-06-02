@@ -46,7 +46,9 @@ module OptimizerWrapper
       Raven.tags_context(key_print: key_print, vrp_checksum: options['checksum'])
       Raven.user_context(api_key: options['api_key']) # Filtered in sentry if user_context
 
-      services_vrps = Marshal.load(Base64.decode64(self.options['services_vrps'])) # Get the vrp
+      # Get the vrp
+      services_vrps =
+        Marshal.load(Base64.decode64(self.options['services_vrps'])) # rubocop:disable Security/MarshalLoad
       log "Vrp size: #{services_vrps.size} Key print: #{key_print} Names: #{services_vrps.map{ |sv| sv[:vrp].name }}"
       Raven.extra_context(
         vrps: services_vrps.map{ |sv|
@@ -93,7 +95,8 @@ module OptimizerWrapper
               (cost ? " cost: #{cost}" : '')
           )
 
-          @killed && wrapper.kill && return # Stops the worker if the job is killed
+          # Stops the worker if the job is killed
+          @killed && wrapper.kill && return # rubocop:disable Lint/NonLocalExitFromIterator
 
           @wrapper = wrapper
           log "avancement: #{message} #{avancement}"

@@ -160,7 +160,7 @@ module Wrappers
     def read_step(vrp, vehicle, step)
       case step['type']
       when 'job', 'pickup', 'delivery'
-        read_activity(vrp, vehicle, step)
+        read_activity(vrp, step)
       when 'start', 'end'
         read_depot(vrp, vehicle, step)
       when 'break'
@@ -171,7 +171,7 @@ module Wrappers
     end
 
     def read_unassigned(vrp, step)
-      read_activity(vrp, nil, step)
+      read_activity(vrp, step)
     end
 
     def read_break(step)
@@ -203,7 +203,7 @@ module Wrappers
       end
     end
 
-    def read_activity(vrp, vehicle, act_step)
+    def read_activity(vrp, act_step)
       service = @object_id_map[act_step['id']]
       point = service.activity.point
       route_data = compute_route_data(vrp, point, act_step)
