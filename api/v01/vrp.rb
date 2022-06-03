@@ -213,8 +213,7 @@ module Api
             end
 
             result_object ||= OptimizerWrapper::Result.get(id) || {}
-            output_format = params[:format]&.to_sym ||
-                            (result_object[:configuration] && result_object[:configuration][:csv] ? :csv : env['api.format'])
+            output_format = params[:format]&.to_sym || ((result_object[:configuration] && result_object[:configuration][:csv]) ? :csv : env['api.format'])
 
             if job&.completed? # job can still be nil if we have the solution from the dump
               APIBase.dump_vrp_dir.write([id, params[:api_key], 'solution'].join('_'), Oj.dump(result_object)) if stored_result.nil? && OptimizerWrapper.config[:dump][:solution]
@@ -283,7 +282,7 @@ module Api
 
               status 202
               if result_object && !result_object.empty?
-                output_format = params[:format]&.to_sym || (result_object[:configuration] && result_object[:configuration][:csv] ? :csv : env['api.format'])
+                output_format = params[:format]&.to_sym || ((result_object[:configuration] && result_object[:configuration][:csv]) ? :csv : env['api.format'])
                 if output_format == :csv
                   present(OutputHelper::Result.build_csv(result_object[:result]), type: CSV)
                 else

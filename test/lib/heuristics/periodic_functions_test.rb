@@ -182,7 +182,7 @@ class HeuristicTest < Minitest::Test
           10 => {
             stops: [{ id: 'service_1', point_id: 'point_0' }], vehicle: vrp.vehicles.first.id, capacity: []
           }
-      }
+        }
       )
       s_a, p_a = get_assignment_data(s.instance_variable_get(:@candidate_routes), vrp)
       s.instance_variable_set(:@services_assignment, s_a)

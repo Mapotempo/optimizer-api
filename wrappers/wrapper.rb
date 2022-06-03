@@ -657,9 +657,9 @@ module Wrappers
       matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
 
       depot_approach =
-        vehicle.start_point && matrix.time ? successive_activities.first.last.map{ |act|
-                                               matrix.time[vehicle.start_point.matrix_index][act.point.matrix_index]
-                                             }.min : 0
+        (vehicle.start_point && matrix.time) ? successive_activities.first.last.map{ |act|
+                                                 matrix.time[vehicle.start_point.matrix_index][act.point.matrix_index]
+                                               }.min : 0
       earliest_arrival = vehicle_timewindow.start + depot_approach
 
       successive_activities.each.with_index{ |(id, a_activities), a_index|
@@ -669,9 +669,9 @@ module Wrappers
 
         last_duration = a_activities.map{ |a| a.duration_on(vehicle) }.min
         depot_return =
-          vehicle.end_point && matrix.time ? a_activities.map{ |act|
-                                               matrix.time[act.point.matrix_index][vehicle.end_point.matrix_index]
-                                             }.min : 0
+          (vehicle.end_point && matrix.time) ? a_activities.map{ |act|
+                                                 matrix.time[act.point.matrix_index][vehicle.end_point.matrix_index]
+                                               }.min : 0
         earliest_depot_arrival = earliest_arrival + depot_return + last_duration
 
         return id if earliest_depot_arrival > vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?) ||
@@ -835,10 +835,10 @@ module Wrappers
       matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
 
       [
-        v_start_m_index && matrix.time ? matrix.time[v_start_m_index][activity.point.matrix_index] : 0,
-        v_end_m_index && matrix.time ? matrix.time[activity.point.matrix_index][v_end_m_index] : 0,
-        v_start_m_index && matrix.distance ? matrix.distance[v_start_m_index][activity.point.matrix_index] : 0,
-        v_end_m_index && matrix.distance ? matrix.distance[activity.point.matrix_index][v_end_m_index] : 0,
+        (v_start_m_index && matrix.time) ? matrix.time[v_start_m_index][activity.point.matrix_index] : 0,
+        (v_end_m_index && matrix.time) ? matrix.time[activity.point.matrix_index][v_end_m_index] : 0,
+        (v_start_m_index && matrix.distance) ? matrix.distance[v_start_m_index][activity.point.matrix_index] : 0,
+        (v_end_m_index && matrix.distance) ? matrix.distance[activity.point.matrix_index][v_end_m_index] : 0,
       ]
     end
 

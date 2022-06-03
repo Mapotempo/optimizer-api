@@ -46,6 +46,9 @@ Style/StringLiteralsInInterpolation:
   Enabled: false
   EnforcedStyle: double_quotes
 
+Style/TernaryParentheses:
+  EnforcedStyle: require_parentheses_when_complex
+
 # Style/UnlessLogicalOperators: # TODO: activate when rubocop gem is upgraded
 #   EnforcedStyle: forbid_logical_operators
 

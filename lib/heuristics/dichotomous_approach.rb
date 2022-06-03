@@ -294,7 +294,7 @@ module Interpreters
       # However, it is not very easy to find a generic and effective way.
 
       sub_solutions = []
-      vehicle_count = skills.empty? && !vrp.routes.empty? ? [vrp.routes.size, 6].min : 3
+      vehicle_count = (skills.empty? && !vrp.routes.empty?) ? [vrp.routes.size, 6].min : 3
       impacted_routes = []
       vehicles_with_skills.each_slice(vehicle_count) do |vehicles_indices|
         remaining_service_ids = solution.unassigned_stops.map(&:service_id) & unassigned_with_skills.map(&:id)

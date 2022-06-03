@@ -134,7 +134,7 @@ module OptimizerWrapper
       begin
         Result.set(self.uuid, p)
       rescue Redis::BaseError => e
-        log "Couldn't set the last result due to the following error (tring again in 2 minutes): #{e}", level: :warning
+        log "Couldn't set the last result due to the following error (trying again in 2 minutes): #{e}", level: :warning
         sleep 120 # Try setting the result one last time without rescue since this is the last result
         Result.set(self.uuid, p)
       end

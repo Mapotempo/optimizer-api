@@ -222,7 +222,7 @@ module Models
 
       redefine_method("#{name}=") do |val|
         c = class_from_string(options[:class_name])
-        self[name] = val && (val.is_a?(Hash) ? c.create(val) : val)
+        self[name] = val&.is_a?(Hash) ? c.create(val) : val
         self[id_function_name] = self[name]&.id if c.module_parent == Models
         self[name]
       end

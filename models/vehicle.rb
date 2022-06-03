@@ -168,9 +168,9 @@ module Models
           next if i == j
 
           blend_matrix[ind_i][ind_j] =
-            (matrix.time && dimensions.include?(:time) ? matrix.time[i][j] * coeff_time : 0) +
-            (matrix.distance && dimensions.include?(:distance) ? matrix.distance[i][j] * coeff_dist : 0) +
-            (matrix.value && dimensions.include?(:value) ? matrix.value[i][j] * coeff_value : 0)
+            ((matrix.time && dimensions.include?(:time)) ? matrix.time[i][j] * coeff_time : 0) +
+            ((matrix.distance && dimensions.include?(:distance)) ? matrix.distance[i][j] * coeff_dist : 0) +
+            ((matrix.value && dimensions.include?(:value)) ? matrix.value[i][j] * coeff_value : 0)
         }
       }
       blend_matrix

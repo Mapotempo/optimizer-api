@@ -964,7 +964,7 @@ module Wrappers
     def best_candidate_position_according_to_tws(route_data, service_id, service_data, previous, options)
       activity = options[:activity]
       duration =
-        @same_point_day && options[:first_visit] ? service_data[:group_duration] : service_data[:durations][activity]
+        (@same_point_day && options[:first_visit]) ? service_data[:group_duration] : service_data[:durations][activity]
       potential_tws = find_timewindows(previous,
                                        { id: service_id, point_id: service_data[:points_ids][activity],
                                          setup_duration: service_data[:setup_durations][activity],
