@@ -35,16 +35,20 @@ module DistanceMatrix
 
   def compute_need_matrix(&block)
     vrp_need_matrix = compute_vrp_need_matrix
-    need_matrix = vehicles.collect{ |vehicle| [vehicle, vehicle.dimensions] }.select{ |vehicle, dimensions|
-      dimensions.find{ |dimension|
-        vrp_need_matrix.include?(dimension) && (vehicle.matrix_id.nil? || matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension).nil?) && vehicle.send('need_matrix_' + dimension.to_s + '?')
+    need_matrix =
+      vehicles.collect{ |vehicle| [vehicle, vehicle.dimensions] }.select{ |vehicle, dimensions|
+        dimensions.find{ |dimension|
+          vrp_need_matrix.include?(dimension) &&
+            (vehicle.matrix_id.nil? || matrices.find{ |matrix| matrix.id == vehicle.matrix_id }.send(dimension).nil?) &&
+            vehicle.send('need_matrix_' + dimension.to_s + '?')
+        }
       }
-    }
     if !need_matrix.empty?
-      matrix_points = points.collect.with_index{ |point, index|
-        point.matrix_index = index
-        [point.location.lat, point.location.lon]
-      }
+      matrix_points =
+        points.collect.with_index{ |point, index|
+          point.matrix_index = index
+          [point.location.lat, point.location.lon]
+        }
 
       uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
         [vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]
@@ -54,9 +58,11 @@ module DistanceMatrix
       uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, options|
         block&.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix', nil, nil, nil)
         # set matrix_time and matrix_distance depending of dimensions order
-        log "matrix computation #{matrix_points.size}x#{matrix_points.size} -- #{services.size} services, #{vehicles.size} vehicles"
+        log "matrix computation #{matrix_points.size}x#{matrix_points.size} "\
+            "-- #{services.size} services, #{vehicles.size} vehicles"
         tic = Time.now
-        router_matrices = router.matrix(OptimizerWrapper.config[:router][:url], mode, dimensions, matrix_points, matrix_points, options)
+        router_matrices = router.matrix(OptimizerWrapper.config[:router][:url],
+                                        mode, dimensions, matrix_points, matrix_points, options)
         log "matrix computed in #{(Time.now - tic).round(2)} seconds"
         m = Models::Matrix.create(
           time: (router_matrices[dimensions.index(:time)] if dimensions.index(:time)),
@@ -72,9 +78,13 @@ module DistanceMatrix
         [[mode, dimensions, options], m]
       }]
 
-      uniq_need_matrix = need_matrix.collect{ |vehicle, dimensions|
-        vehicle.matrix_id = matrices.find{ |matrix| matrix == uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]] }.id
-      }
+      uniq_need_matrix =
+        need_matrix.collect{ |vehicle, dimensions|
+          vehicle.matrix_id = matrices.find{ |matrix|
+            matrix ==
+              uniq_need_matrix[[vehicle.router_mode.to_sym, dimensions | vrp_need_matrix, vehicle.router_options]]
+          }.id
+        }
     end
   end
 

@@ -95,8 +95,8 @@ class InterpreterTest < Minitest::Test
     expanded_vrp = periodic_expand(problem)
     assert_equal 4, expanded_vrp.vehicles.size, 'There should be as many vehicles as days in schedule'
     assert_equal 4, expanded_vrp.vehicles.uniq{ |v| [v.timewindow.start, v.timewindow.end] }.size,
-                    'There should be as many vehicles as days in schedule because ' \
-                    'at least one day_index has been specified'
+                 'There should be as many vehicles as days in schedule because ' \
+                 'at least one day_index has been specified'
 
     problem = VRP.periodic
     problem[:vehicles].first[:timewindow] = { start: 0, end: 10, day_index: 1 }
@@ -605,18 +605,22 @@ class InterpreterTest < Minitest::Test
     }
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    route_s01 = solutions[0].routes.find{ |route|
-      route.stops.any?{ |activity| activity.service_id == 'service_0_1_2' }
-    }
-    route_s02 = solutions[0].routes.find{ |route|
-      route.stops.any?{ |activity| activity.service_id == 'service_0_2_2' }
-    }
-    route_s11 = solutions[0].routes.find{ |route|
-      route.stops.any?{ |activity| activity.service_id == 'service_1_1_2' }
-    }
-    route_s12 = solutions[0].routes.find{ |route|
-      route.stops.any?{ |activity| activity.service_id == 'service_1_2_2' }
-    }
+    route_s01 =
+      solutions[0].routes.find{ |route|
+        route.stops.any?{ |activity| activity.service_id == 'service_0_1_2' }
+      }
+    route_s02 =
+      solutions[0].routes.find{ |route|
+        route.stops.any?{ |activity| activity.service_id == 'service_0_2_2' }
+      }
+    route_s11 =
+      solutions[0].routes.find{ |route|
+        route.stops.any?{ |activity| activity.service_id == 'service_1_1_2' }
+      }
+    route_s12 =
+      solutions[0].routes.find{ |route|
+        route.stops.any?{ |activity| activity.service_id == 'service_1_2_2' }
+      }
 
     route_index_s01 = route_s01&.vehicle&.global_day_index || -1
     route_index_s02 = route_s02&.vehicle&.global_day_index || -1

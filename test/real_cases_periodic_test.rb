@@ -26,10 +26,11 @@ class HeuristicTest < Minitest::Test
         assigned_quantities = 0
         solution.routes.each{ |route|
           route_capacity = route.vehicle.capacities.find{ |cap| cap.unit_id == unit_id }.limit + 1e-5
-          route_quantities = route.stops.sum{ |act|
-            qty = act.loads.find{ |l| l.quantity.unit.id == unit_id }
-            qty ? qty.quantity.value : 0
-          }
+          route_quantities =
+            route.stops.sum{ |act|
+              qty = act.loads.find{ |l| l.quantity.unit.id == unit_id }
+              qty ? qty.quantity.value : 0
+            }
           assigned_quantities += route_quantities
           assert_operator route_quantities, :<=, route_capacity
         }
@@ -54,7 +55,8 @@ class HeuristicTest < Minitest::Test
       }.compact
       assert_nil assigned_service_ids.uniq!,
                  'There should not be any duplicate service ID because there are no duplicated IDs in instance'
-      assert_equal vrp.services.map(&:id).sort, (assigned_service_ids + solutions[0].unassigned_stops.map(&:service_id) ).sort
+      assert_equal vrp.services.map(&:id).sort,
+                   (assigned_service_ids + solutions[0].unassigned_stops.map(&:service_id)).sort
 
       # add priority
       assert(solutions[0].unassigned_stops.any?{ |service| service.service_id.include?('3359') })
@@ -128,7 +130,8 @@ class HeuristicTest < Minitest::Test
     def test_minimum_stop_in_route
       vrp = TestHelper.load_vrps(self, fixture_file: 'performance_13vl')[25]
       vrp.configuration.resolution.allow_partial_assignment = true
-      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},  Marshal.load(Marshal.dump(vrp)), nil)
+      solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }},
+                                               Marshal.load(Marshal.dump(vrp)), nil)
       assert solutions[0].routes.any?{ |r| r.stops.size - 2 < 5 },
              'We expect at least one route with less than 5 services, this test is useless otherwise'
       should_remain_assigned = solutions[0].routes.sum{ |r| r.stops.size - 2 >= 5 ? r.stops.size - 2 : 0 }
@@ -175,11 +178,13 @@ class HeuristicTest < Minitest::Test
         :compute_initial_solution,
         lambda { |vrp_in|
           @starting_time = Time.now
-          @candidate_routes = Marshal.load(File.binread('test/fixtures/fill_days_and_post_processing_candidate_routes.bindump')) # rubocop: disable Security/MarshalLoad
+          file = 'test/fixtures/fill_days_and_post_processing_candidate_routes.bindump'
+          @candidate_routes = Marshal.load(File.binread(file)) # rubocop: disable Security/MarshalLoad
           @candidate_routes.each_value{ |vehicle_routes|
             vehicle_routes.each_value{ |day_route| day_route[:matrix_id] = vrp.vehicles.first.matrix_id }
           }
-          @services_assignment = Marshal.load(File.binread('test/fixtures/fill_days_and_post_processing_services_assignment.bindump')) # rubocop: disable Security/MarshalLoad
+          file = 'test/fixtures/fill_days_and_post_processing_services_assignment.bindump'
+          @services_assignment = Marshal.load(File.binread(file)) # rubocop: disable Security/MarshalLoad
           # We still have 1000 unassigned visits in this dumped solution
 
           refine_solution
@@ -192,7 +197,8 @@ class HeuristicTest < Minitest::Test
       end
 
       # voluntarily equal to watch evolution of periodic algorithm performance
-      assert_equal 63, found_uninserted_visits, 'We started end_phase with 1000 unassigned, we should only have 74 left now'
+      assert_equal 63, found_uninserted_visits,
+                   'We started end_phase with 1000 unassigned, we should only have 74 left now'
     end
 
     def test_treatment_site

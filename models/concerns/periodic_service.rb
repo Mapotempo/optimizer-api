@@ -25,19 +25,21 @@ module PeriodicService
 
     return true if service.visits_number == 1
 
-    first_service_day = ((self.configuration.schedule.range_indices[:start]..self.configuration.schedule.range_indices[:end]).to_a - service.unavailable_days.to_a).min
-    self.vehicles.any?{ |vehicle|
-      next unless service.vehicle_compatibility.nil? || service.vehicle_compatibility[vehicle.id] # vehicle already eliminated
+    range_indices = self.configuration.schedule.range_indices
+    first_service_day = ((range_indices[:start]..range_indices[:end]).to_a - service.unavailable_days.to_a).min
 
-      current_day = [self.configuration.schedule.range_indices[:start], first_service_day].max
+    self.vehicles.any?{ |v|
+      next unless service.vehicle_compatibility.nil? || service.vehicle_compatibility[v.id] # vehcile already eliminated
+
+      current_day = [range_indices[:start], first_service_day].max
       decimal_day = current_day
       current_visit = 0
 
-      while current_visit < service.visits_number && current_day <= self.configuration.schedule.range_indices[:end]
-        if !vehicle.unavailable_days.include?(current_day) &&
-           (vehicle.timewindow.nil? && vehicle.sequence_timewindows.empty? ||
-           (vehicle.timewindow && (vehicle.timewindow.day_index.nil? || current_day % 7 == vehicle.timewindow.day_index)) ||
-           (vehicle.sequence_timewindows.any?{ |tw| tw.day_index.nil? || current_day % 7 == tw.day_index }))
+      while current_visit < service.visits_number && current_day <= range_indices[:end]
+        if !v.unavailable_days.include?(current_day) &&
+           (v.timewindow.nil? && v.sequence_timewindows.empty? ||
+           (v.timewindow && (v.timewindow.day_index.nil? || current_day % 7 == v.timewindow.day_index)) ||
+           (v.sequence_timewindows.any?{ |tw| tw.day_index.nil? || current_day % 7 == tw.day_index }))
           decimal_day += (service.minimum_lapse || 1)
           current_day = decimal_day.round
           current_visit += 1

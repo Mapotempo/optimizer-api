@@ -19,7 +19,11 @@ require './models/base'
 
 module Models
   class Relation < Base
-    ALL_OR_NONE_RELATIONS = %i[shipment meetup].freeze
+    ALL_OR_NONE_RELATIONS = %i[
+      meetup
+      shipment
+    ].freeze
+
     ALTERNATIVE_COMPATIBLE_RELATIONS = %i[
       order
       same_route
@@ -49,14 +53,62 @@ module Models
       vehicle_trips
     ].freeze
 
-    NO_LAPSE_TYPES = %i[same_vehicle same_route sequence order shipment meetup force_first never_first force_end].freeze
-    ONE_LAPSE_TYPES = %i[vehicle_group_number vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months].freeze
-    SEVERAL_LAPSE_TYPES = %i[minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse vehicle_trips].freeze
+    NO_LAPSE_TYPES = %i[
+      force_end
+      force_first
+      same_route
+      same_vehicle
+      sequence
+      shipment
+      meetup
+      never_first
+      order
+    ].freeze
 
-    ON_VEHICLES_TYPES = %i[vehicle_group_number vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months vehicle_trips].freeze
-    ON_SERVICES_TYPES = %i[same_vehicle same_route sequence order shipment meetup force_first never_first force_end minimum_day_lapse maximum_day_lapse minimum_duration_lapse maximum_duration_lapse].freeze
+    ONE_LAPSE_TYPES = %i[
+      vehicle_group_duration
+      vehicle_group_duration_on_months
+      vehicle_group_duration_on_weeks
+      vehicle_group_number
+    ].freeze
 
-    POSITION_TYPES = %i[order sequence shipment].freeze
+    SEVERAL_LAPSE_TYPES = %i[
+      maximum_day_lapse
+      maximum_duration_lapse
+      minimum_day_lapse
+      minimum_duration_lapse
+      vehicle_trips
+    ].freeze
+
+    ON_VEHICLES_TYPES = %i[
+      vehicle_group_duration
+      vehicle_group_duration_on_months
+      vehicle_group_duration_on_weeks
+      vehicle_group_number
+      vehicle_trips
+    ].freeze
+
+    ON_SERVICES_TYPES = %i[
+      force_end
+      force_first
+      maximum_day_lapse
+      maximum_duration_lapse
+      meetup
+      minimum_day_lapse
+      minimum_duration_lapse
+      never_first
+      order
+      same_route
+      same_vehicle
+      shipment
+      sequence
+    ].freeze
+
+    POSITION_TYPES = %i[
+      order
+      sequence
+      shipment
+    ].freeze
 
     field :type, default: :same_route, type: Symbol
     field :lapses, default: nil
@@ -68,7 +120,11 @@ module Models
     # Forced to do the validation in Grape params
     # validates_numericality_of :lapse, allow_nil: true
     # validates_numericality_of :periodicity, greater_than_or_equal_to: 1
-    # validates_inclusion_of :type, :in => %i(same_vehicle same_route sequence order minimum_day_lapse maximum_day_lapse shipment meetup maximum_duration_lapse vehicle_group_duration vehicle_group_duration_on_weeks vehicle_group_duration_on_months vehicle_trips)
+    # validates_inclusion_of :type,
+    #                        in: %i[same_vehicle same_route sequence order minimum_day_lapse
+    #                               maximum_day_lapse shipment meetup maximum_duration_lapse
+    #                               vehicle_group_duration vehicle_group_duration_on_weeks
+    #                               vehicle_group_duration_on_months vehicle_trips]
     def split_regarding_lapses
       # TODO : can we create relations from here ?
       # remove self.linked_ids
@@ -77,8 +133,8 @@ module Models
           [[self.linked_service_ids, self.linked_vehicle_ids, self.lapses.first]]
         else
           self.lapses.collect.with_index{ |lapse, index|
-            [self.linked_service_ids && self.linked_service_ids[index..index+1],
-             self.linked_vehicle_ids && self.linked_vehicle_ids[index..index+1],
+            [self.linked_service_ids && self.linked_service_ids[index..index + 1],
+             self.linked_vehicle_ids && self.linked_vehicle_ids[index..index + 1],
              lapse]
           }
         end

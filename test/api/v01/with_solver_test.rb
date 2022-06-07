@@ -69,7 +69,8 @@ class Api::V01::WithSolverTest < Minitest::Test
       vrp[:configuration][:resolution][:duration] = 20
       @job_id = submit_vrp api_key: 'ortools', vrp: vrp
       result = wait_status @job_id, 'completed', api_key: 'ortools'
-      assert_operator result['job']['graph'].size, :>, 1, 'Graph seems to have been overwritten at each call to blockcall'
+      assert_operator result['job']['graph'].size, :>, 1,
+                      'Graph seems to have been overwritten at each call to blockcall'
     end
     delete_completed_job @job_id, api_key: 'ortools' if @job_id
   end

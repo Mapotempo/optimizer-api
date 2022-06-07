@@ -24,7 +24,7 @@ module Cleanse
     # cleanse_empty_routes(result)
   end
 
-  def self.same_position(vrp, current)
+  def self.same_position(current)
     current.info.travel_time&.zero? || current.info.travel_distance&.zero?
   end
 
@@ -70,7 +70,7 @@ module Cleanse
     stop.loads.map{ |loa| loa.quantity.unit.id }.compact & capacity_unit_ids
   end
 
-  def self.cleanse_empties_fills(vrp, solution)
+  def self.cleanse_empties_fills(_vrp, solution)
     service_types = %i[pickup delivery service]
     solution.routes.each{ |route|
       vehicle = route.vehicle
@@ -80,12 +80,12 @@ module Cleanse
       route.stops.delete_if{ |stop|
         next unless service_types.include?(stop.type)
 
-        if previous_activity && stop && same_position(vrp, stop) &&
+        if previous_activity && stop && same_position(stop) &&
            same_empty_units(capacity_unit_ids, previous_activity, stop) &&
            !same_fill_units(capacity_unit_ids, previous_activity, stop)
           add_unnassigned(solution.unassigned_stops, stop, 'Duplicate empty service.')
           true
-        elsif previous_activity && stop && same_position(vrp, stop) &&
+        elsif previous_activity && stop && same_position(stop) &&
               same_fill_units(capacity_unit_ids, previous_activity, stop) &&
               !same_empty_units(capacity_unit_ids, previous_activity, stop)
           add_unnassigned(solution.unassigned_stops, stop, 'Duplicate fill service.')

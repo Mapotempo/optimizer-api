@@ -121,7 +121,10 @@ module Models
       refute generated_vrp.configuration.resolution.solver
       assert_empty generated_vrp.configuration.preprocessing.first_solution_strategy, 'first_solution_strategy'
 
-      ['path_cheapest_arc', 'global_cheapest_arc', 'local_cheapest_insertion', 'savings', 'parallel_cheapest_insertion', 'first_unbound', 'christofides'].each_with_index{ |heuristic, heuristic_reference|
+      [
+        'path_cheapest_arc', 'global_cheapest_arc', 'local_cheapest_insertion',
+        'savings', 'parallel_cheapest_insertion', 'first_unbound', 'christofides'
+      ].each_with_index{ |heuristic, heuristic_reference|
         vrp = VRP.basic
         vrp[:configuration][:resolution][:solver_parameter] = heuristic_reference
         generated_vrp = TestHelper.create(vrp)

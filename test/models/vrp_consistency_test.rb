@@ -48,15 +48,16 @@ module Models
        Models::Relation::ONE_LAPSE_TYPES,
        Models::Relation::SEVERAL_LAPSE_TYPES].each_with_index{ |types, index|
         lapses = index.zero? ? [] : [1]
-        types.each{ |relation_type|
-          next if %i[force_end force_first never_first].include?(relation_type) # those are supported with periodic heuristic
+        types.each{ |rel_type|
+          # those are supported with periodic heuristic
+          next if %i[force_end force_first never_first].include?(rel_type)
 
-          linked_ids = ['service_1', 'service_2'] if Models::Relation::ON_SERVICES_TYPES.include?(relation_type)
-          linked_vehicle_ids = ['vehicle_0', 'vehicle_0_dup'] if Models::Relation::ON_VEHICLES_TYPES.include?(relation_type)
+          linked_ids = %w[service_1 service_2] if Models::Relation::ON_SERVICES_TYPES.include?(rel_type)
+          linked_vehicle_ids = %w[vehicle_0 vehicle_0_dup] if Models::Relation::ON_VEHICLES_TYPES.include?(rel_type)
 
           vrp[:relations] = [
             {
-              type: relation_type,
+              type: rel_type,
               lapses: lapses,
               linked_ids: linked_ids,
               linked_vehicle_ids: linked_vehicle_ids
@@ -164,10 +165,12 @@ module Models
       vrp = VRP.basic
       vrp[:services][0][:activity][:point_id] = 'missing_point_id'
 
-      exception = assert_raises ActiveHash::RecordNotFound do
-        OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
-      end
-      assert_equal("Couldn't find Models::Point with ID=#{vrp[:services][0][:activity][:point_id].inspect}", exception.message)
+      exception =
+        assert_raises ActiveHash::RecordNotFound do
+          OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(vrp), nil)
+        end
+      assert_equal("Couldn't find Models::Point with ID=#{vrp[:services][0][:activity][:point_id].inspect}",
+                   exception.message)
     end
 
     def test_reject_if_shipments_and_periodic_heuristic
@@ -311,9 +314,10 @@ module Models
       vrp[:services].first[:visits_number] = 3
       vrp[:services].first[:minimum_lapse] = 14
       vrp[:services].first[:maximum_lapse] = 7
-      error = assert_raises OptimizerWrapper::DiscordantProblemError do
-        check_consistency(vrp)
-      end
+      error =
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          check_consistency(vrp)
+        end
       assert_equal 'Minimum lapse can not be bigger than maximum lapse', error.message
     end
 
@@ -341,9 +345,10 @@ module Models
       # complex shipment should be refused
       vrp[:relations] = [{ type: 'shipment', linked_service_ids: ['service_1', 'service_3'] },
                          { type: 'shipment', linked_service_ids: ['service_2', 'service_1'] }]
-      error = assert_raises OptimizerWrapper::UnsupportedProblemError do
-        check_consistency(TestHelper.coerce(vrp))
-      end
+      error =
+        assert_raises OptimizerWrapper::UnsupportedProblemError do
+          check_consistency(TestHelper.coerce(vrp))
+        end
       assert_equal 'A service cannot be both a delivery and a pickup in different relations. '\
                    'Following services appear in multiple shipment relations both as pickup and delivery: ',
                    error.message, 'Error message does not match'
@@ -355,9 +360,10 @@ module Models
       vrp[:relations] = [{ type: 'shipment', linked_service_ids: ['service_1', 'service_1'] },
                          { type: 'shipment', linked_service_ids: ['service_2'] },
                          { type: 'shipment', linked_service_ids: ['service_1', 'service_3'] }]
-      error = assert_raises OptimizerWrapper::DiscordantProblemError do
-        TestHelper.create(TestHelper.coerce(vrp))
-      end
+      error =
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          TestHelper.create(TestHelper.coerce(vrp))
+        end
       assert_equal 'Shipment relations need to have two services -- a pickup and a delivery. ' \
                    'Relations of following services does not have exactly two linked_ids: ' \
                    'service_1, service_2',
@@ -381,10 +387,14 @@ module Models
     def test_ensure_no_skill_matches_with_internal_skills_format
       vrp = VRP.basic
       vrp[:services].first[:skills] = ['vehicle_partition_for_test']
-      error = assert_raises OptimizerWrapper::UnsupportedProblemError do
-        check_consistency(vrp)
-      end
-      assert_equal "There are vehicles or services with 'vehicle_partition_*', 'work_day_partition_*' skills. These skill patterns are reserved for internal use and they would lead to unexpected behaviour.", error.message
+      error =
+        assert_raises OptimizerWrapper::UnsupportedProblemError do
+          check_consistency(vrp)
+        end
+      expected_error_message = "There are vehicles or services with 'vehicle_partition_*', "\
+                               "'work_day_partition_*' skills. These skill patterns are reserved "\
+                               "for internal use and they would lead to unexpected behaviour."
+      assert_equal expected_error_message, error.message
     end
 
     def test_reject_when_duplicated_ids
@@ -459,14 +469,16 @@ module Models
 
       vrp[:vehicles][1][:timewindow] = nil
       vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 10 }}
-      vrp[:vehicles][1][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 }, { start: 0, end: 10, day_index: 1 }]
+      vrp[:vehicles][1][:sequence_timewindows] =
+        [{ start: 0, end: 10, day_index: 0 }, { start: 0, end: 10, day_index: 1 }]
       # vehicles have common day index 0 but they are still not available at exact same days
       assert_raises OptimizerWrapper::DiscordantProblemError do
         check_consistency(vrp)
       end
 
       vrp[:vehicles][0][:timewindow] = nil
-      vrp[:vehicles][0][:sequence_timewindows] = [{ start: 0, end: 10, day_index: 0 }, { start: 0, end: 10, day_index: 1 }]
+      vrp[:vehicles][0][:sequence_timewindows] =
+        [{ start: 0, end: 10, day_index: 0 }, { start: 0, end: 10, day_index: 1 }]
       check_consistency(vrp) # this should not raise
     end
 
@@ -545,26 +557,29 @@ module Models
         TestHelper.vehicle_trips_relation(vrp[:vehicles][0..1]),
         TestHelper.vehicle_trips_relation(vrp[:vehicles][1..2]),
       ]
-      error = assert_raises OptimizerWrapper::UnsupportedProblemError do
-        check_consistency(vrp)
-      end
+      error =
+        assert_raises OptimizerWrapper::UnsupportedProblemError do
+          check_consistency(vrp)
+        end
       assert_equal 'A vehicle cannot appear in more than one vehicle_trips relation', error.message
     end
 
     def test_reject_when_unfeasible_vehicle_timewindows
       vrp = VRP.toy
       vrp[:vehicles].first[:timewindow] = { start: 10000, end: 0 }
-      error = assert_raises OptimizerWrapper::DiscordantProblemError do
-        check_consistency(vrp)
-      end
+      error =
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          check_consistency(vrp)
+        end
       assert_equal 'Vehicle timewindows are infeasible',
                    error.message, 'Error message does not match'
 
       vrp[:vehicles].first[:timewindow] = nil
       vrp[:vehicles].first[:sequence_timewindows] = [{ start: 100, end: 200}, { start: 150, end: 100 }]
-      error = assert_raises OptimizerWrapper::DiscordantProblemError do
-        check_consistency(vrp)
-      end
+      error =
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          check_consistency(vrp)
+        end
       assert_equal 'Vehicle timewindows are infeasible',
                    error.message, 'Error message does not match'
     end
@@ -575,7 +590,8 @@ module Models
       problem[:shipments].first[:pickup][:timewindows] = [{ start: 6, end: 9}]
       problem[:shipments].first[:delivery][:timewindows] = [{ start: 1, end: 5}]
 
-      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup), nil)
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, TestHelper.create(problem.dup),
+                                               nil)
 
       reasons = solutions[0].unassigned_stops.flat_map{ |u| u[:reason].split(' && ') }
 
@@ -587,7 +603,8 @@ module Models
 
       reasons = solutions[0].unassigned_stops.flat_map{ |u| u[:reason].split(' && ') }
 
-      assert_includes reasons, 'Service belongs to a relation of type shipment which makes it infeasible', 'Expected an unfeasible shipment'
+      assert_includes reasons, 'Service belongs to a relation of type shipment which makes it infeasible',
+                      'Expected an unfeasible shipment'
 
       problem[:shipments].first[:delivery][:timewindows] = [Models::Timewindow.create(start: 1, end: 18)]
 
@@ -721,9 +738,10 @@ module Models
       check_consistency(vrp) # no error expected because we can ignore day indices if they are all the same
 
       vrp[:services][1][:activity][:timewindows] = [{ day_index: 1 }]
-      error = assert_raises OptimizerWrapper::DiscordantProblemError do
-        check_consistency(vrp)
-      end
+      error =
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          check_consistency(vrp)
+        end
       assert_equal 'There cannot be different day indices if no schedule is provided', error.message
     end
 
@@ -731,9 +749,10 @@ module Models
       vrp = VRP.basic
       vrp[:vehicles][0].delete(:timewindow)
       vrp[:vehicles][0][:sequence_timewindows] = [{ start: 0, end: 10 }]
-      error = assert_raises OptimizerWrapper::UnsupportedProblemError do
-        check_consistency(vrp)
-      end
+      error =
+        assert_raises OptimizerWrapper::UnsupportedProblemError do
+          check_consistency(vrp)
+        end
       assert_equal 'Vehicle[:sequence_timewindows] are only available when a schedule is provided', error.message
     end
 
@@ -742,9 +761,10 @@ module Models
       vrp[:routes] = [{ mission_ids: [], day_index: 0 }]
       check_consistency(vrp) # no error expected because we have one route and only one vehicle
       vrp[:vehicles][0][:timewindow] = { day_index: 1 }
-      error = assert_raises OptimizerWrapper::DiscordantProblemError do
-        check_consistency(vrp) # one route and only one vehicle, but day indices do not match
-      end
+      error =
+        assert_raises OptimizerWrapper::DiscordantProblemError do
+          check_consistency(vrp) # one route and only one vehicle, but day indices do not match
+        end
       assert_equal 'There cannot be different day indices if no schedule is provided', error.message
 
       vrp[:configuration][:schedule] = { mission_ids: [], range_indices: { start: 0, end: 3 }}

@@ -43,21 +43,26 @@ module Helper
       raise 'Keys cannot be both overridden and shallow copied' if (override.keys & shallow_copy).any?
 
       # if an option doesn't exist for the current object level, pass it to lower levels
-      unused_override = override.select{ |key, _value|
-        [
-          key, "#{key}_id", "#{key[0..-2]}_ids", "#{key[0..-4]}y_ids", key[0..-4], "#{key[0..-6]}ies", "#{key[0..-5]}s"
-        ].none?{ |k| original.class.method_defined?(k.to_sym) }
-      }
+      unused_override =
+        override.select{ |key, _value|
+          [
+            key, "#{key}_id", "#{key[0..-2]}_ids",
+            "#{key[0..-4]}y_ids", key[0..-4], "#{key[0..-6]}ies", "#{key[0..-5]}s"
+          ].none?{ |k| original.class.method_defined?(k.to_sym) }
+        }
 
-      unused_shallow_copy = shallow_copy.select{ |key|
-        [
-          key, "#{key}_id", "#{key[0..-2]}_ids", "#{key[0..-4]}y_ids", key[0..-4], "#{key[0..-6]}ies", "#{key[0..-5]}s"
-        ].none?{ |k| original.class.method_defined?(k.to_sym) }
-      }
+      unused_shallow_copy =
+        shallow_copy.select{ |key|
+          [
+            key, "#{key}_id", "#{key[0..-2]}_ids",
+            "#{key[0..-4]}y_ids", key[0..-4], "#{key[0..-6]}ies", "#{key[0..-5]}s"
+          ].none?{ |k| original.class.method_defined?(k.to_sym) }
+        }
 
       # if a non-"id" version of the key exists, then prefer the hash of the non-id method (i.e., skip x_id(s))
       # so that the objects are generated from scratch instead of re-used.
-      # Unless the key or key_id is marked as shallow_copy (then use the object) or the key or key_id is given in override.
+      # Unless the key or key_id is marked as shallow_copy (then use the object)
+      # or the key or key_id is given in override.
       keys = original.attributes.keys.flat_map{ |key|
         [
           key[0..-4].to_sym, "#{key[0..-6]}ies".to_sym, "#{key[0..-5]}s".to_sym, key
@@ -124,8 +129,8 @@ module Helper
         next if new_route.info.send(stat).nil? && solution.routes[old_index].info.send(stat).nil?
 
         solution.info.send("#{stat}=",
-                              solution.info.send(stat) + new_route.info.send(stat) -
-                              solution.routes[old_index].info.send(stat))
+                           solution.info.send(stat) + new_route.info.send(stat) -
+                           solution.routes[old_index].info.send(stat))
       }
     }
     solution
@@ -161,20 +166,28 @@ class Numeric
   # array = [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]
   #
   # With round():
-  # array.collect{ |val| val.round(1) }.uniq      :=>      [0.1, 0.2]                                                       # too little
-  # array.collect{ |val| val.round(2) }.uniq      :=>      [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2] # too much
+  # array.collect{ |val| val.round(1) }.uniq
+  #   :=>      [0.1, 0.2]                                                       # too little
+  # array.collect{ |val| val.round(2) }.uniq
+  #   :=>      [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2] # too much
   #
   # With nsteps the number of uniq elements between two decimals can be controlled:
-  # array.collect{ |val| val.round_with_steps(1, 0) }.uniq      :=>     [0.1, 0.2]                                                         # same with round(1)
-  # array.collect{ |val| val.round_with_steps(1, 1) }.uniq      :=>     [0.1, 0.15, 0.2]                                                   # one extra step in between
-  # array.collect{ |val| val.round_with_steps(1, 2) }.uniq      :=>     [0.1, 0.13, 0.17, 0.2]                                             # two extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 0) }.uniq
+  #   :=>     [0.1, 0.2]                                                         # same with round(1)
+  # array.collect{ |val| val.round_with_steps(1, 1) }.uniq
+  #   :=>     [0.1, 0.15, 0.2]                                                   # one extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 2) }.uniq
+  #   :=>     [0.1, 0.13, 0.17, 0.2]                                             # two extra step in between
   # ...
-  # array.collect{ |val| val.round_with_steps(1, 8) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2]         # eigth extra step in between
-  # array.collect{ |val| val.round_with_steps(1, 9) }.uniq      :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]   # same with round(2)
+  # array.collect{ |val| val.round_with_steps(1, 8) }.uniq
+  #   :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.16, 0.17, 0.18, 0.19, 0.2]         # eight extra step in between
+  # array.collect{ |val| val.round_with_steps(1, 9) }.uniq
+  #   :=>     [0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2]   # same with round(2)
   #
   # Theoretically, val.round_with_steps(ndigits, nsteps) is
   # equivalent to  val.round_to_multiple_of(1.0 / (nsteps + 1) / 10**ndigits )
   def round_with_steps(ndigits, nsteps = 0)
-    self.round_to_multiple_of(1.fdiv((nsteps + 1) * 10**ndigits)).round(ndigits + 1) # same as ((self * (nsteps + 1.0)).round(ndigits) / (nsteps + 1.0)).round(ndigits + 1)
+    # same as ((self * (nsteps + 1.0)).round(ndigits) / (nsteps + 1.0)).round(ndigits + 1)
+    self.round_to_multiple_of(1.fdiv((nsteps + 1) * 10**ndigits)).round(ndigits + 1)
   end
 end

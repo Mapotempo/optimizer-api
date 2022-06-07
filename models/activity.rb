@@ -34,10 +34,10 @@ module Models
     belongs_to :point, class_name: 'Models::Point', as_json: :id, vrp_result: :hide
     has_many :timewindows, class_name: 'Models::Timewindow'
     # include ValidateTimewindows # FIXME: <- This is commented out because of the above reason.
-                                  # Commenting out would make the ActivityTest::test_timewindows pass; however,
-                                  # the code would continue to accept invalid time windows thorugh API because
-                                  # vrp.valid? doesn't call the validator of activity
-                                  # We need to implement a check inside Api::V01::Vrp and fix the ActivityTest::test_timewindows accordingly
+    # Commenting out would make the ActivityTest::test_timewindows pass; however,
+    # the code would continue to accept invalid time windows thorugh API because
+    # vrp.valid? doesn't call the validator of activity
+    # We need to implement a check inside Api::V01::Vrp and fix the ActivityTest::test_timewindows accordingly
 
     def vrp_result(options = {})
       hash = super(options)

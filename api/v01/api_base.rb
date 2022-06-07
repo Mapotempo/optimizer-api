@@ -30,7 +30,9 @@ module Api
       end
 
       def self.profile(api_key)
-        raise 'Profile missing in configuration' unless ::OptimizerWrapper.config[:profiles].has_key? ::OptimizerWrapper.access[api_key][:profile]
+        unless ::OptimizerWrapper.config[:profiles].key? ::OptimizerWrapper.access[api_key][:profile]
+          raise 'Profile missing in configuration'
+        end
 
         ::OptimizerWrapper.config[:profiles][::OptimizerWrapper.access[api_key][:profile]].deep_merge(
           ::OptimizerWrapper.access[api_key].except(:profile)

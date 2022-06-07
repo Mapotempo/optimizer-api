@@ -10,6 +10,9 @@ AllCops:
     - 'tmp/**/*'
     - 'vendor/bundle/**/*'
     - 'config/initializers/local.rb'
+    - 'lib/routers/router_wrapper.rb'
+    - 'wrappers/ortools_result_pb.rb' # auto-genereated file
+    - 'wrappers/ortools_vrp_pb.rb'    # auto-genereated file
 
 Style/FrozenStringLiteralComment:
   Exclude:
@@ -28,8 +31,29 @@ Style/GuardClause:
 Style/NumericPredicate:
   Enabled: false
 
+# We prefer standardizing on double-quoted strings for readability.
+# However, there are too many offenses so they are disable here.
+#
+# This is what rails, github, google, etc does to minimize conflicts
+# https://github.com/rails/rails/blob/4732514bb0af535bc7209a67f3823b2ebcb52848/.rubocop.yml#L184
+# https://github.com/github/rubocop-github/blob/93fd172c92b8abd6518ce9366c150a0e4e43d037/config/_default_shared.yml#L327
+# https://github.com/googleapis/ruby-style/blob/0181b5295790a7edec289cc482995d0d395cb884/google-style.yml#L356
+Style/StringLiterals:
+  Enabled: false
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  Enabled: false
+  EnforcedStyle: double_quotes
+
+Style/TernaryParentheses:
+  EnforcedStyle: require_parentheses_when_complex
+
 # Style/UnlessLogicalOperators: # TODO: activate when rubocop gem is upgraded
 #   EnforcedStyle: forbid_logical_operators
+
+Layout/CommentIndentation:
+  Enabled: true
 
 Layout/EmptyLines:
   Severity: warning
@@ -42,3 +66,15 @@ Layout/IndentationConsistency:
 
 Layout/IndentationWidth:
   Severity: warning
+
+Layout/MultilineAssignmentLayout:
+  Enabled: true
+
+Layout/LineLength:
+  # These files have long description sections
+  Exclude:
+  - 'api/api_v01.rb'
+  - 'api/v01/api.rb'
+  - 'api/v01/entities/vrp_input.rb'
+  - 'api/v01/entities/vrp_result.rb'
+  - 'api/v01/vrp.rb'

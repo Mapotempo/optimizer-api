@@ -168,7 +168,8 @@ module Parsers
           extra_time = stop.info.begin_time - previous_end - used_travel_time
           # setup_duration consumed by the current rest is at most the next stop setup_duration or
           # the extra_time between this stop and the previous one.
-          # In other words we try as much as possible to reduce the waiting time by performing setup durations before the rests.
+          # In other words we try as much as possible to reduce the waiting time
+          # by performing setup durations before the rests.
           considered_setup = [extra_time, potential_setup].min
           consumed_setup_time += considered_setup
         else
@@ -225,9 +226,9 @@ module Parsers
 
       unless segments.empty?
         info = vrp.router.compute_batch(OptimizerWrapper.config[:router][:url],
-                                                     @route.vehicle.router_mode.to_sym, @route.vehicle.router_dimension,
-                                                     segments, vrp.configuration.restitution.geometry.include?(:encoded_polylines),
-                                                     @route.vehicle.router_options)
+                                        @route.vehicle.router_mode.to_sym, @route.vehicle.router_dimension,
+                                        segments, vrp.configuration.restitution.geometry.include?(:encoded_polylines),
+                                        @route.vehicle.router_options)
         raise RouterError.new('Route info cannot be received') unless info
       end
 

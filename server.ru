@@ -22,11 +22,11 @@ use Rack::Cors do
   allow do
     origins '*'
     resource '*',
-      headers: :any,
-      methods: :any,
-      expose: ['Cache-Control', 'Content-Encoding', 'Content-Type'],
-      max_age: 1728000,
-      credentials: false
+             headers: :any,
+             methods: :any,
+             expose: ['Cache-Control', 'Content-Encoding', 'Content-Type'],
+             max_age: 1728000,
+             credentials: false
   end
 end
 
@@ -39,7 +39,7 @@ use Rack::ServerPages do |config|
 end
 run Rack::ServerPages::NotFound
 
-#\ -p 1791
+# \ -p 1791
 run Api::Root
 
 use ActionDispatch::RemoteIp

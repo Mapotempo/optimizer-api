@@ -12,7 +12,7 @@ env:
 
 jobs:
 
-  rubocop_error:
+  rubocop:
     runs-on: ubuntu-latest
     env:
       OPTIONS: "APP_ENV=rubocop"
@@ -24,27 +24,28 @@ jobs:
         with:
           ruby-version: 2.5.7
           bundler-cache: true
-      - name: Run RuboCop
+      - name: Run RuboCop Error
         run: bundle exec rubocop --parallel -f c --config .rubocop.yml --fail-level E --display-only-fail-level-offenses
-
-  rubocop_warning:
-    runs-on: ubuntu-latest
-    env:
-      OPTIONS: "APP_ENV=rubocop"
-      BUNDLE_GEMFILE: ${{ github.workspace }}/Gemfile
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: 2.5.7
-          bundler-cache: true
-      - name: Run RuboCop
+      - name: Run RuboCop Warning
         run: bundle exec rubocop --parallel -f c --config .rubocop.yml --fail-level W --display-only-fail-level-offenses
+      - name: Run Lint, Security, Bundler and Gemspec cops
+        run: bundle exec rubocop --parallel -f c --config .rubocop.yml --only Lint,Security,Bundler,Gemspec
+      - name: Run Performance cops
+        run: bundle exec rubocop --parallel -f c --config .rubocop.yml --only Performance
+      - name: Run Layout cops
+        # Run `bundle exec rubocop --fix-layout` to fix layout issues
+        run: bundle exec rubocop --parallel -f c --config .rubocop.yml --only Layout
+        # Activate auto-formatting instead of disabling this check
+        # On vscode set the following two options and install ruby-rubocop extention to automate the layout formatting:
+        # "editor.formatOnSave": true, "editor.formatOnSaveMode": "modificationsIfAvailable"
+        # On sublimetext install Sublime RuboCop package and active auto formatting on file save
+      - name: Run Style cops
+        # run `bundle exec rubocop --auto-correct --only Style` to fix style issues
+        run: bundle exec rubocop --parallel -f c --config .rubocop.yml --only Style
 
   build:
     if: github.event.pull_request.draft == false
-    needs: rubocop_error
+    needs: rubocop
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

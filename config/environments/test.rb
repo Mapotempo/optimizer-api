@@ -28,16 +28,18 @@ module OptimizerWrapper
   FileUtils.mkdir_p(TMP_DIR) unless File.directory?(TMP_DIR)
   @@tmp_vrp_dir = CacheManager.new(TMP_DIR)
 
-  HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings parallel_cheapest_insertion first_unbound christofides].freeze
+  HEURISTICS = %w[path_cheapest_arc global_cheapest_arc local_cheapest_insertion savings
+                  parallel_cheapest_insertion first_unbound christofides].freeze
   WEEKDAYS = %i[mon tue wed thu fri sat sun].freeze
   DEMO = Wrappers::Demo.new(tmp_dir: TMP_DIR)
   VROOM = Wrappers::Vroom.new(tmp_dir: TMP_DIR, threads: 1)
   # if dependencies don't exist (libprotobuf10 on debian) provide or-tools dependencies location
-  ORTOOLS_EXEC = 'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'.freeze
+  ORTOOLS_EXEC =
+    'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'.freeze
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
 
   PARAMS_LIMIT = { points: 150, vehicles: 10 }.freeze
-  QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }] # Only taken into account if REDIS_COUNT
+  QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }].freeze # Only taken into account if REDIS_COUNT
   REDIS_COUNT = ENV['REDIS_COUNT_HOST'] && Redis.new(host: ENV['REDIS_COUNT_HOST']) || Redis.new
 
   DUMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'test', 'dump')

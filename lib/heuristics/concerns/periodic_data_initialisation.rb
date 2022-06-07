@@ -75,17 +75,19 @@ module PeriodicDataInitialization
     }
 
     routes.sort_by(&:day_index).each{ |defined_route|
-      # TODO : try to affect missing visits with add_missing visits functions (because plan_service_next_visits only plans after last planned day, not in between)
+      # TODO : try to affect missing visits with add_missing visits functions
+      # (because plan_service_next_visits only plans after last planned day, not in between)
       # Should plan_service_next_visits use this logic always ?
       plan_visits_missing_in_routes(defined_route.vehicle_id, defined_route.day_index.to_i)
     }
 
     considered_ids.each{ |id|
-      @services_assignment[id][:missing_visits] = @services_data[id][:raw].visits_number - @services_assignment[id][:days].size
+      @services_assignment[id][:missing_visits] = @services_data[id][:raw].visits_number -
+                                                  @services_assignment[id][:days].size
       next unless @services_assignment[id][:missing_visits].positive?
 
-      @services_assignment[id][:unassigned_reasons] |=
-        ['Routes provided do not allow to assign this visit because previous visit could not be planned in specified route']
+      @services_assignment[id][:unassigned_reasons] |= ['Routes provided do not allow to assign this visit because '\
+                                                        'previous visit could not be planned in specified route']
     }
   end
 
@@ -128,16 +130,22 @@ module PeriodicDataInitialization
 
   def collect_services_data(vrp)
     available_units = vrp.vehicles.flat_map{ |v| v.capacities.collect{ |capacity| capacity.unit.id } }.uniq
-    one_working_day_per_vehicle = @candidate_routes.all?{ |_vehicle_id, all_routes| all_routes.keys.uniq{ |day| day % 7 }.size == 1 }
+    one_working_day_per_vehicle =
+      @candidate_routes.all?{ |_vehicle_id, all_routes| all_routes.keys.uniq{ |day| day % 7 }.size == 1 }
     vrp.services.each{ |service|
-      @services_assignment[service.id] = { vehicles: [], days: [], missing_visits: service.visits_number, unassigned_reasons: [] }
+      @services_assignment[service.id] = { vehicles: [], days: [], missing_visits: service.visits_number,
+                                           unassigned_reasons: [] }
       @services_data[service.id] = {
         raw: service,
         capacity: compute_capacities(service.quantities, false, available_units),
-        setup_durations: service.activity ? [service.activity.setup_duration] : service.activities.collect(&:setup_duration),
+        setup_durations: service.activity ?
+                           [service.activity.setup_duration] :
+                           service.activities.collect(&:setup_duration),
         durations: service.activity ? [service.activity.duration] : service.activities.collect(&:duration),
         heuristic_period: compute_period(service, one_working_day_per_vehicle),
-        points_ids: service.activity ? [service.activity.point.id || service.activity.point.matrix_id] : service.activities.collect{ |a| a.point.id || a.point.matrix_id },
+        points_ids: service.activity ?
+                      [service.activity.point.id || service.activity.point.matrix_id] :
+                      service.activities.collect{ |a| a.point.id || a.point.matrix_id },
         tws_sets: service.activity ? [service.activity.timewindows] : service.activities.collect(&:timewindows),
         priority: service.priority,
         sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
@@ -149,7 +157,8 @@ module PeriodicDataInitialization
         @candidate_services_ids << service.id
         @to_plan_service_ids << service.id
       else
-        reject_all_visits(service.id, service.visits_number, 'First and last possible days do not allow this service planification')
+        reject_all_visits(service.id, service.visits_number,
+                          'First and last possible days do not allow this service planification')
       end
     }
 
@@ -161,7 +170,10 @@ module PeriodicDataInitialization
 
     @to_plan_service_ids = []
     vrp.points.each{ |point|
-      same_located_set = @services_data.select{ |_id, data| data[:points_ids].include?(point.id) }.sort_by{ |_id, data| data[:raw].visits_number }
+      same_located_set =
+        @services_data.select{ |_id, data|
+          data[:points_ids].include?(point.id)
+        }.sort_by{ |_id, data| data[:raw].visits_number }
 
       next if same_located_set.empty?
 
@@ -216,7 +228,9 @@ module PeriodicDataInitialization
 
   def compute_latest_authorized
     @services_data.group_by{ |_id, data| [data[:raw].visits_number, data[:heuristic_period]] }.each{ |_parameters, set|
-      latest_day = set.max_by{ |_service, data| data[:raw].last_possible_days.first }.last[:raw].last_possible_days.first # first is for first visit
+      latest_day = set.max_by{ |_service, data|
+        data[:raw].last_possible_days.first
+      }.last[:raw].last_possible_days.first # first is for first visit
 
       @candidate_routes.each{ |vehicle_id, all_routes|
         all_routes.each_key{ |day|
@@ -232,7 +246,11 @@ module PeriodicDataInitialization
     ### finds the biggest tw common to all services in [set] ###
     first_with_tw = set.find{ |_id, data| !data[:tws_sets].first.empty? }
     if first_with_tw
-      group_tw = @services_data[first_with_tw[0]][:tws_sets].first.collect{ |tw| { day_index: tw[:day_index], start: tw[:start], end: tw[:end] } }
+      group_tw =
+        @services_data[first_with_tw[0]][:tws_sets].first.collect{ |tw|
+          { day_index: tw[:day_index],
+            start: tw[:start], end: tw[:end] }
+        }
       # all timewindows are assigned to a day
       group_tw.select{ |timewindow| timewindow[:day_index].nil? }.each{ |tw|
         (0..6).each{ |day|
@@ -258,11 +276,13 @@ module PeriodicDataInitialization
 
         # adjust all tws with intersections with this point tws
         data[:tws_sets].first.each{ |tw1|
-          intersecting_tws = group_tw.select{ |tw2|
-            (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
-              (tw2[:start] <= tw1[:start] || tw1[:end].nil? || tw2[:start].between?(tw1[:start], tw1[:end])) &&
-              (tw2[:end].nil? || tw1[:end].nil? || tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:end] >= tw1[:end])
-          }
+          intersecting_tws =
+            group_tw.select{ |tw2|
+              (tw1[:day_index].nil? || tw2[:day_index].nil? || tw1[:day_index] == tw2[:day_index]) &&
+                (tw2[:start] <= tw1[:start] || tw1[:end].nil? || tw2[:start].between?(tw1[:start], tw1[:end])) &&
+                (tw2[:end].nil? || tw1[:end].nil? ||
+                  tw2[:end].between?(tw1[:start], tw1[:end]) || tw2[:end] >= tw1[:end])
+            }
           next if intersecting_tws.empty?
 
           intersecting_tws.each{ |tw2|

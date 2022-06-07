@@ -48,9 +48,11 @@ module Models
     # The following 7 variables are used for dicho development
     # TODO: Wait for the dev to finish to expose the dicho parameters
     # The last one is on the api in a hidden way
-    field :dicho_level_coeff, default: 1.1 # This variable is calculated inside dicho by default (TODO: check if it is really necessary)
+    # This variable is calculated inside dicho by default (TODO: check if it is really necessary)
+    field :dicho_level_coeff, default: 1.1
     field :dicho_algorithm_vehicle_limit, default: 10
-    field :dicho_division_service_limit, default: 100 # This variable needs to corrected using the average number of services per vehicle.
+    # This variable needs to corrected using the average number of services per vehicle.
+    field :dicho_division_service_limit, default: 100
     field :dicho_division_vehicle_limit, default: 3
     field :dicho_exclusion_scaling_angle, default: 38
     field :dicho_inclusion_rate, default: 0.6

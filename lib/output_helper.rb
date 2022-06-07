@@ -43,8 +43,8 @@ module OutputHelper
     def self.generate_periodic_header(solutions_set)
       if solutions_set.any?{ |solution|
            solution[:routes].any?{ |route|
-            route[:original_vehicle_id] != route[:vehicle_id]
-          }
+             route[:original_vehicle_id] != route[:vehicle_id]
+           }
          }
         [true, [I18n.t('export_file.plan.name'), I18n.t('export_file.plan.ref')]]
       else
@@ -138,10 +138,11 @@ module OutputHelper
       days_info = periodic ? [activity[:day_week_num], activity[:day_week]] : []
       common = build_csv_activity(name, route, activity)
       timewindows = build_csv_timewindows(activity, max_timewindows_size)
-      quantities = unit_ids.collect{ |unit_id|
-        quantity = activity[:detail][:quantities]&.find{ |qty| qty[:unit] == unit_id }
-        quantity[:value] if quantity
-      }
+      quantities =
+        unit_ids.collect{ |unit_id|
+          quantity = activity[:detail][:quantities]&.find{ |qty| qty[:unit] == unit_id }
+          quantity[:value] if quantity
+        }
       (days_info + common + quantities + timewindows + reason + complementary_data(route, activity))
     end
 
@@ -223,12 +224,14 @@ module OutputHelper
             route[:activities].each{ |activity|
               reason = any_unassigned ? [nil] : []
               output_csv << activity_line(
-                activity, route, solution[:name], unit_ids, max_timewindows_size, periodic, reason)
+                activity, route, solution[:name], unit_ids, max_timewindows_size, periodic, reason
+              )
             }
           }
           solution[:unassigned].each{ |activity|
             output_csv << activity_line(
-              activity, nil, solution[:name], unit_ids, max_timewindows_size, periodic, [activity[:reason]])
+              activity, nil, solution[:name], unit_ids, max_timewindows_size, periodic, [activity[:reason]]
+            )
           }
         }
       }
@@ -239,12 +242,14 @@ module OutputHelper
   class Clustering
     def self.generate_files(all_service_vrps, two_stages = false, job = nil)
       vrp_name = all_service_vrps.first[:vrp].name
-      file_name = ('generated_clusters' + '_' + [vrp_name, job, Time.now.strftime('%H:%M:%S')].compact.join('_')).parameterize
+      file_name = ('generated_clusters' + '_' + [vrp_name, job,
+                                                 Time.now.strftime('%H:%M:%S')].compact.join('_')).parameterize
 
       polygons = []
       csv_lines = [['id', 'lat', 'lon', 'cluster', 'vehicles_ids', 'vehicle_tw_if_only_one']]
       all_service_vrps.each_with_index{ |service_vrp, cluster_index|
-        polygons << collect_hulls(service_vrp) # unless service_vrp[:vrp].services.empty? -----> possible to get here if cluster empty ??
+        # unless service_vrp[:vrp].services.empty? -----> possible to get here if cluster empty ??
+        polygons << collect_hulls(service_vrp)
         service_vrp[:vrp].services.each{ |service|
           csv_lines << csv_line(service_vrp[:vrp], service, cluster_index, two_stages)
         }
@@ -255,9 +260,10 @@ module OutputHelper
         features: polygons.compact
       }.to_json)
 
-      csv_string = CSV.generate do |out_csv|
-        csv_lines.each{ |line| out_csv << line }
-      end
+      csv_string =
+        CSV.generate do |out_csv|
+          csv_lines.each{ |line| out_csv << line }
+        end
 
       Api::V01::APIBase.dump_vrp_dir.write(file_name + '_csv', csv_string)
 
@@ -266,28 +272,35 @@ module OutputHelper
     end
 
     def self.collect_hulls(service_vrp)
-      vector = service_vrp[:vrp].services.collect{ |service|
-        [service.activity.point.location.lon, service.activity.point.location.lat]
-      }
+      vector =
+        service_vrp[:vrp].services.collect{ |service|
+          [service.activity.point.location.lon, service.activity.point.location.lat]
+        }
       hull = Hull.get_hull(vector)
       return nil if hull.nil?
 
-      unit_objects = service_vrp[:vrp].units.collect{ |unit|
-        {
-          unit_id: unit.id,
-          value: service_vrp[:vrp].services.collect{ |service|
-            service_quantity = service.quantities.find{ |quantity| quantity.unit_id == unit.id }
-            service_quantity&.value || 0
-          }.reduce(&:+)
+      unit_objects =
+        service_vrp[:vrp].units.collect{ |unit|
+          {
+            unit_id: unit.id,
+            value: service_vrp[:vrp].services.collect{ |service|
+              service_quantity = service.quantities.find{ |quantity| quantity.unit_id == unit.id }
+              service_quantity&.value || 0
+            }.reduce(&:+)
+          }
         }
-      }
-      duration = service_vrp[:vrp][:services].group_by{ |s| s.activity.point_id }.map{ |_point_id, ss|
-        first = ss.min_by{ |s| -s.visits_number }
-        duration = first.activity.setup_duration * first.visits_number + ss.map{ |s| s.activity.duration * s.visits_number }.sum
-      }.sum
+      duration =
+        service_vrp[:vrp][:services].group_by{ |s| s.activity.point_id }.sum{ |_point_id, ss|
+          first = ss.min_by{ |s| -s.visits_number }
+          first.activity.setup_duration * first.visits_number + ss.sum{ |s| s.activity.duration * s.visits_number }
+        }
       {
         type: 'Feature',
-        properties: Hash[unit_objects.collect{ |unit_object| [unit_object[:unit_id].to_sym, unit_object[:value]] } + [[:duration, duration]] + [[:vehicle, (service_vrp[:vrp].vehicles.size == 1) ? service_vrp[:vrp].vehicles.first&.id : nil]]],
+        properties: Hash[
+          unit_objects.collect{ |unit_object| [unit_object[:unit_id].to_sym, unit_object[:value]] } +
+          [[:duration, duration]] +
+          [[:vehicle, service_vrp[:vrp].vehicles.size == 1 ? service_vrp[:vrp].vehicles.first&.id : nil]]
+        ],
         geometry: {
           type: 'Polygon',
           coordinates: [hull + [hull.first]]
@@ -326,8 +339,9 @@ module OutputHelper
         vehicle_color_indices = solution[:routes]&.map&.with_index{ |route, index|
           [route[:original_vehicle_id], index]
         }&.to_h
-
-        geojson[:partitions] = generate_partitions_geometry(solution, vehicle_color_indices) if expected_geometry.include?(:partitions)
+        if expected_geometry.include?(:partitions)
+          geojson[:partitions] = generate_partitions_geometry(solution, vehicle_color_indices)
+        end
         geojson[:points] = generate_points_geometry(solution, vehicle_color_indices)
         if expected_geometry.include?(:polylines) && OptimizerWrapper.config[:restitution][:allow_polylines]
           geojson[:polylines] = generate_polylines_geometry(solution, vehicle_color_indices)
@@ -336,168 +350,177 @@ module OutputHelper
       }
     end
 
-    private
+    class << self
+      private
 
-    def self.generate_partitions_geometry(result, vehicle_color_indices)
-      activities = result[:routes].flat_map{ |r|
-        r[:activities].select{ |a| a[:type] != 'depot' && a[:type] != 'rest' }
-      }
-      elements = activities + result[:unassigned]
-      all_skills = elements.flat_map{ |a| a[:detail][:internal_skills] }.uniq
+      def generate_partitions_geometry(result, vehicle_color_indices)
+        activities =
+          result[:routes].flat_map{ |r|
+            r[:activities].select{ |a| a[:type] != 'depot' && a[:type] != 'rest' }
+          }
+        elements = activities + result[:unassigned]
+        all_skills = elements.flat_map{ |a| a[:detail][:internal_skills] }.uniq
 
-      has_vehicle_partition = all_skills.any?{ |skill| skill.to_s.start_with?('vehicle_partition_') }
-      has_work_day_partition = all_skills.any?{ |skill| skill.to_s.start_with?('work_day_partition_') }
-      return unless has_vehicle_partition || has_work_day_partition
+        has_vehicle_partition = all_skills.any?{ |skill| skill.to_s.start_with?('vehicle_partition_') }
+        has_work_day_partition = all_skills.any?{ |skill| skill.to_s.start_with?('work_day_partition_') }
+        return unless has_vehicle_partition || has_work_day_partition
 
-      partitions = {}
-      partitions[:vehicle] = draw_cluster(elements, vehicle_color_indices, :vehicle) if has_vehicle_partition
-      partitions[:work_day] = draw_cluster(elements, vehicle_color_indices, :work_day) if has_work_day_partition
-      partitions
-    end
+        partitions = {}
+        partitions[:vehicle] = draw_cluster(elements, vehicle_color_indices, :vehicle) if has_vehicle_partition
+        partitions[:work_day] = draw_cluster(elements, vehicle_color_indices, :work_day) if has_work_day_partition
+        partitions
+      end
 
-    def self.draw_cluster(elements, vehicle_color_indices, entity)
-      polygons = elements.group_by{ |element|
-        entity == :vehicle ?
-        [element[:detail][:internal_skills].find{ |sk| sk.to_s.start_with?('vehicle_partition_') }] :
-        [element[:detail][:internal_skills].find{ |sk| sk.to_s.start_with?('work_day_partition_') },
-         element[:detail][:skills].find{ |sk| sk.start_with?('cluster ') }]
-      }.collect.with_index{ |data, cluster_index|
-        cluster_name, partition_items = data
-        skills_properties = compute_skills_properties(data)
-        color_index = skills_properties[:vehicle] ? vehicle_color_indices[skills_properties[:vehicle]] : cluster_index
-        collect_basic_hulls(partition_items.collect{ |item| item[:detail] }, entity, color_index, cluster_name, skills_properties)
-      }
+      def draw_cluster(elements, vehicle_color_indices, entity)
+        polygons =
+          elements.group_by{ |element|
+            entity == :vehicle ?
+            [element[:detail][:internal_skills].find{ |sk| sk.to_s.start_with?('vehicle_partition_') }] :
+            [element[:detail][:internal_skills].find{ |sk| sk.to_s.start_with?('work_day_partition_') },
+             element[:detail][:skills].find{ |sk| sk.start_with?('cluster ') }]
+          }.collect.with_index{ |data, cluster_index|
+            cluster_name, partition_items = data
+            skills_properties = compute_skills_properties(data)
+            color_index =
+              skills_properties[:vehicle] ? vehicle_color_indices[skills_properties[:vehicle]] : cluster_index
+            collect_basic_hulls(partition_items.collect{ |item| item[:detail] }, entity, color_index,
+                                cluster_name, skills_properties)
+          }
 
-      {
-        type: 'FeatureCollection',
-        features: polygons.compact
-      }
-    end
-
-    def self.compute_skills_properties(data)
-      items = data.last
-      skills = items.flat_map{ |item| item[:detail][:internal_skills] }.uniq
-      vehicle_skills = skills.select{ |sk| sk.to_s.start_with?('vehicle_partition_') }
-      work_day_skills = skills.select{ |sk| sk.to_s.start_with?('work_day_partition_') }
-
-      sk_properties = {}
-      sk_properties[:vehicle] = vehicle_skills.first.to_s.gsub('vehicle_partition_', '') if vehicle_skills.size == 1
-      sk_properties[:work_day] = work_day_skills.first.to_s.gsub('work_day_partition_', '') if work_day_skills.size == 1
-      sk_properties
-    end
-
-    def self.compute_color(_elements, _entity, index)
-      @colors[index % @colors.size]
-    end
-
-    def self.collect_basic_hulls(elements, entity, cluster_index, cluster_name, skills_properties)
-      vector = elements.map{ |detail|
-        [detail[:lon], detail[:lat]]
-      }.uniq
-      hull = Hull.get_hull(vector)
-      return nil if hull.nil?
-
-      quantities = elements.flat_map{ |e| e[:quantities] }.group_by{ |qty| qty[:unit] }.collect{ |unit_id, qties|
         {
-          unit_id: unit_id,
-          value: qties.sum{ |qty| qty[:value] || 0 }
+          type: 'FeatureCollection',
+          features: polygons.compact
         }
-      }
-      duration = elements.sum{ |e| e[:duration] + e[:setup_duration] }
-      {
-        type: 'Feature',
-        properties: {
-          color: compute_color(elements, entity, cluster_index),
-          name: cluster_name.join('_'),
-        }.merge(
-          Hash[quantities.collect{ |qty| [qty[:unit_id].to_sym, qty[:value]] }]
-        ).merge(Hash[:duration, duration]).merge(skills_properties),
-        geometry: {
-          type: 'Polygon',
-          coordinates: [hull + [hull.first]]
-        }
-      }
-    end
+      end
 
-    def self.generate_points_geometry(result, vehicle_color_indices)
-      return nil unless (result[:unassigned].empty? || result[:unassigned].any?{ |un| un[:detail][:lat] }) &&
-                        (result[:routes].all?{ |r| r[:activities].empty? } ||
-                         result[:routes].any?{ |r| r[:activities].any?{ |a| a[:detail] && a[:detail][:lat] } })
+      def compute_skills_properties(data)
+        items = data.last
+        skills = items.flat_map{ |item| item[:detail][:internal_skills] }.uniq
+        vehicle_skills = skills.select{ |sk| sk.to_s.start_with?('vehicle_partition_') }
+        work_day_skills = skills.select{ |sk| sk.to_s.start_with?('work_day_partition_') }
 
-      points = []
+        sk_property = {}
+        sk_property[:vehicle] = vehicle_skills.first.to_s.gsub('vehicle_partition_', '') if vehicle_skills.size == 1
+        sk_property[:work_day] = work_day_skills.first.to_s.gsub('work_day_partition_', '') if work_day_skills.size == 1
+        sk_property
+      end
 
-      mission_types = [:service, :pickup, :delivery]
+      def compute_color(_elements, _entity, index)
+        @colors[index % @colors.size]
+      end
 
-      result[:unassigned].each{ |unassigned|
-        points << {
+      def collect_basic_hulls(elements, entity, cluster_index, cluster_name, skills_properties)
+        vector = elements.map{ |detail|
+          [detail[:lon], detail[:lat]]
+        }.uniq
+        hull = Hull.get_hull(vector)
+        return nil if hull.nil?
+
+        quantities =
+          elements.flat_map{ |e| e[:quantities] }.group_by{ |qty| qty[:unit] }.collect{ |unit_id, qties|
+            {
+              unit_id: unit_id,
+              value: qties.sum{ |qty| qty[:value] || 0 }
+            }
+          }
+        duration = elements.sum{ |e| e[:duration] + e[:setup_duration] }
+        {
           type: 'Feature',
           properties: {
-            color: '#B5B5B5',
-            name: unassigned[:service_id] || unassigned[:shipment_id],
-          },
+            color: compute_color(elements, entity, cluster_index),
+            name: cluster_name.join('_'),
+          }.merge(
+            Hash[quantities.collect{ |qty| [qty[:unit_id].to_sym, qty[:value]] }]
+          ).merge(Hash[:duration, duration]).merge(skills_properties),
           geometry: {
-            type: 'Point',
-            coordinates: [unassigned[:detail][:lon], unassigned[:detail][:lat]]
+            type: 'Polygon',
+            coordinates: [hull + [hull.first]]
           }
         }
-      }
+      end
 
-      result[:routes].each{ |r|
-        color = compute_color([], nil, vehicle_color_indices[r[:original_vehicle_id]] || r[:day] || 0)
-        r[:activities].each{ |a|
-          next unless mission_types.include?(a[:type].to_sym)
+      def generate_points_geometry(result, vehicle_color_indices)
+        return nil unless (result[:unassigned].empty? || result[:unassigned].any?{ |un| un[:detail][:lat] }) &&
+                          (result[:routes].all?{ |r| r[:activities].empty? } ||
+                           result[:routes].any?{ |r| r[:activities].any?{ |a| a[:detail] && a[:detail][:lat] } })
 
-          skills_properties = compute_skills_properties([nil, [a]])
+        points = []
+
+        mission_types = [:service, :pickup, :delivery]
+
+        result[:unassigned].each{ |unassigned|
           points << {
             type: 'Feature',
             properties: {
-              color: color,
-              name: a[:service_id] || a[:pickup_id] || a[:shipment_id],
-              day: r[:day]
-            }.merge(skills_properties),
+              color: '#B5B5B5',
+              name: unassigned[:service_id] || unassigned[:shipment_id],
+            },
             geometry: {
               type: 'Point',
-              coordinates: [a[:detail][:lon], a[:detail][:lat]]
+              coordinates: [unassigned[:detail][:lon], unassigned[:detail][:lat]]
             }
           }
         }
-      }
 
-      {
-        type: 'FeatureCollection',
-        features: points
-      }
-    end
+        result[:routes].each{ |r|
+          color = compute_color([], nil, vehicle_color_indices[r[:original_vehicle_id]] || r[:day] || 0)
+          r[:activities].each{ |a|
+            next unless mission_types.include?(a[:type].to_sym)
 
-    def self.generate_polylines_geometry(result, vehicle_color_indices)
-      polylines = []
-
-      result[:routes].each_with_index{ |route, route_index|
-        next unless route[:geometry]
-
-        color = route[:original_vehicle_id] && compute_color([], nil, vehicle_color_indices[route[:original_vehicle_id]]) ||
-                route[:day] && compute_color([], nil, route[:day]) ||
-                compute_color([], :vehicle, route_index)
-        week_day = route[:day] && { work_day: OptimizerWrapper::WEEKDAYS[route[:day] % 7] } || {}
-        polylines << {
-          type: 'Feature',
-          properties: {
-            color: color,
-            name: "#{route[:original_vehicle_id]}#{route[:day] ? '' : ", day #{route[:day]} route"}",
-            vehicle: route[:original_vehicle_id],
-            day: route[:day]
-          }.merge(week_day),
-          geometry: {
-            type: 'LineString',
-            coordinates: route[:geometry].flatten(1)
+            skills_properties = compute_skills_properties([nil, [a]])
+            points << {
+              type: 'Feature',
+              properties: {
+                color: color,
+                name: a[:service_id] || a[:pickup_id] || a[:shipment_id],
+                day: r[:day]
+              }.merge(skills_properties),
+              geometry: {
+                type: 'Point',
+                coordinates: [a[:detail][:lon], a[:detail][:lat]]
+              }
+            }
           }
         }
-      }
 
-      {
-        type: 'FeatureCollection',
-        features: polylines
-      }
+        {
+          type: 'FeatureCollection',
+          features: points
+        }
+      end
+
+      def generate_polylines_geometry(result, vehicle_color_indices)
+        polylines = []
+
+        result[:routes].each_with_index{ |route, route_index|
+          next unless route[:geometry]
+
+          color = route[:original_vehicle_id] &&
+                  compute_color([], nil, vehicle_color_indices[route[:original_vehicle_id]]) ||
+                  route[:day] &&
+                  compute_color([], nil, route[:day]) ||
+                  compute_color([], :vehicle, route_index)
+          week_day = route[:day] && { work_day: OptimizerWrapper::WEEKDAYS[route[:day] % 7] } || {}
+          polylines << {
+            type: 'Feature',
+            properties: {
+              color: color,
+              name: "#{route[:original_vehicle_id]}#{route[:day] ? '' : ", day #{route[:day]} route"}",
+              vehicle: route[:original_vehicle_id],
+              day: route[:day]
+            }.merge(week_day),
+            geometry: {
+              type: 'LineString',
+              coordinates: route[:geometry].flatten(1)
+            }
+          }
+        }
+
+        {
+          type: 'FeatureCollection',
+          features: polylines
+        }
+      end
     end
   end
 

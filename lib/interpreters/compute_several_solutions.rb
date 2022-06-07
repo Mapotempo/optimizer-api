@@ -35,11 +35,13 @@ module Interpreters
     end
 
     def self.generate_matrix(vrp)
-      matrix = (0..vrp.matrices[0][:time].size - 1).collect{ |i|
-        (0..vrp.matrices[0][:time][i].size - 1).collect{ |j|
-          vrp.matrices[0][:time][i][j] + (rand(3).zero? ? -1 : 1) * vrp.matrices[0][:time][i][j] * rand(vrp.configuration.resolution.variation_ratio) / 100
+      matrix =
+        (0..vrp.matrices[0][:time].size - 1).collect{ |i|
+          (0..vrp.matrices[0][:time][i].size - 1).collect{ |j|
+            random_ratio = rand(vrp.configuration.resolution.variation_ratio)
+            vrp.matrices[0][:time][i][j] + (rand(3).zero? ? -1 : 1) * vrp.matrices[0][:time][i][j] * random_ratio / 100
+          }
         }
-      }
       while (0..matrix.size - 1).any?{ |i|
               (0..matrix[i].size - 1).any?{ |j|
                 (0..matrix[i].size - 1).any? { |k|
@@ -97,7 +99,9 @@ module Interpreters
             [mandatory_heuristic, verified('global_cheapest_arc'), verified('parallel_cheapest_insertion')]
           end
 
-        heuristic_list |= ['savings'] if vrp.vehicles.collect{ |vehicle| vehicle[:rests].to_a.size }.sum.positive? # while waiting for self_selection improve
+        heuristic_list |= ['savings'] if vrp.vehicles.collect{ |vehicle|
+                                           vehicle[:rests].to_a.size
+                                         }.sum.positive? # while waiting for self_selection improve
         heuristic_list
       else
         first_solution_strategy
@@ -117,13 +121,16 @@ module Interpreters
     def self.expand_repetitions(service_vrp)
       return [service_vrp] if service_vrp[:vrp].configuration.resolution.repetition.nil? ||
                               service_vrp[:vrp].configuration.resolution.repetition <= 1
+
       repeated_service_vrps = [service_vrp]
       vrp_hash = service_vrp[:vrp].as_json
 
       (service_vrp[:vrp].configuration.resolution.repetition - 1).times{
         sub_service_vrp = duplicate_service_vrp(service_vrp, vrp_hash)
         sub_service_vrp[:vrp].configuration.resolution.repetition = 1
-        sub_service_vrp[:vrp].configuration.preprocessing.partitions.each{ |partition| partition[:restarts] = [partition[:restarts], 5].compact.min } # change restarts ?
+        sub_service_vrp[:vrp].configuration.preprocessing.partitions.each{ |partition|
+          partition[:restarts] = [partition[:restarts], 5].compact.min
+        } # change restarts ?
         repeated_service_vrps << sub_service_vrp
       }
 
@@ -173,29 +180,33 @@ module Interpreters
         log '---> find_best_heuristic'
         tic = Time.now
         percent_allocated_to_heur_selection = 0.3 # spend at most 30% of the total time for heuristic selection
-        total_time_allocated_for_heuristic_selection = service_vrp[:vrp].configuration.resolution.duration.to_f * percent_allocated_to_heur_selection
+        total_time_allocated_for_heuristic_selection =
+          service_vrp[:vrp].configuration.resolution.duration.to_f * percent_allocated_to_heur_selection
         time_for_each_heuristic = (total_time_allocated_for_heuristic_selection / custom_heuristics.size).to_i
 
         custom_heuristics << 'supplied_initial_routes' if vrp.routes.any?
 
         elapsed_times = []
         vrp_hash = service_vrp[:vrp].as_json
-        first_results = custom_heuristics.collect{ |heuristic|
-          s_vrp = duplicate_service_vrp(service_vrp, vrp_hash)
-          if heuristic == 'supplied_initial_routes'
-            s_vrp[:vrp].configuration.preprocessing.first_solution_strategy = [verified('global_cheapest_arc')] # fastest for fallback
-          else
-            s_vrp[:vrp].routes = []
-            s_vrp[:vrp].configuration.preprocessing.first_solution_strategy = [verified(heuristic)]
-          end
-          s_vrp[:vrp].configuration.restitution.allow_empty_result = true
-          s_vrp[:vrp].configuration.resolution.batch_heuristic = true
-          s_vrp[:vrp].configuration.resolution.minimum_duration = nil
-          s_vrp[:vrp].configuration.resolution.duration = [time_for_each_heuristic, 300000].min # no more than 5 min for single heur
-          heuristic_solution = OptimizerWrapper.config[:services][s_vrp[:service]].solve(s_vrp[:vrp], nil)
-          elapsed_times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
-          heuristic_solution
-        }
+        first_results =
+          custom_heuristics.collect{ |heuristic|
+            s_vrp = duplicate_service_vrp(service_vrp, vrp_hash)
+            if heuristic == 'supplied_initial_routes'
+              # fastest for fallback
+              s_vrp[:vrp].configuration.preprocessing.first_solution_strategy = [verified('global_cheapest_arc')]
+            else
+              s_vrp[:vrp].routes = []
+              s_vrp[:vrp].configuration.preprocessing.first_solution_strategy = [verified(heuristic)]
+            end
+            s_vrp[:vrp].configuration.restitution.allow_empty_result = true
+            s_vrp[:vrp].configuration.resolution.batch_heuristic = true
+            s_vrp[:vrp].configuration.resolution.minimum_duration = nil
+            # no more than 5 min for single heur
+            s_vrp[:vrp].configuration.resolution.duration = [time_for_each_heuristic, 300000].min
+            heuristic_solution = OptimizerWrapper.config[:services][s_vrp[:service]].solve(s_vrp[:vrp], nil)
+            elapsed_times << (heuristic_solution && heuristic_solution[:elapsed] || 0)
+            heuristic_solution
+          }
 
         raise 'No solution found during heuristic selection' if first_results.all?(&:nil?)
 
@@ -204,7 +215,9 @@ module Interpreters
           synthesis << {
             heuristic: custom_heuristics[i],
             # If the cost is 0 we might want to set it to Float::MAX because 0 cost is not possible.
-            quality: solution.nil? ? [Float::MAX] : [solution.unassigned_stops&.size.to_i, solution.cost.to_i, elapsed_times[i]],
+            quality: solution.nil? ?
+                      [Float::MAX] :
+                      [solution.unassigned_stops&.size.to_i, solution.cost.to_i, elapsed_times[i]],
             used: false,
             cost: solution ? solution.cost : nil,
             time_spent: elapsed_times[i],
@@ -225,16 +238,21 @@ module Interpreters
 
         best[:used] = true
 
-        vrp.configuration.preprocessing.heuristic_result = best[:solution]
-        vrp.configuration.preprocessing.heuristic_result[:solvers].map!{ |solver| "configuration.preprocessing.#{solver}".to_sym }
+        preprocessing = vrp.configuration.preprocessing
+        preprocessing.heuristic_result = best[:solution]
+        preprocessing.heuristic_result[:solvers].map!{ |solver| "configuration.preprocessing.#{solver}".to_sym }
         synthesis.each{ |synth| synth.delete(:solution) }
         vrp.configuration.resolution.batch_heuristic = nil
-        vrp.configuration.preprocessing.first_solution_strategy = best[:heuristic] != 'supplied_initial_routes' ? [verified(best[:heuristic])] : []
-        vrp.configuration.preprocessing.heuristic_synthesis = synthesis
-        vrp.configuration.resolution.duration = vrp.configuration.resolution.duration ? [(vrp.configuration.resolution.duration.to_f * (1 - percent_allocated_to_heur_selection)).round, 1000].max : nil
+        preprocessing.first_solution_strategy =
+          best[:heuristic] != 'supplied_initial_routes' ? [verified(best[:heuristic])] : []
+        preprocessing.heuristic_synthesis = synthesis
+        vrp.configuration.resolution.duration =
+          vrp.configuration.resolution.duration ? [
+         (vrp.configuration.resolution.duration.to_f * (1 - percent_allocated_to_heur_selection)).round, 1000
+         ].max : nil
         log "<--- find_best_heuristic elapsed: #{Time.now - tic}sec selected heuristic: #{best[:heuristic]}"
       else
-        vrp.configuration.preprocessing.first_solution_strategy = custom_heuristics
+        preprocessing.first_solution_strategy = custom_heuristics
       end
 
       service_vrp
@@ -244,26 +262,28 @@ module Interpreters
       vehicles = vrp.vehicles
       services = vrp.services
 
-      loop_route = vehicles.any?{ |vehicle|
-        if (vehicle.start_point.nil? || vehicle.end_point.nil?)
-          true
-        else
-          start_point = vehicle.start_point
-          end_point = vehicle.end_point
+      loop_route =
+        vehicles.any?{ |vehicle|
+          if vehicle.start_point.nil? || vehicle.end_point.nil?
+            true
+          else
+            start_point = vehicle.start_point
+            end_point = vehicle.end_point
 
-          vehicle.start_point_id == vehicle.end_point_id ||
-            start_point.same_location?(end_point) ||
-            vrp.matrices && start_point.matrix_index && end_point.matrix_index &&
-              vrp.matrices.all?{ |matrix|
-                matrix.time && matrix.time[start_point.matrix_index][end_point.matrix_index] == 0
-              }
-        end
-      }
-      size_mtws = services.count{ |service|
-        service.activity&.timewindows&.size.to_i > 1 || 
-          # No timewindow means an implicit infinite timewindow
-          service.activities.sum{ |act| [act.timewindows.size, 1].max } > 1
-      }
+            vehicle.start_point_id == vehicle.end_point_id ||
+              start_point.same_location?(end_point) ||
+              vrp.matrices && start_point.matrix_index && end_point.matrix_index &&
+                vrp.matrices.all?{ |matrix|
+                  matrix.time && matrix.time[start_point.matrix_index][end_point.matrix_index] == 0
+                }
+          end
+        }
+      size_mtws =
+        services.count{ |service|
+          service.activity&.timewindows&.size.to_i > 1 ||
+            # No timewindow means an implicit infinite timewindow
+            service.activities.sum{ |act| [act.timewindows.size, 1].max } > 1
+        }
       size_rest = vehicles.sum{ |vehicle| vehicle.rests.size }
       unique_configuration = vehicles.uniq(&:router_mode).size == 1 &&
                              vehicles.uniq(&:router_dimension).size == 1 &&
@@ -284,7 +304,8 @@ module Interpreters
         verified('global_cheapest_arc')
       elsif vehicles.size == 1 && size_rest.positive? || size_mtws > 0
         verified('local_cheapest_insertion')
-      elsif loop_route && unique_configuration && vehicles.size < 10 && vehicles.none?(&:duration) && vrp.points.size < 250
+      elsif loop_route && unique_configuration && vehicles.size < 10 &&
+            vehicles.none?(&:duration) && vrp.points.size < 250
         # Savings heuristic requires a high memory quantity which may lead to OOM error for large problems
         verified('savings')
       elsif size_rest.positive? || unique_configuration || loop_route
@@ -296,7 +317,7 @@ module Interpreters
 
     def self.verified(heuristic)
       unless OptimizerWrapper::HEURISTICS.include?(heuristic)
-        raise StandardError.new("Unknown heuristic : #{heuristic}. Inconsistent first solution strategy used internally")
+        raise "Unknown heuristic : #{heuristic}. Inconsistent first solution strategy used internally"
       end
 
       heuristic

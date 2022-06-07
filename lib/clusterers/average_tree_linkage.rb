@@ -73,7 +73,8 @@ module Ai4r
       def merge_metrics(index_a, index_b, unit_symbols, graph, node_clusters)
         merged_metrics = {}
         unit_symbols.each{ |symbol|
-          merged_metrics[symbol] = graph[node_clusters[index_a]][:unit_metrics][symbol] + graph[node_clusters[index_b]][:unit_metrics][symbol]
+          merged_metrics[symbol] =
+            graph[node_clusters[index_a]][:unit_metrics][symbol] + graph[node_clusters[index_b]][:unit_metrics][symbol]
         }
         merged_metrics
       end

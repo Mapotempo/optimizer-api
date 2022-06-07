@@ -57,8 +57,9 @@ class DichotomousTest < Minitest::Test
       assert solution.elapsed / 1000 > min_dur * 0.99,
              "Time spent in optimization (#{solution.elapsed / 1000}) is less than " \
              "the minimum duration asked (#{min_dur})."
-      assert t2 - t1 < max_dur * 2, # Due to API overhead, it can be violated (randomly but very rarely).
-                                    # Since the optimisation time is short the relative overhead is big.
+      # Due to API overhead, it can be violated (randomly but very rarely).
+      # Since the optimisation time is short the relative overhead is big.
+      assert t2 - t1 < max_dur * 2,
              "Time spend in the API (#{t2 - t1}) is too big compared to maximum " \
              "optimization duration asked (#{max_dur})."
     end
@@ -82,22 +83,26 @@ class DichotomousTest < Minitest::Test
         limit_vrp[:vehicles] << { id: "v#{i + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
       }
 
-      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: TestHelper.create(limit_vrp), service: :demo, dicho_level: 0)
+      vrp = TestHelper.create(limit_vrp)
+      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
       vrp[:vehicles] = limit_vrp[:vehicles].dup
       vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
-      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
+      vrp = TestHelper.create(vrp)
+      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
       vrp[:services] = limit_vrp[:services].dup
       vrp[:services] << { id: "s#{limits[:service] + 1}", activity: { point_id: 'p1' }}
-      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
+      vrp = TestHelper.create(vrp)
+      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :demo, dicho_level: 0)
 
       vrp = limit_vrp.dup
       vrp[:services] << { id: "s#{limits[:service] + 1}", activity: { point_id: 'p1' }}
       vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
-      assert Interpreters::Dichotomous.dichotomous_candidate?(vrp: TestHelper.create(vrp), service: :demo, dicho_level: 0)
+      vrp = TestHelper.create(vrp)
+      assert Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :demo, dicho_level: 0)
     end
 
     def test_infinite_loop_due_to_impossible_to_cluster
@@ -125,7 +130,9 @@ class DichotomousTest < Minitest::Test
       counter = 0
       level = nil
       Interpreters::Dichotomous.stub(:split, lambda{ |vrpi, cut_symbol|
-        assert_operator counter, :<, 3, 'Interpreters::Dichotomous::split is called too many times. Either there is an infinite loop due to imposible clustering or dicho split logic is altered.'
+        assert_operator counter, :<, 3,
+                        'Interpreters::Dichotomous::split is called too many times. '\
+                        'Either there is an infinite loop due to imposible clustering or dicho split logic is altered.'
 
         if vrpi[:dicho_level] != level
           level = vrpi[:dicho_level]
@@ -157,8 +164,14 @@ class DichotomousTest < Minitest::Test
         services_vrps_dicho = Interpreters::Dichotomous.split(service_vrp, nil)
         assert_equal 2, services_vrps_dicho.size
 
-        locations_one = services_vrps_dicho.first[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } # clusters.first.data_items.map{ |d| [d[0], d[1]] }
-        locations_two = services_vrps_dicho.second[:vrp].services.map{ |s| [s.activity.point.location.lat, s.activity.point.location.lon] } # clusters.second.data_items.map{ |d| [d[0], d[1]] }
+        locations_one =
+          services_vrps_dicho.first[:vrp].services.map{ |s|
+            [s.activity.point.location.lat, s.activity.point.location.lon]
+          }                         # clusters.first.data_items.map{ |d| [d[0], d[1]] }
+        locations_two =
+          services_vrps_dicho.second[:vrp].services.map{ |s|
+            [s.activity.point.location.lat, s.activity.point.location.lon]
+          }                         # clusters.second.data_items.map{ |d| [d[0], d[1]] }
         # split is done by vehicle + by representative_vrp so this might lead to some points get split between sides
         # but this should not be an issue because the optimisation should handle such points if they can be performed
         # on the same vehicle.
@@ -170,7 +183,8 @@ class DichotomousTest < Minitest::Test
           durations << service_vrp_dicho[:vrp].services_duration
         }
         assert_equal service_vrp[:vrp].services_duration.to_i, durations.sum.to_i
-        assert services_vrps_dicho[0][:vrp].vehicles.size >= services_vrps_dicho[1][:vrp].vehicles.size, 'Dicho should start solving the side with more vehicles first'
+        assert services_vrps_dicho[0][:vrp].vehicles.size >= services_vrps_dicho[1][:vrp].vehicles.size,
+               'Dicho should start solving the side with more vehicles first'
 
         average_duration = durations.sum / durations.size
         # Clusters should be balanced but the priority is the geometry
@@ -178,7 +192,8 @@ class DichotomousTest < Minitest::Test
         min_duration = (1.0 - range) * average_duration
         max_duration = (1.0 + range) * average_duration
         durations.each_with_index{ |duration, index|
-          assert duration < max_duration && duration > min_duration, "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
+          assert duration < max_duration && duration > min_duration,
+                 "Duration ##{index} (#{duration}) should be between #{min_duration} and #{max_duration}"
         }
 
         service_vrp = services_vrps_dicho.min_by{ |sv| sv[:vrp].services_duration }
@@ -204,8 +219,10 @@ class DichotomousTest < Minitest::Test
 
     def test_split_function_with_services_at_same_location
       vrp = TestHelper.load_vrp(self, fixture_file: 'two_phases_clustering_sched_with_freq_and_same_point_day_5veh')
-      assert vrp.services.group_by{ |s| s.activity.point_id }.any?{ |_pt_id, set| set.size > 1 }, 'This test is useless if there are not several services with same point_id'
-      split = Interpreters::Dichotomous.send(:split, { vrp: vrp, dicho_sides: [], dicho_denominators: [], dicho_level: 0 })
+      assert vrp.services.group_by{ |s| s.activity.point_id }.any?{ |_pt_id, set| set.size > 1 },
+             'This test is useless if there are not several services with same point_id'
+      split = Interpreters::Dichotomous.send(:split,
+                                             { vrp: vrp, dicho_sides: [], dicho_denominators: [], dicho_level: 0 })
       assert_equal 2, split.size
       assert_equal vrp.services.size, split.sum{ |s| s[:vrp].services.size }, 'Wrong number of services returned'
     end
@@ -243,12 +260,17 @@ class DichotomousTest < Minitest::Test
 
           sv_one = sub_service_vrps[1][:vrp]
           transferred_vehicle = sv_one.vehicles.last
-          assert_equal 'extra_unused_vehicle', transferred_vehicle.id, 'transfer_unused_vehicles should have transfer the extra vehicle'
+          assert_equal 'extra_unused_vehicle', transferred_vehicle.id,
+                       'transfer_unused_vehicles should have transfer the extra vehicle'
 
           point_ids = sv_one.points.map(&:id)
           assert_equal point_ids.size, point_ids.uniq.size, 'There are duplicate points after transfer_unused_vehicles'
-          assert sv_one.points.any?{ |p| p.object_id == transferred_vehicle.start_point.object_id }, "transferred vehicle's start_point doesn't exist in points"
-          assert sv_one.points.any?{ |p| p.object_id == transferred_vehicle.end_point.object_id }, "transferred vehicle's end_point doesn't exist in points"
+          assert sv_one.points.any?{ |p|
+                   p.object_id == transferred_vehicle.start_point.object_id
+                 }, "transferred vehicle's start_point doesn't exist in points"
+          assert sv_one.points.any?{ |p|
+                   p.object_id == transferred_vehicle.end_point.object_id
+                 }, "transferred vehicle's end_point doesn't exist in points"
         }) do
           OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
         end

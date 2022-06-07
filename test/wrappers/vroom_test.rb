@@ -566,9 +566,15 @@ class Wrappers::VroomTest < Minitest::Test
     vrp = VRP.basic
     vrp[:matrices].first[:distance] = vrp[:matrices].first[:time]
     solutions = OptimizerWrapper.wrapper_vrp('vroom', { services: { vrp: [:vroom] }}, TestHelper.create(vrp), nil)
-    assert solutions[0].routes.all?{ |route| route.stops.empty? || route.info.total_time }, 'At least one route total_time was not provided'
-    assert solutions[0].routes.all?{ |route| route.stops.empty? || route.info.total_travel_time }, 'At least one route total_travel_time was not provided'
-    assert solutions[0].routes.all?{ |route| route.stops.empty? || route.info.total_distance }, 'At least one route total_travel_distance was not provided'
+    assert solutions[0].routes.all?{ |route|
+             route.stops.empty? || route.info.total_time
+           }, 'At least one route total_time was not provided'
+    assert solutions[0].routes.all?{ |route|
+             route.stops.empty? || route.info.total_travel_time
+           }, 'At least one route total_travel_time was not provided'
+    assert solutions[0].routes.all?{ |route|
+             route.stops.empty? || route.info.total_distance
+           }, 'At least one route total_travel_distance was not provided'
   end
 
   def test_shipments

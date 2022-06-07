@@ -133,10 +133,10 @@ class WrapperTest < Minitest::Test
     problem = VRP.basic_threshold
     size = problem[:services].size
     [:ortools, :vroom].compact.each{ |o|
-      # zip_cluser generates sub problems which register identical objects
+      # zip_cluster generates sub problems which register identical objects
       vrp = TestHelper.create(problem)
       solution = OptimizerWrapper.solve(service: o, vrp: vrp)
-      assert_equal size + 2 , solution.routes[0].stops.size, "[#{o}] " # 1 depot + 1 rest
+      assert_equal size + 2, solution.routes[0].stops.size, "[#{o}] " # 1 depot + 1 rest
       services = solution.routes[0].stops.map(&:service_id)
       1.upto(size - 1).each{ |i|
         assert_includes services, "service_#{i}", "[#{o}] Service missing: #{i}"
@@ -765,7 +765,7 @@ class WrapperTest < Minitest::Test
     }
 
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:vroom, :ortools] }},
-                                          TestHelper.create(problem), nil)
+                                             TestHelper.create(problem), nil)
     assert_equal :vroom, solutions[0].solvers[0]
     assert_equal :ortools, solutions[0].solvers[1]
   end
@@ -940,8 +940,9 @@ class WrapperTest < Minitest::Test
       }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    unassigned_reason = 'No compatible vehicle can reach this service while respecting all constraints'
     assert_equal(1, solutions[0].unassigned_stops.count{ |un|
-      un.reason&.split(' && ')&.include?('No compatible vehicle can reach this service while respecting all constraints')
+      un.reason&.split(' && ')&.include?(unassigned_reason)
     })
   end
 
@@ -1001,8 +1002,9 @@ class WrapperTest < Minitest::Test
       }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    unassigned_reason = 'No compatible vehicle can reach this service while respecting all constraints'
     assert_equal(1, solutions[0].unassigned_stops.count{ |un|
-      un.reason&.split(' && ')&.include?('No compatible vehicle can reach this service while respecting all constraints')
+      un.reason&.split(' && ')&.include?(unassigned_reason)
     })
   end
 
@@ -1073,7 +1075,8 @@ class WrapperTest < Minitest::Test
       }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 1, (solutions[0].unassigned_stops.count{ |un| un.reason&.split(' && ')&.include?('Service has a quantity which is greater than the capacity of any compatible vehicle') })
+    unassigned_reason = 'Service has a quantity which is greater than the capacity of any compatible vehicle'
+    assert_equal 1, (solutions[0].unassigned_stops.count{ |un| un.reason&.split(' && ')&.include?(unassigned_reason) })
   end
 
   def test_impossible_service_skills
@@ -1174,7 +1177,9 @@ class WrapperTest < Minitest::Test
       }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal(1, solutions[0].unassigned_stops.count{ |un| un.reason.include?('Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits') })
+    unassigned_reason =
+      'Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits'
+    assert_equal(1, solutions[0].unassigned_stops.count{ |un| un.reason.include?(unassigned_reason) })
   end
 
   def test_impossible_service_duration
@@ -1225,9 +1230,9 @@ class WrapperTest < Minitest::Test
       }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 1, (solutions[0].unassigned_stops.count{ |un|
-      un.reason&.include?('Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits')
-    })
+    unassigned_reason =
+      'Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits'
+    assert_equal 1, (solutions[0].unassigned_stops.count{ |un| un.reason&.include?(unassigned_reason) })
   end
 
   def test_impossible_service_duration_with_sequence_tw
@@ -1284,9 +1289,9 @@ class WrapperTest < Minitest::Test
       }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 1, (solutions[0].unassigned_stops.count{ |un|
-      un.reason.include?('Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits')
-    })
+    unassigned_reason =
+      'Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits'
+    assert_equal 1, (solutions[0].unassigned_stops.count{ |un| un.reason.include?(unassigned_reason) })
   end
 
   def test_impossible_service_duration_with_two_vehicles
@@ -1353,7 +1358,11 @@ class WrapperTest < Minitest::Test
     ]
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 5, day_index: 1 }]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal(1, solutions[0].unassigned_stops.count{ |un| un.reason&.split(' && ')&.include?('Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits') })
+    unassigned_reason = "Service cannot be performed by any compatible vehicle while "\
+                        "respecting duration, timewindow and day limits"
+    assert_equal(1, solutions[0].unassigned_stops.count{ |un|
+                      un.reason&.split(' && ')&.include?(unassigned_reason)
+                    })
   end
 
   def test_impossible_service_due_to_unavailable_day_periodic
@@ -1366,7 +1375,11 @@ class WrapperTest < Minitest::Test
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 5, day_index: 0 }]
     vrp[:services].first[:unavailable_visit_day_indices] = [0]
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(vrp), nil)
-    assert_equal(1, solutions[0].unassigned_stops.count{ |un| un.reason.split(' && ').include?('Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits') })
+    unassigned_reason = "Service cannot be performed by any compatible vehicle while "\
+                        "respecting duration, timewindow and day limits"
+    assert_equal(1, solutions[0].unassigned_stops.count{ |un|
+                      un.reason.split(' && ').include?(unassigned_reason)
+                    })
   end
 
   def test_impossible_service_distance
@@ -1518,7 +1531,8 @@ class WrapperTest < Minitest::Test
       }
     }
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
-    assert_equal 2, (solutions[0].unassigned_stops.count{ |un| un.reason == 'Inconsistency between visit number and minimum lapse' })
+    unassigned_reason = 'Inconsistency between visit number and minimum lapse'
+    assert_equal 2, (solutions[0].unassigned_stops.count{ |un| un.reason == unassigned_reason })
   end
 
   def test_wrong_matrix_and_points_definitions
@@ -1725,7 +1739,8 @@ class WrapperTest < Minitest::Test
 
     problem[:services].each.with_index{ |s, i| s[:exclusion_cost] = 1001 + i }
 
-    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+    vrp = TestHelper.create(problem)
+    solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal 1, (solutions[0].routes.sum{ |route| route.stops.count(&:service_id) })
     assert_equal 5, solutions[0].unassigned_stops.size
 
@@ -1805,7 +1820,8 @@ class WrapperTest < Minitest::Test
       }
     }
     Interpreters::PeriodicVisits.stub_any_instance(:expand, ->(vrp, _job, &_block){ vrp }) do
-      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+      vrp = TestHelper.create(problem)
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 2, solutions[0].unassigned_stops.size
     end
   end
@@ -1876,7 +1892,8 @@ class WrapperTest < Minitest::Test
       }
     }
     Interpreters::PeriodicVisits.stub_any_instance(:expand, ->(vrp, _job, &_block){ vrp }) do
-      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+      vrp = TestHelper.create(problem)
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 3, solutions[0].unassigned_stops.size
     end
   end
@@ -1945,7 +1962,8 @@ class WrapperTest < Minitest::Test
     }
 
     Interpreters::PeriodicVisits.stub_any_instance(:expand, ->(vrp, _job, &_block){ vrp }) do
-      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+      vrp = TestHelper.create(problem)
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 2, solutions[0].unassigned_stops.size
     end
   end
@@ -2012,7 +2030,8 @@ class WrapperTest < Minitest::Test
     }
 
     Interpreters::PeriodicVisits.stub_any_instance(:expand, ->(vrp, _job, &_block){ vrp }) do
-      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, TestHelper.create(problem), nil)
+      vrp = TestHelper.create(problem)
+      solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
       assert_equal 6, solutions[0].unassigned_stops.size
     end
   end
@@ -2027,8 +2046,10 @@ class WrapperTest < Minitest::Test
       end: 10
     }
     vrp[:services].first[:activity][:duration] = 15
-    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
-    assert_equal(1, unfeasible.count{ |un| un.reason == 'Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits' })
+    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    unassigned_reason = "Service cannot be performed by any compatible vehicle while respecting "\
+                        "duration, timewindow and day limits"
+    assert_equal(1, unfeasible.values.flatten.count{ |un| un.reason == unassigned_reason })
 
     vrp[:vehicles].first[:timewindow] = nil
     vrp[:vehicles].first[:sequence_timewindows] = [{
@@ -2037,8 +2058,10 @@ class WrapperTest < Minitest::Test
     }]
     vrp[:services].first[:activity][:duration] = 15
     vrp[:configuration][:schedule] = { range_indices: { start: 0, end: 3 }}
-    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
-    assert_equal(1, unfeasible.count{ |un| un.reason == 'Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits' })
+    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    unassigned_reason = "Service cannot be performed by any compatible vehicle while respecting "\
+                        "duration, timewindow and day limits"
+    assert_equal(1, unfeasible.values.flatten.count{ |un| un.reason == unassigned_reason })
 
     vrp[:vehicles].first[:sequence_timewindows] << {
       start: 0,
@@ -2054,41 +2077,44 @@ class WrapperTest < Minitest::Test
     assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
 
     vrp[:services].first[:quantities].first[:value] = -6
-    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
-    assert_equal(1, unfeasible.count{ |un| un.reason&.split(' && ')&.include?('Service has a quantity which is greater than the capacity of any compatible vehicle') })
+    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    unassigned_reason = 'Service has a quantity which is greater than the capacity of any compatible vehicle'
+    assert_equal(1, unfeasible.values.flatten.count{ |un| un.reason&.split(' && ')&.include?(unassigned_reason) })
   end
 
   def test_feasible_if_tardiness_allowed
     vrp = VRP.basic
+    demo = OptimizerWrapper.config[:services][:demo]
 
     vrp[:vehicles].first[:timewindow] = { start: 0, end: 1 }
-    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
-                 'All services (3) should be eliminated'
+    assert_equal 3, demo.check_distances(TestHelper.create(vrp), {}).size, 'All services (3) should be eliminated'
 
     vrp[:vehicles].first[:cost_late_multiplier] = 1
-    assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
-                 'All services (3) should be eliminated since maximum_lateness is too low even tough tardiness is allowed'
+    assert_equal 3, demo.check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+                 'All services (3) should be eliminated since maximum_lateness '\
+                 'is too low even tough tardiness is allowed'
 
     vrp[:vehicles].first[:timewindow][:maximum_lateness] = 10 # eliminates no services
-    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+    assert_equal 0, demo.check_distances(TestHelper.create(vrp), {}).values.flatten.size,
                  'No services should be eliminated due to vehicle timewindow since tardiness is allowed'
 
     vrp[:vehicles].first[:timewindow][:maximum_lateness] = 3 # eliminates service 2 and 3 but not 1
-    assert_equal 2, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+    assert_equal 2, demo.check_distances(TestHelper.create(vrp), {}).values.flatten.size,
                  'Only Services 2 and 3 should be eliminated'
 
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 3 }]
     vrp[:vehicles].first[:timewindow][:maximum_lateness] = 10
-    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+    assert_equal 1, demo.check_distances(TestHelper.create(vrp), {}).values.flatten.size,
                  'First service should be eliminated due its timewindow'
 
     vrp[:services].first[:activity][:late_multiplier] = 1
-    assert_equal 0, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+    assert_equal 0, demo.check_distances(TestHelper.create(vrp), {}).values.flatten.size,
                  'First service should not be eliminated due to its timewindow since tardiness is allowed'
 
     vrp[:services].first[:activity][:timewindows].first[:maximum_lateness] = 0
-    assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
-                 'First service should be eliminated due to its timewindow even if tardiness is allowed since maximum_lateness is not enough'
+    assert_equal 1, demo.check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+                 'First service should be eliminated due to its timewindow even if '\
+                 'tardiness is allowed since maximum_lateness is not enough'
   end
 
   def test_return_empty_if_all_eliminated
@@ -2105,18 +2131,18 @@ class WrapperTest < Minitest::Test
     vrp[:vehicles].first[:start_point_id] = nil
     vrp[:vehicles].first[:end_point_id] = 'point_0'
     assert_equal 2, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
-                    'Two services should be eliminated even if there is no vehicle start'
+                 'Two services should be eliminated even if there is no vehicle start'
 
     vrp[:vehicles].first[:start_point_id] = 'point_0'
     vrp[:vehicles].first[:end_point_id] = nil
     assert_equal 3, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
-                    'All services (3) should be eliminated even if there is no vehicle end'
+                 'All services (3) should be eliminated even if there is no vehicle end'
 
     vrp[:vehicles].first[:start_point_id] = nil
     vrp[:vehicles].first[:end_point_id] = nil
     vrp[:services].first[:activity][:duration] = 2
     assert_equal 1, OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).size,
-                    'First service should be eliminated even if there is no vehicle start nor end'
+                 'First service should be eliminated even if there is no vehicle start nor end'
   end
 
   def test_work_day_entity_after_eventual_vehicle
@@ -2168,7 +2194,9 @@ class WrapperTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solutions = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
     assert_equal problem[:services].size,
-                 solutions[0].routes.sum{ |r| r.stops.count(&:service_id) } + solutions[0].unassigned_stops.count(&:service_id)
+                 solutions[0].routes.sum{ |r|
+                   r.stops.count(&:service_id)
+                 } + solutions[0].unassigned_stops.count(&:service_id)
   end
 
   def test_compute_several_solutions
@@ -2213,9 +2241,12 @@ class WrapperTest < Minitest::Test
     # all 7 services in one relation type become unfeasible at the same time
     Models::Relation::ALL_OR_NONE_RELATIONS.each{ |relation_type|
       linked_ids_size = relation_type == :shipment ? 2 : problem[:services].size
-      problem[:relations] = [{ type: relation_type, linked_ids: problem[:services][0..linked_ids_size - 1].collect{ |s| s[:id] } }]
+      problem[:relations] = [
+        { type: relation_type, linked_ids: problem[:services][0..linked_ids_size - 1].collect{ |s| s[:id] } }
+      ]
       vrp = TestHelper.create(problem)
-      assert_equal linked_ids_size, services_demo.add_unassigned({}, vrp, vrp[:services][0], 'reason').values.flatten.size
+      assert_equal linked_ids_size,
+                   services_demo.add_unassigned({}, vrp, vrp[:services][0], 'reason').values.flatten.size
     }
 
     # 2 services in shipment, 2 in meetup, which are connected by a fake shipment becomes unfeasible at the same time
@@ -2227,7 +2258,8 @@ class WrapperTest < Minitest::Test
     ]
     vrp = TestHelper.create(problem)
     unassigned = {}
-    assert_equal 2, services_demo.add_unassigned(unassigned, vrp, vrp[:services][5], 'a_reason').values.flatten.size # only 1 shipment
+    # only 1 shipment
+    assert_equal 2, services_demo.add_unassigned(unassigned, vrp, vrp[:services][5], 'a_reason').values.flatten.size
     services_demo.add_unassigned(unassigned, vrp, vrp[:services][0], 'another_reason') # in shipment and fake_shipment
     assert_equal 6, unassigned.values.flatten.size
     in_relation_msg = 'In a shipment|meetup relation with an unfeasible service: '
@@ -2258,7 +2290,8 @@ class WrapperTest < Minitest::Test
         OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:demo] }}, vrp, nil)
       end
       assert_equal expected_repetitions, solve_call,
-                   "#{expected_repetitions} repetitions expected, with#{vrp.configuration.preprocessing.partitions ? '' : 'no'} " \
+                   "#{expected_repetitions} repetitions expected, "\
+                   "with#{vrp.configuration.preprocessing.partitions ? '' : 'no'} " \
                    "partitions and #{vrp.schedule? ? '' : 'no'} periodic"
     }
   end
@@ -2276,17 +2309,18 @@ class WrapperTest < Minitest::Test
   end
 
   def test_impossible_minimum_lapse_opened_days
+    demo = OptimizerWrapper.config[:services][:demo]
     vrp = VRP.lat_lon_periodic_two_vehicles
     vrp[:services].first[:visits_number] = 2
     vrp[:services].first[:minimum_lapse] = 2
 
-    assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    assert_empty demo.detect_unfeasible_services(TestHelper.create(vrp))
 
     vrp[:configuration][:schedule][:range_indices] = { start: 0, end: 2 }
-    assert_empty OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp))
+    assert_empty demo.detect_unfeasible_services(TestHelper.create(vrp))
 
     vrp[:vehicles].each{ |v| v[:sequence_timewindows].delete_if{ |tw| tw[:day_index].zero? } }
-    unfeasible = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
+    unfeasible = demo.detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
     assert_equal(2, unfeasible.count{ |un| un.reason == 'Inconsistency between visit number and minimum lapse' })
     vrp[:vehicles].each{ |v|
       v[:sequence_timewindows].select{ |tw| tw[:day_index] == 2 }.each{ |tw| tw[:day_index] = 0 }
@@ -2352,7 +2386,7 @@ class WrapperTest < Minitest::Test
     # if more verifications are added but the time should not jump orders of magnitude.
     assert_operator total_check_distances_time, :<=, 6.6, 'check_distances function took longer than expected'
     assert_operator total_add_unassigned_time, :<=, 6.6, 'add_unassigned function took longer than expected'
-    assert_operator total_detect_unfeasible_services_time, :<=, 14.5, 'detect_unfeasible_services function took too long'
+    assert_operator total_detect_unfeasible_services_time, :<=, 14.5, 'detect_unfeasible_services took too long'
   ensure
     OptimizerLogger.level = old_logger_level if old_logger_level
     OptimizerWrapper.config[:solve][:repetition] = old_config_solve_repetition if old_config_solve_repetition
@@ -2393,6 +2427,7 @@ class WrapperTest < Minitest::Test
   end
 
   def test_check_distances_if_distance_and_time_with_lateness
+    demo = OptimizerWrapper.config[:services][:demo]
     vrp = VRP.basic
 
     vrp[:matrices][0][:distance] = vrp[:matrices][0][:time]
@@ -2402,8 +2437,7 @@ class WrapperTest < Minitest::Test
     vrp[:vehicles].first[:cost_distance_multiplier] = 1
     vrp[:vehicles].first[:distance] = 1
 
-    assert_equal 3,
-                 OptimizerWrapper.config[:services][:demo].check_distances(TestHelper.create(vrp), {}).values.flatten.size,
+    assert_equal 3, demo.check_distances(TestHelper.create(vrp), {}).values.flatten.size,
                  "all should be infeasible due to distance constraint"
   end
 
@@ -2562,7 +2596,7 @@ class WrapperTest < Minitest::Test
     # one without vehicle for "infeasible" service_3
     # one without vehicle for "infeasible" service_5 (this and the previous one can be in the same sub-vrp eventually)
     assert_equal 4, independent_vrps.size,
-                'split_independent_vrp function does not generate expected number of independent_vrps'
+                 'split_independent_vrp function does not generate expected number of independent_vrps'
 
     expected_vehicles = [["vehicle_0"], ["vehicle_1", "vehicle_2"], [], []]
     expected_services = [["service_2", "service_4"], ["service_1", "service_6"], ["service_3"], ["service_5"]]
@@ -2656,7 +2690,8 @@ class WrapperTest < Minitest::Test
 
     vrp = TestHelper.create(VRP.periodic)
     vrp.services = []
-    expected_days = vrp.configuration.schedule.range_indices[:end] - vrp.configuration.schedule.range_indices[:start] + 1
+    expected_days = vrp.configuration.schedule.range_indices[:end] -
+                    vrp.configuration.schedule.range_indices[:start] + 1
     nb_vehicles = vrp.vehicles.size
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
     assert_equal expected_days * nb_vehicles, solutions[0].routes.size
@@ -2857,20 +2892,21 @@ class WrapperTest < Minitest::Test
     }
 
     # solve WITHOUT simplification but from the last solution with evaluate_only
-    solution_wo_simplification = Wrappers::Wrapper.stub_any_instance(:simplify_vehicle_pause, proc{ nil }) do
-      vrp = TestHelper.load_vrp(self, fixture_file: 'problem_w_pause_that_can_be_simplified')
-      vrp.configuration.resolution.evaluate_only = true
-      vrp.configuration.preprocessing.first_solution_strategy = nil
-      vrp.routes = solution_w_simplification.routes.collect{ |r|
-        next if r.stops.none?(&:service_id)
+    solution_wo_simplification =
+      Wrappers::Wrapper.stub_any_instance(:simplify_vehicle_pause, proc{ nil }) do
+        vrp = TestHelper.load_vrp(self, fixture_file: 'problem_w_pause_that_can_be_simplified')
+        vrp.configuration.resolution.evaluate_only = true
+        vrp.configuration.preprocessing.first_solution_strategy = nil
+        vrp.routes = solution_w_simplification.routes.collect{ |r|
+          next if r.stops.none?(&:service_id)
 
-        {
-          vehicle: vrp.vehicles.find{ |v| v.id == r.vehicle.id },
-          mission_ids: r.stops.map(&:service_id).compact
-        }
-      }.compact
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
-    end
+          {
+            vehicle: vrp.vehicles.find{ |v| v.id == r.vehicle.id },
+            mission_ids: r.stops.map(&:service_id).compact
+          }
+        }.compact
+        OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
+      end
 
     # check if the results with and without simplification are the same
     solution_wo_simplification.routes.each_with_index{ |r, i|
@@ -2900,7 +2936,8 @@ class WrapperTest < Minitest::Test
         mission_ids: r.stops.map(&:service_id).compact
       }
     }.compact
-    solution_w_simplification = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
+    solution_w_simplification =
+      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil).first
 
     # check if all rests respect their TWs
     solution_w_simplification.routes.each{ |route|
@@ -2980,56 +3017,61 @@ class WrapperTest < Minitest::Test
 
     solns_with_simplification = OptimizerWrapper.wrapper_vrp('demo', { services: { vrp: [:ortools] }}, vrp, nil)
 
-    there_is_no_skipped_trip_when_simplification_is_on = vrp.relations.none?{ |relation|
-      skipped_a_trip = false
-      relation.linked_vehicle_ids.any?{ |vid|
-        route = solns_with_simplification[0].routes.find{ |r| r.vehicle.id == vid }
+    there_is_no_skipped_trip_when_simplification_is_on =
+      vrp.relations.none?{ |relation|
+        skipped_a_trip = false
+        relation.linked_vehicle_ids.any?{ |vid|
+          route = solns_with_simplification[0].routes.find{ |r| r.vehicle.id == vid }
 
-        # if an earlier trip is skipped check if a later trip is active
-        if skipped_a_trip
-          route.info.end_time > route.info.start_time
-        else
-          skipped_a_trip = (route.info.end_time <= route.info.start_time)
-          nil
-        end
+          # if an earlier trip is skipped check if a later trip is active
+          if skipped_a_trip
+            route.info.end_time > route.info.start_time
+          else
+            skipped_a_trip = (route.info.end_time <= route.info.start_time)
+            nil
+          end
+        }
       }
-    }
     assert there_is_no_skipped_trip_when_simplification_is_on, 'Should prevent skipped trips for this instance'
     # Solve WITHOUT simplification (when prioritize_first_available_trips_and_vehicles is off)
     # verify the cost is the same or better with the simplification and that the trip2 is used before trip1
     function_called = false
-    solns_without_simplification = Wrappers::Wrapper.stub_any_instance(:prioritize_first_available_trips_and_vehicles,
-                                                                       proc{
-                                                                         function_called = true
-                                                                         nil
-                                                                       }) do
-      vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multi_trips_which_uses_trip2_before_trip1')
-      OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
-    end
+    solns_without_simplification =
+      Wrappers::Wrapper.stub_any_instance(:prioritize_first_available_trips_and_vehicles,
+                                          proc{
+                                            function_called = true
+                                            nil
+                                          }) do
+        vrp = TestHelper.load_vrp(self, fixture_file: 'vrp_multi_trips_which_uses_trip2_before_trip1')
+        OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
+      end
     assert function_called, 'prioritize_first_available_trips_and_vehicles should have been called'
-    assert_operator solns_with_simplification[0].cost, :<=, solns_without_simplification[0].cost,
+    assert_operator solns_with_simplification[0].cost, :<=,
+                    solns_without_simplification[0].cost,
                     'simplification should not increase the cost'
-    assert_operator solns_with_simplification[0].unassigned_stops.size, :<=, solns_without_simplification[0].unassigned_stops.size,
+    assert_operator solns_with_simplification[0].unassigned_stops.size, :<=,
+                    solns_without_simplification[0].unassigned_stops.size,
                     'simplification should not increase unassigned services'
 
     # If the next check starts to fail regularly, it may be removed after verification
     assert_msg = 'This instance used to skip a trip when prioritize_first_available_trips_and_vehicles is off. ' \
                  'This is not the case anymore either due to randomness in or-tools or ' \
                  'the prioritize_first_available_trips_and_vehicles is not necessary anymore.'
-    there_is_a_skipped_trip_when_simplification_is_off = vrp.relations.any?{ |relation|
-      skipped_a_trip = false
-      relation.linked_vehicle_ids.any?{ |vid|
-        route = solns_without_simplification[0].routes.find{ |r| r.vehicle.id == vid }
+    there_is_a_skipped_trip_when_simplification_is_off =
+      vrp.relations.any?{ |relation|
+        skipped_a_trip = false
+        relation.linked_vehicle_ids.any?{ |vid|
+          route = solns_without_simplification[0].routes.find{ |r| r.vehicle.id == vid }
 
-        # if an earlier trip is skipped check if a later trip is active
-        if skipped_a_trip
-          route.info.end_time > route.info.start_time
-        else
-          skipped_a_trip = (route.info.end_time <= route.info.start_time)
-          nil
-        end
+          # if an earlier trip is skipped check if a later trip is active
+          if skipped_a_trip
+            route.info.end_time > route.info.start_time
+          else
+            skipped_a_trip = (route.info.end_time <= route.info.start_time)
+            nil
+          end
+        }
       }
-    }
     assert there_is_a_skipped_trip_when_simplification_is_off, assert_msg
   end
 
@@ -3079,7 +3121,8 @@ class WrapperTest < Minitest::Test
     solutions = OptimizerWrapper.wrapper_vrp('ortools', { services: { vrp: [:ortools] }}, vrp, nil)
 
     assert_empty solutions[0].unassigned_stops, 'There should be no unsigned services'
-    assert_equal 1, solutions[0].routes.count{ |r| r.stops.any?{ |a| a.service_id } }, 'All services must be assigned to one vehicle'
+    assert_equal 1, solutions[0].routes.count{ |r| r.stops.any?(&:service_id) },
+                 'All services must be assigned to one vehicle'
 
     planned_order = solutions[0].routes[0].stops.map(&:service_id).compact
     feasible_orders = [%w[service_1 service_2 service_3], %w[service_2 service_1 service_3]]
@@ -3090,8 +3133,10 @@ class WrapperTest < Minitest::Test
     vrp = VRP.toy
     vrp[:services].first[:activity][:timewindows] = [{ start: 0, end: 10 }, { start: 20, end: 15 }]
     # ship and service but only check service
-    unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
-    assert_equal 1, (unfeasible_services.count{ |un| un.reason&.split(' && ')&.include?('Service timewindow is infeasible') })
+    unfeasible_services =
+      OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(TestHelper.create(vrp)).values.flatten
+    unassigned_reason = 'Service timewindow is infeasible'
+    assert_equal 1, (unfeasible_services.count{ |un| un.reason&.split(' && ')&.include?(unassigned_reason) })
   end
 
   def test_multiple_reason
@@ -3117,7 +3162,8 @@ class WrapperTest < Minitest::Test
 
     unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
     assert_equal 3, unfeasible_services.values.flatten.size
-    assert(unfeasible_services.values.flatten.all?{ |un| un[:reason] == 'Provided possible days do not allow service to be assigned' })
+    unassigned_reason = 'Provided possible days do not allow service to be assigned'
+    assert(unfeasible_services.values.flatten.all?{ |un| un[:reason] == unassigned_reason })
   end
 
   def test_possible_days_consistency_regarding_other_visits_possible_days
@@ -3143,21 +3189,23 @@ class WrapperTest < Minitest::Test
 
     unfeasible_services = OptimizerWrapper.config[:services][:demo].detect_unfeasible_services(vrp)
     assert_equal 9, unfeasible_services.values.flatten.size
-    assert(unfeasible_services.values.flatten.all?{ |un| un[:reason] == 'Provided possible days do not allow service to be assigned' })
+    unassigned_reason = 'Provided possible days do not allow service to be assigned'
+    assert(unfeasible_services.values.flatten.all?{ |un| un[:reason] == unassigned_reason })
     refute_includes unfeasible_services.values.flatten.collect{ |un| un[:original_service_id] }, vrp.services.first.id
   end
 
   def test_no_compatible_vehicle_with_enough_capacity_respects_empty_operation
+    demo = OptimizerWrapper.config[:services][:demo]
     problem = VRP.lat_lon_capacitated
     problem[:services].first[:quantities].first[:value] = 2 * problem[:vehicles].first[:capacities].first[:limit]
 
     vrp = TestHelper.create(problem)
-    unassigned_flag = OptimizerWrapper.config[:services][:demo].no_compatible_vehicle_with_enough_capacity(vrp, vrp.services.first)
+    unassigned_flag = demo.no_compatible_vehicle_with_enough_capacity(vrp, vrp.services.first)
     assert unassigned_flag, "Service quantity violate vehicle capacity, it should be eliminated"
 
     problem[:services].first[:quantities].first[:empty] = true
     vrp = TestHelper.create(problem)
-    unassigned_flag = OptimizerWrapper.config[:services][:demo].no_compatible_vehicle_with_enough_capacity(vrp, vrp.services.first)
+    unassigned_flag = demo.no_compatible_vehicle_with_enough_capacity(vrp, vrp.services.first)
     refute unassigned_flag, "Empty operation cannot violate vehicle capacity, it should not be eliminated"
   end
 

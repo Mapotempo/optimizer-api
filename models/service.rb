@@ -54,7 +54,8 @@ module Models
     has_many :skills, class_name: 'Symbol', type: Array[Symbol]
     has_many :original_skills, class_name: 'Symbol', type: Array[Symbol]
 
-    field :vehicle_compatibility, as_json: :none # vehicle_compatibility[v_id] == {true -> compatible, false -> incompatible, nil -> not checked yet}
+    # vehicle_compatibility[v_id] == {true -> compatible, false -> incompatible, nil -> not checked yet}
+    field :vehicle_compatibility, as_json: :none
 
     ## has_many :period_activities, class_name: 'Models::Activity' # Need alternatives visits
     belongs_to :activity, class_name: 'Models::Activity'

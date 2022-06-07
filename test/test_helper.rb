@@ -76,10 +76,11 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
     # Thus `if service[:activity] && service[:activity][symbol]` style verifications.
 
     # Clean unreferenced points
-    all_referenced_point_ids = vrp[:vehicles]&.flat_map{ |v| [v[:start_point_id], v[:end_point_id]] }.to_a |
-                               vrp[:services]&.flat_map{ |s| s[:activity] ? s[:activity][:point_id] : s[:activities]&.map{ |a| a[:point_id] }.to_a }.to_a |
-                               vrp[:shipments]&.flat_map{ |s| [s[:pickup][:point_id], s[:delivery][:point_id]].compact }.to_a |
-                               vrp[:subtours]&.flat_map{ |s| s[:transmodal_stop_ids].to_a }.to_a
+    all_referenced_point_ids =
+      vrp[:vehicles]&.flat_map{ |v| [v[:start_point_id], v[:end_point_id]] }.to_a |
+      vrp[:services]&.flat_map{ |s| ([s[:activity]].compact + s[:activities].to_a).map{ |a| a[:point_id] } }.to_a |
+      vrp[:shipments]&.flat_map{ |s| [s[:pickup][:point_id], s[:delivery][:point_id]].compact }.to_a |
+      vrp[:subtours]&.flat_map{ |s| s[:transmodal_stop_ids].to_a }.to_a
     vrp[:points]&.delete_if{ |p| all_referenced_point_ids.exclude?(p[:id]) }
 
     vrp[:points]&.each{ |pt|
@@ -96,7 +97,9 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
         service.delete(:type)
         service[:activity][symbol] = ScheduleType.type_cast(service[:activity][symbol] || 0) if service[:activity]
-        service[:activities]&.each{ |activity| activity[symbol] = ScheduleType.type_cast(activity[symbol] || 0) if activity }
+        service[:activities]&.each{ |activity|
+          activity[symbol] = ScheduleType.type_cast(activity[symbol] || 0) if activity
+        }
       }
       vrp[:shipments]&.each{ |shipment|
         shipment[:pickup][symbol]   = ScheduleType.type_cast(shipment[:pickup][symbol] || 0) if shipment[:pickup]
@@ -115,7 +118,9 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       if vehicle.key?(:skills)
         vehicle.delete(:skills) if vehicle[:skills].nil? || vehicle[:skills].empty?
 
-        raise 'Vehicle skills should be an Array[Array[Symbol]]' if vehicle[:skills]&.any?{ |skill_set| !skill_set.is_a? Array }
+        if vehicle[:skills]&.any?{ |skill_set| !skill_set.is_a? Array }
+          raise 'Vehicle skills should be an Array[Array[Symbol]]'
+        end
 
         vehicle[:skills]&.each{ |skill_set| skill_set.map!(&:to_sym) }
       end
@@ -144,49 +149,61 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
       }
     }
 
-    if vrp[:configuration] && vrp[:configuration][:preprocessing] && vrp[:configuration][:preprocessing][:first_solution_strategy]
-      vrp[:configuration][:preprocessing][:first_solution_strategy] = [vrp[:configuration][:preprocessing][:first_solution_strategy]].flatten
+    config = vrp[:configuration]
+    if config && config[:preprocessing] && config[:preprocessing][:first_solution_strategy]
+      config[:preprocessing][:first_solution_strategy] = [config[:preprocessing][:first_solution_strategy]].flatten
     end
 
-    if vrp[:configuration] && vrp[:configuration][:restitution] && vrp[:configuration][:restitution][:geometry] == true
-      vrp[:configuration][:restitution][:geometry] = %i[polylines encoded_polylines]
+    if config && config[:restitution] && config[:restitution][:geometry] == true
+      config[:restitution][:geometry] = %i[polylines encoded_polylines]
     end
 
-    if vrp[:configuration]
-      if vrp[:configuration][:restitution]
-        vrp[:configuration][:restitution][:geometry] ||= []
+    if config
+      if config[:restitution]
+        config[:restitution][:geometry] ||= []
       else
-        vrp[:configuration][:restitution] = { geometry: [] }
+        config[:restitution] = { geometry: [] }
       end
     end
 
-    if vrp.is_a?(Hash) # TODO: make this work for the model as well. So that, it can detect model change and dump incompatibility.
-      unknown_model_fields = vrp.keys - [:name, :matrices, :units, :points, :rests, :zones, :vehicles, :services, :shipments, :relations, :subtours, :routes, :configuration]
-      raise StandardError, "If there is a new model class add it above. If not, following fields should not be in vrp: #{unknown_model_fields}" unless unknown_model_fields.empty?
+    if vrp.is_a?(Hash) # TODO: make this work for the model as well.
+      # So that, it can detect model change and dump incompatibility.
+      unknown_model_fields = vrp.keys - [:name, :matrices, :units, :points, :rests,
+                                         :zones, :vehicles, :services, :shipments, :relations, :subtours,
+                                         :routes, :configuration]
+      unless unknown_model_fields.empty?
+        raise "If there is a new model class add it above. "\
+              "If not, following fields should not be in vrp: #{unknown_model_fields}"
+      end
     end
 
-    # partition[:entity] becomes a symbol
-    vrp[:configuration][:preprocessing][:partitions]&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp[:configuration] && vrp[:configuration][:preprocessing]
-    vrp.configuration.preprocessing.partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym } if vrp.is_a?(Models::Vrp)
+    if config && config[:preprocessing]
+      # partition[:entity] becomes a symbol
+      config[:preprocessing][:partitions]&.each{ |partition|
+        partition[:entity] = partition[:entity].to_sym
+      }
+    end
+    if vrp.is_a?(Models::Vrp)
+      vrp.configuration.preprocessing.partitions&.each{ |partition| partition[:entity] = partition[:entity].to_sym }
+    end
 
     vrp[:relations]&.each{ |r|
       r[:type] = r[:type]&.to_sym
       next if [Models::Relation::NO_LAPSE_TYPES,
                Models::Relation::ONE_LAPSE_TYPES,
-               Models::Relation::SEVERAL_LAPSE_TYPES].any?{ |set|
-                set.include?(r[:type])
-              }
+               Models::Relation::SEVERAL_LAPSE_TYPES].any?{ |set| set.include?(r[:type]) }
 
-      raise 'This relation does not exit in any of NO_LAPSE_RELATIONS ONE_LAPSE_RELATIONS SEVERAL_LAPSE_RELATIONS, there is a risk of incorrect management'
+      raise 'This relation does not exit in any of NO_LAPSE_RELATIONS ONE_LAPSE_RELATIONS '\
+      'SEVERAL_LAPSE_RELATIONS, there is a risk of incorrect management'
     }
 
     vrp[:relations]&.each{ |r|
       r[:type] = r[:type]&.to_sym
-      next if [Models::Relation::ON_VEHICLES_TYPES, Models::Relation::ON_SERVICES_TYPES].any?{ |set|
-                set.include?(r[:type])
-              }
+      next if [Models::Relation::ON_VEHICLES_TYPES,
+               Models::Relation::ON_SERVICES_TYPES].any?{ |set| set.include?(r[:type]) }
 
-      raise 'This relation does not exit in any of ON_VEHICLES_TYPES ON_SERVICES_TYPES there is a risk of incorrect management'
+      raise 'This relation does not exit in any of ON_VEHICLES_TYPES '\
+      'ON_SERVICES_TYPES there is a risk of incorrect management'
     }
 
     vrp[:vehicles]&.each{ |v|
@@ -243,19 +260,21 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
 
           if ENV['TEST_DUMP_VRP'] == 'true'
             WebMock.enable_net_connect!
-            matrices =
-              vrp.router.send(:__minitest_any_instance_stub__matrix, url, mode, dimensions, uniq_row, uniq_column, options) # call original method
+            matrices = vrp.router.send(:__minitest_any_instance_stub__matrix,
+                                       url, mode, dimensions, uniq_row, uniq_column, options) # call original method
             WebMock.disable_net_connect!
 
             corresponding_data =
-              { column: uniq_column, dimensions: dimensions, matrices: matrices, mode: mode, options: options, row: uniq_row, url: url }
+              { column: uniq_column, dimensions: dimensions,
+                matrices: matrices, mode: mode, options: options, row: uniq_row, url: url }
 
             write_in_dump << corresponding_data
           else
-            corresponding_data = dumped_data.find{ |dumped|
-              dumped[:mode] == mode && dumped[:options] == options && (dimensions - dumped[:dimensions]).empty? &&
-                (uniq_row - dumped[:row]).empty? && (uniq_column - dumped[:column]).empty?
-            }
+            corresponding_data =
+              dumped_data.find{ |dumped|
+                dumped[:mode] == mode && dumped[:options] == options && (dimensions - dumped[:dimensions]).empty? &&
+                  (uniq_row - dumped[:row]).empty? && (uniq_column - dumped[:column]).empty?
+              }
             raise 'Could not find matrix in the dump' unless corresponding_data
           end
 
@@ -288,12 +307,14 @@ module TestHelper # rubocop: disable Style/CommentedKeyword, Lint/RedundantCopDi
   def self.load_vrps(test, options = {})
     filename = options[:fixture_file] || test.name[5..-1]
     json_file = options[:json_file_path] || "test/fixtures/#{filename}.json"
-    vrps = options[:problem] ? { vrp: options[:problem] } :
-                               JSON.parse(File.read(json_file), symbolize_names: true)
+    vrps =
+      options[:problem] ? { vrp: options[:problem] } :
+                                    JSON.parse(File.read(json_file), symbolize_names: true)
     vrps = [vrps] unless vrps.is_a?(Array)
     vrps.map!{ |vrp| create(vrp[:vrp]) }
 
-    matrices_required(vrps, filename) unless vrps.any?(&:name) # this is a way not to keep track of matrices when it is not needed
+    # "unless name" is a way not to keep track of matrices when it is not needed
+    matrices_required(vrps, filename) unless vrps.any?(&:name)
 
     vrps
   end
@@ -1033,20 +1054,20 @@ module VRP # rubocop: disable Metrics/ModuleLength, Style/CommentedKeyword
           [4395, 0, 528, 887, 678, 878, 4245, 4193, 4267, 3766, 3698, 4014, 4014, 0]
         ],
         distance: [
-          [0, 47517.6, 48430.8, 45189.3, 42265.6, 43516.8, 27045, 27767.6, 28944.3, 26764.8, 25854.9, 26981.3, 26981.3, 47517.6],
-          [47895.8, 0, 1041.8, 7247.1, 5677.2, 6735.3, 53175.5, 52927.8, 53644.9, 52224, 51314.1, 50371.6, 50371.6, 0],
-          [48809, 1041.8, 0, 8160.3, 6590.4, 7648.5, 54088.7, 53841, 54558.1, 53137.2, 52227.3, 51284.8, 51284.8, 1041.8],
-          [46138, 7058.6, 7971.8, 0, 4128.1, 4005.4, 51215, 51937.7, 53114.3, 50263.6, 49353.6, 48411.2, 48411.2, 7058.6],
-          [43348.3, 5746.6, 6659.9, 4161.3, 0, 1251.2, 48681.3, 49764.1, 50481.2, 47729.9, 46819.9, 45877.5, 45877.5, 5746.6],
-          [44408.7, 6799.1, 7712.3, 4073.4, 1251.2, 0, 49485.8, 51015.3, 51732.4, 48534.3, 47624.4, 46681.9, 46681.9, 6799.1],
-          [27645.2, 53274.4, 54187.6, 51568.2, 48577.8, 49829.1, 0, 1169.2, 2413.7, 3525.5, 3041, 4614, 4614, 53274.4],
-          [28391.3, 53009.8, 53923, 52314.3, 49347, 50598.3, 1192.7, 0, 1621.1, 2732.9, 3606.8, 3821.4, 3821.4, 53009.8],
-          [29383.2, 53810.3, 54723.5, 53306.2, 50147.5, 51398.8, 2388.6, 1572.5, 0, 3533.4, 4407.3, 4621.9, 4621.9, 53810.3],
-          [27454.2, 52282, 53195.2, 50575.8, 47585.4, 48836.7, 3572.1, 2756, 3473.1, 0, 1106.8, 2088, 2088, 52282],
-          [26501.3, 51329, 52242.2, 49622.8, 46632.5, 47883.7, 3013.4, 3641.4, 4358.5, 1118.3, 0, 1887.6, 1887.6, 51329],
-          [27191.7, 50443.5, 51356.7, 48737.3, 45747, 46998.2, 4660.6, 3844.5, 4561.6, 2088, 1887.3, 0, 0, 50443.5],
-          [27191.7, 50443.5, 51356.7, 48737.3, 45747, 46998.2, 4660.6, 3844.5, 4561.6, 2088, 1887.3, 0, 0, 50443.5],
-          [47895.8, 0, 1041.8, 7247.1, 5677.2, 6735.3, 53175.5, 52927.8, 53644.9, 52224, 51314.1, 50371.6, 50371.6, 0]
+          [0, 47517, 48430, 45189, 42265, 43516, 27045, 27767, 28944, 26764, 25854, 26981, 26981, 47517],
+          [47895, 0, 1041, 7247, 5677, 6735, 53175, 52927, 53644, 52224, 51314, 50371, 50371, 0],
+          [48809, 1041, 0, 8160, 6590, 7648, 54088, 53841, 54558, 53137, 52227, 51284, 51284, 1041],
+          [46138, 7058, 7971, 0, 4128, 4005, 51215, 51937, 53114, 50263, 49353, 48411, 48411, 7058],
+          [43348, 5746, 6659, 4161, 0, 1251, 48681, 49764, 50481, 47729, 46819, 45877, 45877, 5746],
+          [44408, 6799, 7712, 4073, 1251, 0, 49485, 51015, 51732, 48534, 47624, 46681, 46681, 6799],
+          [27645, 53274, 54187, 51568, 48577, 49829, 0, 1169, 2413, 3525, 3041, 4614, 4614, 53274],
+          [28391, 53009, 53923, 52314, 49347, 50598, 1192, 0, 1621, 2732, 3606, 3821, 3821, 53009],
+          [29383, 53810, 54723, 53306, 50147, 51398, 2388, 1572, 0, 3533, 4407, 4621, 4621, 53810],
+          [27454, 52282, 53195, 50575, 47585, 48836, 3572, 2756, 3473, 0, 1106, 2088, 2088, 52282],
+          [26501, 51329, 52242, 49622, 46632, 47883, 3013, 3641, 4358, 1118, 0, 1887, 1887, 51329],
+          [27191, 50443, 51356, 48737, 45747, 46998, 4660, 3844, 4561, 2088, 1887, 0, 0, 50443],
+          [27191, 50443, 51356, 48737, 45747, 46998, 4660, 3844, 4561, 2088, 1887, 0, 0, 50443],
+          [47895, 0, 1041, 7247, 5677, 6735, 53175, 52927, 53644, 52224, 51314, 50371, 50371, 0]
         ]
       }],
       points: [{

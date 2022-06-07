@@ -60,13 +60,19 @@ module Ai4r
         distances_to_new_cluster = []
         new_clusters_compatibility = @compatibility_matrix.last
         (0..cj - 1).each do |cx|
-          distances_to_new_cluster << (new_clusters_compatibility[cx] ? [@distance_matrix[ci - 1][cx], @distance_matrix[cj - 1][cx]].max : @max_distance + 1)
+          distances_to_new_cluster <<
+            (new_clusters_compatibility[cx] ? [@distance_matrix[ci - 1][cx],
+                                               @distance_matrix[cj - 1][cx]].max : @max_distance + 1)
         end
         (cj + 1..ci - 1).each do |cx|
-          distances_to_new_cluster << (new_clusters_compatibility[cx - 1] ? [@distance_matrix[ci - 1][cx], @distance_matrix[cx - 1][cj]].max : @max_distance + 1)
+          distances_to_new_cluster <<
+            (new_clusters_compatibility[cx - 1] ? [@distance_matrix[ci - 1][cx],
+                                                   @distance_matrix[cx - 1][cj]].max : @max_distance + 1)
         end
         (ci + 1..@distance_matrix.length).each do |cx|
-          distances_to_new_cluster << (new_clusters_compatibility[cx - 2] ? [@distance_matrix[cx - 1][ci], @distance_matrix[cx - 1][cj]].max : @max_distance + 1)
+          distances_to_new_cluster <<
+            (new_clusters_compatibility[cx - 2] ? [@distance_matrix[cx - 1][ci],
+                                                   @distance_matrix[cx - 1][cj]].max : @max_distance + 1)
         end
 
         if cj.zero? && ci == 1

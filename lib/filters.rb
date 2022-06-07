@@ -51,11 +51,14 @@ module Filters
 
     # Then services and shipments
     Models::Quantity.all.each{ |quantity|
-      if all_values_by_units[quantity.unit].nil? # This unit has no capacity in none of the service_vrps, but we still might turn it into integer
+      # This unit has no capacity in none of the service_vrps, but we still might turn it into integer
+      if all_values_by_units[quantity.unit].nil?
         all_values_by_units[quantity.unit] = []
       end
       all_values_by_units[quantity.unit].push(quantity.value) unless quantity.value.nil? || quantity.value.zero?
-      all_values_by_units[quantity.unit].push(quantity.setup_value) if quantity.unit.counting && !quantity.setup_value.zero?
+      if quantity.unit.counting && !quantity.setup_value.zero?
+        all_values_by_units[quantity.unit].push(quantity.setup_value)
+      end
     }
 
     all_values_by_units.reject!{ |_unit, value_array| value_array.empty? }
@@ -68,9 +71,10 @@ module Filters
       # FIXME: We need to decide what to do if there is an overload_multiplier cost in one unit and it
       # has a noninteger capacity/quantitiy (i.e., we need to multiply the values of a unit with a precision_coef)
       # Currently precision_coef is not in use so this souldn't cause a problem.
-      float_unit_has_overload_multiplier = true if !float_unit_has_overload_multiplier &&
-                                                   (unit.precision_coef != Models::Unit.default_attributes[:precision_coef]) &&
-                                                   (Models::Capacity.where(unit: unit).all?{ |cap| cap.overload_multiplier.nil? || cap.overload_multiplier.zero? })
+      float_unit_has_overload_multiplier =
+        !float_unit_has_overload_multiplier &&
+        (unit.precision_coef != Models::Unit.default_attributes[:precision_coef]) &&
+        Models::Capacity.where(unit: unit).all?{ |cap| cap.overload_multiplier.nil? || cap.overload_multiplier.zero? }
     }
 
     if float_unit_has_overload_multiplier ||
@@ -89,7 +93,8 @@ module Filters
 
     # Skip the following units before balancing:
     # counting units (the precision_coef turns them into integer, they don't need to be in the balancing)
-    # the units which only has services/shipments without capacity or which only has capacity without any services/shipments
+    # the units which only has services/shipments without capacity or
+    # which only has capacity without any services/shipments
     all_values_by_units.delete_if{ |unit, value_array|
       unit.counting ||
         (value_array.size == Models::Capacity.where(unit: unit).size) ||
@@ -150,9 +155,10 @@ module Filters
   def self.decimal_places(value)
     decimal_count = 0
     original_value = value
-    until (value - value.round).abs < 1e-10 # Check if integer (it needs to be done like this due to floating point representation)
-        decimal_count += 1
-        value = original_value * 10**decimal_count # value *= 10 propogates the floating point error
+    # Check if integer (it needs to be done like this due to floating point representation)
+    until (value - value.round).abs < 1e-10
+      decimal_count += 1
+      value = original_value * 10**decimal_count # value *= 10 propagates the floating point error
     end
     decimal_count
   end
@@ -175,7 +181,8 @@ module Filters
       service.activity.timewindows.each{ |timewindow|
         unified_timewindows[timewindow.id] = {
           start: (timewindow.day_index || 0) * 86400 + timewindow.start,
-          end: timewindow.end && ((timewindow.day_index || 0) * 86400 + timewindow.end) || (0 + (1 + (timewindow.day_index || 6)) * 86400)
+          end: timewindow.end &&
+               ((timewindow.day_index || 0) * 86400 + timewindow.end) || (0 + (1 + (timewindow.day_index || 6)) * 86400)
         }
         inter[timewindow.id] = []
       }
@@ -184,7 +191,8 @@ module Filters
         unified_timewindows.each{ |s_key, s_value|
           next if key == s_key || s_value.include?(key) || value.include?(s_key)
 
-          next unless value[:start] >= s_value[:start] && value[:start] <= s_value[:end] || value[:end] >= s_value[:start] && value[:end] <= s_value[:end]
+          next unless value[:start] >= s_value[:start] &&
+                      value[:start] <= s_value[:end] || value[:end] >= s_value[:start] && value[:end] <= s_value[:end]
 
           inter[key].each{ |k_value| inter[k_value] << s_key }
           inter[s_key].each{ |k_value| inter[k_value] << key }
@@ -208,7 +216,8 @@ module Filters
         # latest_day_index = day_indices.include?(nil) ? nil : day_indices.max
         earliest_start = starts.include?(nil) ? nil : starts.min
         latest_end = ends.include?(nil) ? nil : ends.max
-        new_timewindows << Models::Timewindow.create(start: earliest_start, end: latest_end, day_index: earliest_day_index)
+        new_timewindows << Models::Timewindow.create(start: earliest_start, end: latest_end,
+                                                     day_index: earliest_day_index)
       }
       service.activity.timewindows = new_timewindows
     }

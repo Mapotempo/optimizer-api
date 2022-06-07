@@ -41,18 +41,19 @@ module Models
 
       def initialize(object, options = {})
         options = { info: {} }.merge(options)
-        parsed_object = case object.class.to_s
-                        when 'Models::Service'
-                          Parsers::ServiceParser.parse(object, options)
-                        when 'Models::Rest'
-                          Parsers::RestParser.parse(object, options)
-                        when 'Models::Point'
-                          Parsers::PointParser.parse(object, options)
-                        when 'Hash'
-                          object # Allow direct loading of json solution
-                        else
-                          raise 'Unknown stop class'
-                        end
+        parsed_object =
+          case object.class.to_s
+          when 'Models::Service'
+            Parsers::ServiceParser.parse(object, options)
+          when 'Models::Rest'
+            Parsers::RestParser.parse(object, options)
+          when 'Models::Point'
+            Parsers::PointParser.parse(object, options)
+          when 'Hash'
+            object # Allow direct loading of json solution
+          else
+            raise 'Unknown stop class'
+          end
         raise 'A route stop cannot be nil' unless parsed_object
 
         super(parsed_object)
@@ -101,15 +102,17 @@ module Models
         return nil if activity.timewindows.empty?
 
         if info.waiting_time > 0
-          active_tw = activity.timewindows.select{ |tw| tw.start > info.begin_time }.min_by{ |tw|
-            tw.start - info.begin_time
-          }
+          active_tw =
+            activity.timewindows.select{ |tw| tw.start > info.begin_time }.min_by{ |tw|
+              tw.start - info.begin_time
+            }
           return active_tw
         end
 
-        active_tw = activity.timewindows.find{ |tw|
-          tw.start <= info.begin_time && info.begin_time <= tw.safe_end
-        }
+        active_tw =
+          activity.timewindows.find{ |tw|
+            tw.start <= info.begin_time && info.begin_time <= tw.safe_end
+          }
         return active_tw if active_tw
 
         activity.timewindows.find{ |tw|

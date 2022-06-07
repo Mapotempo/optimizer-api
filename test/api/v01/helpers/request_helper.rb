@@ -36,7 +36,8 @@ module TestHelper
 
       sleep 0.1
     end
-    puts "#{job_id} #{Time.now} got avancement '#{last_response_body['job']['avancement']}' to match #{avancement_regexp}"
+    puts "#{job_id} #{Time.now} got avancement '#{last_response_body['job']['avancement']}' "\
+         "to match #{avancement_regexp}"
     last_response_body
   end
 
@@ -48,7 +49,9 @@ module TestHelper
       assert_equal 200, last_response.status, 'Response status code should be 200'
       assert_includes ['queued', 'working', 'completed'], JSON.parse(last_response.body)['job']['status']
 
-      puts "Empty response body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
+      if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
+        puts "Empty response body: #{JSON.parse(last_response.body)}"
+      end
 
       break if JSON.parse(last_response.body)['job']['status'] == status
 
@@ -71,7 +74,9 @@ module TestHelper
 
       assert_includes ['queued', 'working', 'completed'], JSON.parse(last_response.body)['job']['status']
 
-      puts "Empty response body: #{JSON.parse(last_response.body)}" if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
+      if JSON.parse(last_response.body).nil? || JSON.parse(last_response.body)['job'].nil?
+        puts "Empty response body: #{JSON.parse(last_response.body)}"
+      end
 
       break if JSON.parse(last_response.body)['job']['status'] == status
 
@@ -151,7 +156,8 @@ module TestHelper
     old_resque_inline = Resque.inline
     Resque.inline = false
     if options[:start_worker]
-      pid_worker = Process.spawn({ 'COUNT' => '1', 'QUEUE' => 'DEFAULT' }, 'bundle exec rake resque:workers --trace', pgroup: true) # don't create another shell
+      pid_worker = Process.spawn({ 'COUNT' => '1', 'QUEUE' => 'DEFAULT' },
+                                 'bundle exec rake resque:workers --trace', pgroup: true) # don't create another shell
       pgid_worker = Process.getpgid(pid_worker)
       while `ps -o pgid | grep #{pgid_worker}`.split(/\n/).size < 2
         puts "#{Time.now} Waiting for the worker to launch"

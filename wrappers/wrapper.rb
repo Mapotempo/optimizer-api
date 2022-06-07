@@ -33,7 +33,8 @@ module Wrappers
     end
 
     def assert_points_same_definition(vrp)
-      (vrp.points.all?(&:location) || vrp.points.none?(&:location)) && (vrp.points.all?(&:matrix_index) || vrp.points.none?(&:matrix_index))
+      (vrp.points.all?(&:location) || vrp.points.none?(&:location)) && (vrp.points.all?(&:matrix_index) ||
+        vrp.points.none?(&:matrix_index))
     end
 
     def assert_vehicles_start_or_end(vrp)
@@ -149,13 +150,14 @@ module Wrappers
     end
 
     def assert_only_empty_or_fill_quantities(vrp)
-      problem_units = vrp.units.collect{ |unit|
-        {
-          unit_id: unit.id,
-          fill: false,
-          empty: false
+      problem_units =
+        vrp.units.collect{ |unit|
+          {
+            unit_id: unit.id,
+            fill: false,
+            empty: false
+          }
         }
-      }
 
       vrp.services.each{ |service|
         service.quantities.each{ |quantity|
@@ -194,13 +196,17 @@ module Wrappers
     end
 
     def assert_first_solution_strategy_is_possible(vrp)
-      vrp.configuration.preprocessing.first_solution_strategy.empty? || (!vrp.configuration.resolution.evaluate_only && !vrp.configuration.resolution.batch_heuristic)
+      vrp.configuration.preprocessing.first_solution_strategy.empty? || (!vrp.configuration.resolution.evaluate_only &&
+        !vrp.configuration.resolution.batch_heuristic)
     end
 
     def assert_first_solution_strategy_is_valid(vrp)
       vrp.configuration.preprocessing.first_solution_strategy.empty? ||
-        (vrp.configuration.preprocessing.first_solution_strategy[0] != 'self_selection' && !vrp.periodic_heuristic? || vrp.configuration.preprocessing.first_solution_strategy.size == 1) &&
-          vrp.configuration.preprocessing.first_solution_strategy.all?{ |strategy| strategy == 'self_selection' || strategy == 'periodic' || OptimizerWrapper::HEURISTICS.include?(strategy) }
+        (vrp.configuration.preprocessing.first_solution_strategy[0] != 'self_selection' && !vrp.periodic_heuristic? ||
+          vrp.configuration.preprocessing.first_solution_strategy.size == 1) &&
+          vrp.configuration.preprocessing.first_solution_strategy.all?{ |strategy|
+            strategy == 'self_selection' || strategy == 'periodic' || OptimizerWrapper::HEURISTICS.include?(strategy)
+          }
     end
 
     def assert_no_planning_heuristic(vrp)
@@ -229,7 +235,8 @@ module Wrappers
     end
 
     def assert_wrong_vehicle_shift_preference_with_heuristic(vrp)
-      (vrp.vehicles.map(&:shift_preference).uniq - [:minimize_span] - ['minimize_span']).empty? || !vrp.periodic_heuristic?
+      (vrp.vehicles.map(&:shift_preference).uniq - [:minimize_span] - ['minimize_span']).empty? ||
+        !vrp.periodic_heuristic?
     end
 
     def assert_no_activity_with_position(vrp)
@@ -253,7 +260,11 @@ module Wrappers
     end
 
     def assert_possible_to_get_distances_if_maximum_ride_distance(vrp)
-      vrp.vehicles.none?(&:maximum_ride_distance) || (vrp.points.all?{ |point| point.location&.lat } || vrp.matrices.all?{ |matrix| matrix.distance && !matrix.distance.empty? })
+      vrp.vehicles.none?(&:maximum_ride_distance) ||
+        (
+          vrp.points.all?{ |point| point.location&.lat } ||
+          vrp.matrices.all?{ |matrix| matrix.distance && !matrix.distance.empty? }
+        )
     end
 
     def assert_no_vehicle_free_approach_or_return_if_heuristic(vrp)
@@ -265,7 +276,8 @@ module Wrappers
     end
 
     def assert_no_vehicle_limit_if_heuristic(vrp)
-      vrp.configuration.resolution.vehicle_limit.nil? || vrp.configuration.resolution.vehicle_limit >= vrp.vehicles.size || !vrp.periodic_heuristic?
+      vrp.configuration.resolution.vehicle_limit.nil? ||
+        vrp.configuration.resolution.vehicle_limit >= vrp.vehicles.size || !vrp.periodic_heuristic?
     end
 
     def assert_no_same_point_day_if_no_heuristic(vrp)
@@ -277,7 +289,8 @@ module Wrappers
     end
 
     def assert_no_first_solution_strategy(vrp)
-      vrp.configuration.preprocessing.first_solution_strategy.empty? || vrp.configuration.preprocessing.first_solution_strategy == ['self_selection']
+      vrp.configuration.preprocessing.first_solution_strategy.empty? ||
+        vrp.configuration.preprocessing.first_solution_strategy == ['self_selection']
     end
 
     def assert_solver(vrp)
@@ -285,11 +298,13 @@ module Wrappers
     end
 
     def assert_solver_if_not_periodic(vrp)
-      vrp.configuration.resolution.solver || vrp.configuration.preprocessing.first_solution_strategy && vrp.periodic_heuristic?
+      vrp.configuration.resolution.solver ||
+        vrp.configuration.preprocessing.first_solution_strategy && vrp.periodic_heuristic?
     end
 
     def assert_clustering_compatible_with_periodic_heuristic(vrp)
-      (!vrp.configuration.preprocessing.first_solution_strategy || !vrp.periodic_heuristic?) || !vrp.configuration.preprocessing.cluster_threshold && !vrp.configuration.preprocessing.max_split_size
+      (!vrp.configuration.preprocessing.first_solution_strategy || !vrp.periodic_heuristic?) ||
+        !vrp.configuration.preprocessing.cluster_threshold && !vrp.configuration.preprocessing.max_split_size
     end
 
     def assert_lat_lon_for_partition(vrp)
@@ -298,8 +313,10 @@ module Wrappers
     end
 
     def assert_vehicle_entity_only_before_work_day(vrp)
-      vehicle_entity_index = vrp.configuration.preprocessing.partitions.find_index{ |partition| partition.entity == :vehicle }
-      work_day_entity_index = vrp.configuration.preprocessing.partitions.find_index{ |partition| partition.entity == :work_day }
+      vehicle_entity_index =
+        vrp.configuration.preprocessing.partitions.find_index{ |partition| partition.entity == :vehicle }
+      work_day_entity_index =
+        vrp.configuration.preprocessing.partitions.find_index{ |partition| partition.entity == :work_day }
       vehicle_entity_index.nil? || work_day_entity_index.nil? || vehicle_entity_index < work_day_entity_index
     end
 
@@ -316,7 +333,9 @@ module Wrappers
 
     def assert_valid_partitions(vrp)
       vrp.configuration.preprocessing.partitions.size < 3 &&
-        (vrp.configuration.preprocessing.partitions.collect{ |partition| partition[:entity] }.uniq.size == vrp.configuration.preprocessing.partitions.size)
+        (vrp.configuration.preprocessing.partitions.collect{ |partition|
+           partition[:entity]
+         }.uniq.size == vrp.configuration.preprocessing.partitions.size)
     end
 
     def assert_route_date_or_indice_if_periodic(vrp)
@@ -388,16 +407,19 @@ module Wrappers
     end
 
     def assert_single_dimension(vrp)
-      vrp.vehicles.empty? || (assert_only_time_dimension(vrp) ^ assert_only_distance_dimension(vrp) ^ assert_only_value_dimension(vrp))
+      vrp.vehicles.empty? ||
+        (assert_only_time_dimension(vrp) ^ assert_only_distance_dimension(vrp) ^ assert_only_value_dimension(vrp))
     end
 
     # TODO: Need a better way to represent solver preference
     def assert_small_minimum_duration(vrp)
-      vrp.configuration.resolution.minimum_duration.nil? || vrp.vehicles.empty? || vrp.configuration.resolution.minimum_duration / vrp.vehicles.size < 5000
+      vrp.configuration.resolution.minimum_duration.nil? || vrp.vehicles.empty? ||
+        vrp.configuration.resolution.minimum_duration / vrp.vehicles.size < 5000
     end
 
     def assert_no_cost_fixed(vrp)
-      vrp.vehicles.all?{ |vehicle| vehicle.cost_fixed.nil? || vehicle.cost_fixed.zero? } || vrp.vehicles.map(&:cost_fixed).uniq.size == 1
+      vrp.vehicles.all?{ |vehicle| vehicle.cost_fixed.nil? || vehicle.cost_fixed.zero? } ||
+        vrp.vehicles.map(&:cost_fixed).uniq.size == 1
     end
 
     def assert_no_complex_setup_durations(vrp)
@@ -405,11 +427,11 @@ module Wrappers
       return false if vrp.services.any?{ |s| s.activities.any? }
 
       vrp.services.all?{ |s| s.activity.setup_duration.to_i == 0 } || # either there is no setup duration
-      ( # or it can be simplified by augmenting the time matrix
-        vrp.services.group_by{ |s| s.activity.point }.all?{ |_point, service_group|
-          service_group.uniq{ |s| s.activity.setup_duration.to_i }.size == 1
-        } && vrp.vehicles.group_by{ |v| [v.coef_setup || 1, v.additional_setup.to_i] }.size <= 1
-      )
+        ( # or it can be simplified by augmenting the time matrix
+          vrp.services.group_by{ |s| s.activity.point }.all?{ |_point, service_group|
+            service_group.uniq{ |s| s.activity.setup_duration.to_i }.size == 1
+          } && vrp.vehicles.group_by{ |v| [v.coef_setup || 1, v.additional_setup.to_i] }.size <= 1
+        )
     end
 
     def solve_synchronous?(_vrp)
@@ -437,9 +459,14 @@ module Wrappers
       }
 
       matrix_indices.each.with_index{ |matrix_index, index|
-        next if (column_cpt[index] < vrp.matrices.size * (matrix_indices.size - 1)) && (line_cpt[index] < vrp.matrices.size * (matrix_indices.size - 1))
+        next if (column_cpt[index] < vrp.matrices.size * (matrix_indices.size - 1)) &&
+                (line_cpt[index] < vrp.matrices.size * (matrix_indices.size - 1))
 
-        vrp.services.select{ |service| (service.activity ? [service.activity] : service.activities).any?{ |activity| activity.point.matrix_index == matrix_index } }.each{ |service|
+        vrp.services.select{ |service|
+          (service.activity ? [service.activity] : service.activities).any?{ |activity|
+            activity.point.matrix_index == matrix_index
+          }
+        }.each{ |service|
           add_unassigned(unfeasible, vrp, service, 'Unreachable')
         }
       }
@@ -451,7 +478,8 @@ module Wrappers
       # calls add_unassigned_internal for every service in an "ALL_OR_NONE_RELATION" with the service
       service_already_marked_unfeasible = !!unfeasible[service.id]
 
-      unless service_already_marked_unfeasible && reason.start_with?('In a ') && reason =~ /\AIn a \S+ relation with an unfeasible service: /
+      unless service_already_marked_unfeasible && reason.start_with?('In a ') &&
+             reason =~ /\AIn a \S+ relation with an unfeasible service: /
         add_unassigned_internal(unfeasible, vrp, service, reason)
       end
 
@@ -469,7 +497,9 @@ module Wrappers
           remove_end_index = -1
           relation.linked_services[remove_start_index..remove_end_index].each{ |service_in|
             next if service_in == service
-            add_unassigned(unfeasible, vrp, service_in, "In a #{relation.type} relation with an unfeasible service: #{service.id}")
+
+            add_unassigned(unfeasible, vrp, service_in,
+                           "In a #{relation.type} relation with an unfeasible service: #{service.id}")
           }
         }
         vrp.routes.delete_if{ |route|
@@ -547,11 +577,14 @@ module Wrappers
         end
 
         if no_compatible_vehicle_with_enough_capacity(vrp, service)
-          add_unassigned(unfeasible, vrp, service, 'Service has a quantity which is greater than the capacity of any compatible vehicle')
+          add_unassigned(unfeasible, vrp, service,
+                         'Service has a quantity which is greater than the capacity of any compatible vehicle')
         end
 
         if no_compatible_vehicle_with_compatible_tw(vrp, service)
-          add_unassigned(unfeasible, vrp, service, 'Service cannot be performed by any compatible vehicle while respecting duration, timewindow and day limits')
+          add_unassigned(unfeasible, vrp, service,
+                         'Service cannot be performed by any compatible vehicle while '\
+                         'respecting duration, timewindow and day limits')
         end
 
         # Planning inconsistency
@@ -586,9 +619,10 @@ module Wrappers
       previous_removed = false
       to_delete_services = []
       relation.linked_services.each{ |service|
-        previous_removed ||= vrp.vehicles.none?{ |vehicle|
-          service.vehicle_compatibility[vehicle.id]
-        }
+        previous_removed ||=
+          vrp.vehicles.none?{ |vehicle|
+            service.vehicle_compatibility[vehicle.id]
+          }
 
         if previous_removed
           if Models::Relation::ALL_OR_NONE_RELATIONS.include?(relation.type)
@@ -601,30 +635,43 @@ module Wrappers
       }
 
       to_delete_services.each{ |service|
-        add_unassigned(unfeasible, vrp, service, "Service belongs to a relation of type #{relation.type} which makes it infeasible")
+        add_unassigned(unfeasible, vrp, service,
+                       "Service belongs to a relation of type #{relation.type} which makes it infeasible")
       }
     end
 
     def last_service_reachable_sequence(vrp, vehicle, services)
       vehicle_timewindow = vehicle.timewindow || Models::Timewindow.new(start: 0)
-      vehicle_duration = [vehicle.duration, vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?) - vehicle_timewindow.start].compact.min
-      successive_activities = services.map{ |service|
-        return service.id if service.vehicle_compatibility[vehicle.id] == false
-        [service.id, service.activity && [service.activity] || service.activities]
-      }
+      vehicle_duration = [
+        vehicle.duration,
+        vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?) - vehicle_timewindow.start
+      ].compact.min
+      successive_activities =
+        services.map{ |service|
+          return service.id if service.vehicle_compatibility[vehicle.id] == false
+
+          [service.id, service.activity && [service.activity] || service.activities]
+        }
       return nil if successive_activities.all?{ |_id, acts| acts.any?{ |a| a.timewindows.none?(&:end) } }
 
       matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
 
-      depot_approach = vehicle.start_point && matrix.time ? successive_activities.first.last.map{ |act| matrix.time[vehicle.start_point.matrix_index][act.point.matrix_index] }.min : 0
+      depot_approach =
+        (vehicle.start_point && matrix.time) ? successive_activities.first.last.map{ |act|
+                                                 matrix.time[vehicle.start_point.matrix_index][act.point.matrix_index]
+                                               }.min : 0
       earliest_arrival = vehicle_timewindow.start + depot_approach
 
       successive_activities.each.with_index{ |(id, a_activities), a_index|
-        return id if earliest_arrival > (a_activities.map{ |act| act.timewindows.map{ |tw| tw.safe_end(act.late_multiplier&.positive?) }.max }.max ||
-                                            vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?))
+        time = a_activities.map{ |act| act.timewindows.map{ |tw| tw.safe_end(act.late_multiplier&.positive?) }.max }.max
+        time ||= vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?)
+        return id if earliest_arrival > time
 
         last_duration = a_activities.map{ |a| a.duration_on(vehicle) }.min
-        depot_return = vehicle.end_point && matrix.time ? a_activities.map{ |act| matrix.time[act.point.matrix_index][vehicle.end_point.matrix_index] }.min : 0
+        depot_return =
+          (vehicle.end_point && matrix.time) ? a_activities.map{ |act|
+                                                 matrix.time[act.point.matrix_index][vehicle.end_point.matrix_index]
+                                               }.min : 0
         earliest_depot_arrival = earliest_arrival + depot_return + last_duration
 
         return id if earliest_depot_arrival > vehicle_timewindow.safe_end(vehicle.cost_late_multiplier&.positive?) ||
@@ -735,9 +782,12 @@ module Wrappers
 
         vehicle_timewindows = implicit_timewindow if vehicle_timewindows.empty?
 
+        schedule_conf = vrp.configuration.schedule
+
         service.vehicle_compatibility[vehicle.id] =
           s_activities.any?{ |activity|
-            time_to_go, time_to_return, dist_to_go, dist_to_return = two_way_time_and_dist(vrp, vehicle, activity) || [0, 0, 0, 0]
+            time_to_go, time_to_return, dist_to_go, dist_to_return =
+              two_way_time_and_dist(vrp, vehicle, activity) || [0, 0, 0, 0]
 
             # NOTE: There is no easy way to include the setup duration in the elimination because the
             # setup_duration logic is based of time[point_a][point_b] == 0; so we need to check all
@@ -754,10 +804,11 @@ module Wrappers
                     # vehicle has a tw that can serve service in time (incl. travel if it exists)
                     (s_tw.day_index.nil? || v_tw.day_index.nil? || s_tw.day_index == v_tw.day_index) &&
                       v_tw.start + time_to_go <= s_tw.safe_end(activity.late_multiplier&.positive?) &&
-                      [s_tw.start, v_tw.start + time_to_go].max + activity.duration_on(vehicle) + time_to_return <= v_tw.safe_end(vehicle.cost_late_multiplier&.positive?) &&
+                      [s_tw.start, v_tw.start + time_to_go].max + activity.duration_on(vehicle) + time_to_return <=
+                        v_tw.safe_end(vehicle.cost_late_multiplier&.positive?) &&
                       ( # either not schedule or there should be a day in which both vehicle and service are available
                         !vrp.schedule? ||
-                          vrp.configuration.schedule.range_indices[:start].upto(vrp.configuration.schedule.range_indices[:end]).any?{ |day|
+                          schedule_conf.range_indices[:start].upto(schedule_conf.range_indices[:end]).any?{ |day|
                             (s_tw.day_index.nil? || day % 7 == s_tw.day_index) &&
                               (v_tw.day_index.nil? || day % 7 == v_tw.day_index) &&
                               service.unavailable_days.exclude?(day) &&
@@ -784,10 +835,10 @@ module Wrappers
       matrix = vrp.matrices.find{ |m| m.id == vehicle.matrix_id }
 
       [
-        v_start_m_index && matrix.time ? matrix.time[v_start_m_index][activity.point.matrix_index] : 0,
-        v_end_m_index && matrix.time ? matrix.time[activity.point.matrix_index][v_end_m_index] : 0,
-        v_start_m_index && matrix.distance ? matrix.distance[v_start_m_index][activity.point.matrix_index] : 0,
-        v_end_m_index && matrix.distance ? matrix.distance[activity.point.matrix_index][v_end_m_index] : 0,
+        (v_start_m_index && matrix.time) ? matrix.time[v_start_m_index][activity.point.matrix_index] : 0,
+        (v_end_m_index && matrix.time) ? matrix.time[activity.point.matrix_index][v_end_m_index] : 0,
+        (v_start_m_index && matrix.distance) ? matrix.distance[v_start_m_index][activity.point.matrix_index] : 0,
+        (v_end_m_index && matrix.distance) ? matrix.distance[activity.point.matrix_index][v_end_m_index] : 0,
       ]
     end
 
@@ -798,7 +849,8 @@ module Wrappers
 
       vrp.services.each{ |service|
         if no_compatible_vehicle_with_compatible_tw(vrp, service)
-          add_unassigned(unfeasible, vrp, service, 'No compatible vehicle can reach this service while respecting all constraints')
+          add_unassigned(unfeasible, vrp, service,
+                         'No compatible vehicle can reach this service while respecting all constraints')
         end
       }
 
@@ -808,8 +860,14 @@ module Wrappers
       }
 
       unless unfeasible.empty?
-        log "Following services marked as infeasible:\n#{unfeasible.values.flatten.group_by{ |u| u[:reason] }.collect{ |g, set| "#{(set.size < 20) ? set.collect{ |s| s[:service_id] }.join(', ') : "#{set.size} services"}\n with reason '#{g}'" }.join("\n")}", level: :debug
-        log "#{unfeasible.size} services marked as infeasible with the following reasons: #{unfeasible.values.flatten.collect{ |u| u[:reason] }.uniq.join(', ')}", level: :info
+        infeasible_services =
+          unfeasible.values.flatten.group_by{ |u| u[:reason] }.map{ |g, set|
+            "#{set.size < 20 ? set.map{ |s| s[:service_id] }.join(', ') : "#{set.size} services"}\n with reason '#{g}'"
+          }.join("\n")
+        log "Following services marked as infeasible:\n#{infeasible_services}", level: :debug
+
+        reasons = unfeasible.values.flatten.collect{ |u| u[:reason] }.uniq.join(', ')
+        log "#{unfeasible.size} services marked as infeasible with the following reasons: #{reasons}", level: :info
       end
       unfeasible
     end
@@ -1007,7 +1065,7 @@ module Wrappers
         # the original service id with the new expanded service ids in the routes (and rewind it afterwards)
         # but if the complex relations are already in feasible initial routes then it might not worth it.
         # So we can wait for a real use case arrives and we have an instance to test.
-        if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.include?(s.id) }}
+        if services_in_multi_shipment_relations.any?{ |s| vrp.routes.any?{ |r| r.mission_ids.include?(s.id) } }
           vrp.services += services_in_multi_shipment_relations
           return nil
         end
@@ -1033,15 +1091,17 @@ module Wrappers
           end
 
           total_quantity_per_unit_id = Hash.new(0)
-          all_shipment_quantities = shipment_relations.collect{ |relation|
-            # WARNING: Here we assume that there are two services in the relation -- a pair of pickup and delivery
-            relation.linked_services.find{ |i| i != service }.quantities.each{ |quantity|
-              total_quantity_per_unit_id[quantity.unit_id] += quantity.value
+          all_shipment_quantities =
+            shipment_relations.collect{ |relation|
+              # WARNING: Here we assume that there are two services in the relation -- a pair of pickup and delivery
+              relation.linked_services.find{ |i| i != service }.quantities.each{ |quantity|
+                total_quantity_per_unit_id[quantity.unit_id] += quantity.value
+              }
             }
-          }
-          extra_per_quantity = service.quantities.collect{ |quantity|
-            (quantity.value + total_quantity_per_unit_id[quantity.unit_id]) / shipment_relations.size.to_f
-          }
+          extra_per_quantity =
+            service.quantities.collect{ |quantity|
+              (quantity.value + total_quantity_per_unit_id[quantity.unit_id]) / shipment_relations.size.to_f
+            }
 
           sequence_relation_ids = []
 
@@ -1071,7 +1131,8 @@ module Wrappers
             }
 
             relation_hash = relation.as_json
-            relation_hash[:linked_service_ids] = relation.linked_services.map{ |s| s.id == service.id ? new_service.id : s.id }
+            relation_hash[:linked_service_ids] =
+              relation.linked_services.map{ |s| s.id == service.id ? new_service.id : s.id }
             new_shipment_relation = Models::Relation.create(relation_hash)
 
             new_service.relations << new_shipment_relation
@@ -1081,8 +1142,10 @@ module Wrappers
           }
 
           # For some reason, or-tools performance is better when the sequence relation is defined in the inverse order.
-          # Note that, activity.duration's are set to zero except the last duplicated service (so we model exactly same constraint).
-          sequence_relations << Models::Relation.create(type: :sequence, linked_service_ids: sequence_relation_ids.reverse)
+          # Note that, activity.duration's are set to zero except the last duplicated service
+          # (so we model exactly same constraint).
+          sequence_relations << Models::Relation.create(type: :sequence,
+                                                        linked_service_ids: sequence_relation_ids.reverse)
         }
 
         vrp[:simplified_complex_shipments] = {
@@ -1119,7 +1182,9 @@ module Wrappers
           # delete the unassigned expanded version of service and calculate how many of them planned/unassigned
           unassigned_exp_ser_count = solution.unassigned_stops.size
           unassigned_exp_ser_count -= solution.unassigned_stops.delete_if{ |uns| uns.id == service.original_id }.size
-          planned_exp_ser_count = simplification_data[:expanded_services].count{ |s| s.original_id == service.original_id } - unassigned_exp_ser_count
+          planned_exp_ser_count =
+            simplification_data[:expanded_services].count{ |s| s.original_id == service.original_id } -
+            unassigned_exp_ser_count
 
           if planned_exp_ser_count == 0
             # if all of them were unplanned
@@ -1150,7 +1215,9 @@ module Wrappers
               next unless insert_location # expanded activity(ies) of service is found in this route
 
               # stop.. something went wrong if duplicated services are planned on different vehicles
-              raise 'Simplification cannot patch the result if duplicated services are planned on different vehicles' unless deleted_exp_ser_count == planned_exp_ser_count
+              unless deleted_exp_ser_count == planned_exp_ser_count
+                raise 'Simplification cannot patch the result if duplicated services are planned on different vehicles'
+              end
 
               stop = Models::Solution::Stop.new(service, loads: [], info: stop_info)
 
@@ -1194,7 +1261,9 @@ module Wrappers
       case options[:mode]
       when :simplify
         vrp.vehicles&.each{ |vehicle|
-          next unless (vehicle.force_start || vehicle.shift_preference == 'force_start') && vehicle.duration && vehicle.timewindow
+          next unless (vehicle.force_start || vehicle.shift_preference == 'force_start') &&
+                      vehicle.duration &&
+                      vehicle.timewindow
 
           simplification_active ||= true
           # Warning: this can make some services infeasible because vehicle cannot work after tw.start + duration
@@ -1260,7 +1329,11 @@ module Wrappers
           next if vehicle.rests.any?{ |rest|
             rest.timewindows.any? { |rest_tw|
               rest_start = rest_tw.start || vehicle.timewindow&.start || 0
-              rest_end = rest_tw.end || vehicle.timewindow&.end || vehicle.duration && rest.duration && (rest_start + vehicle.duration - rest.duration) || 2147483647
+              rest_end = rest_tw.end ||
+                         vehicle.timewindow&.end ||
+                         vehicle.duration &&
+                         rest.duration &&
+                         (rest_start + vehicle.duration - rest.duration) || 2147483647
               max_service_duration > rest_end - rest_start
             }
           }
@@ -1354,7 +1427,8 @@ module Wrappers
                 end
                 if rest.timewindows&.last&.end && rest_start > rest.timewindows.last.end
                   rest_start -= stop_after_rest.info.travel_time
-                  rest_start = [rest_start, rest.timewindows&.first&.start.to_i].max # don't induce idle_time if within travel_time
+                  # don't induce idle_time if within travel_time
+                  rest_start = [rest_start, rest.timewindows&.first&.start.to_i].max
                 end
 
                 [insert_rest_at, rest_start]
@@ -1374,7 +1448,8 @@ module Wrappers
               route.shift_route_times(idle_time_created_by_inserted_pause)
               idle_time_created_by_inserted_pause = 0
             end
-            times = { begin_time: rest_start, end_time: rest_start + rest.duration, departure_time: rest_start + rest.duration }
+            times = { begin_time: rest_start, end_time: rest_start + rest.duration,
+                      departure_time: rest_start + rest.duration }
             rest_stop = Models::Solution::Stop.new(rest, info: Models::Solution::Stop::Info.new(times))
             solution.insert_stop(vrp, route, rest_stop, insert_rest_at, idle_time_created_by_inserted_pause)
 
@@ -1400,6 +1475,7 @@ module Wrappers
       # and the setup duration s_p can be removed from the problem.
       # This way solvers like vroom which does not support setup duration can be used.
       return nil if vrp.periodic_heuristic?
+
       simplification_active = false
 
       case options[:mode]
@@ -1423,9 +1499,11 @@ module Wrappers
             vehicle = vehicles_grouped_by_matrix_id[matrix.id].first
 
             # WARNING: In the following logic we assume that matrix indices are unique.
-            # This follows the logic setup within optimizer-ortools until we indroduce the point_id in protobuf model
+            # This follows the logic setup within optimizer-ortools until we introduce the point_id in protobuf model
             matrix.time.each.with_index{ |row, row_index|
-              row[point.matrix_index] += first_activity.setup_duration_on(vehicle).to_i if point.matrix_index != row_index
+              if point.matrix_index != row_index
+                row[point.matrix_index] += first_activity.setup_duration_on(vehicle).to_i
+              end
             }
           }
 
@@ -1467,7 +1545,9 @@ module Wrappers
             # WARNING: In this revert logic we still assume that matrix indices are unique.
             # This follows the logic setup within optimizer-ortools until we indroduce the point_id in protobuf model
             matrix.time.each_with_index{ |row, row_index|
-              row[point.matrix_index] -= (coef_setup * setup_duration + additional_setup).to_i if point.matrix_index != row_index
+              if point.matrix_index != row_index
+                row[point.matrix_index] -= (coef_setup * setup_duration + additional_setup).to_i
+              end
             }
           }
 
