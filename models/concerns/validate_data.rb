@@ -558,8 +558,9 @@ module ValidateData
   def check_clustering_parameters(configuration)
     return unless configuration && configuration[:preprocessing]
 
-    if configuration[:preprocessing][:force_cluster]
-      log 'force_cluster field has been deprecated and should not be used anymore', level: :warn
+    if configuration[:preprocessing].key?(:force_cluster)
+      log 'force_cluster has been deprecated and should not be used anymore, we need to warn the user', level: :warn
+      configuration[:preprocessing].delete(:force_cluster)
     end
 
     if @hash[:relations].any?{ |relation| relation[:type] == :vehicle_trips }
