@@ -1,0 +1,5 @@
+id,activity.point_id,activity.duration,visits_number,activity.timewindow_ids,quantity_ids,minimum_lapse
+s1,point1,117,1,"tw1,tw2,tw3,tw4,tw5","qu1,qu01",84
+s2,point2,1874,6,"tw1,tw2,tw3,tw4,tw5","qu2,qu02",14
+s3,point3,969,3,"tw1,tw2,tw3,tw4,tw5","qu3,qu03",28
+s4,point4,43,3,"tw1,tw2,tw3,tw4,tw5","qu4,qu04",28
