@@ -1,0 +1,5 @@
+id,start_point_id,end_point_id,router_mode,cost_time_multiplier,router_dimension,speed multiplier,cost_distance_multiplier,sequence_timewindow_ids,capacity_ids
+vehicle1,depot,depot,car,1,time,60,1,"monday_v01,tuesday_v01,wednesday_v01,thursday_v01,friday_v01","cap1,cap2"
+vehicle1,depot,depot,car,1,time,60,1,"monday_v01,tuesday_v01,wednesday_v01,thursday_v01,friday_v01","cap1,cap2"
+vehicle1,depot,depot,car,1,time,60,1,"monday_v01,tuesday_v01,wednesday_v01,thursday_v01,friday_v01","cap1,cap2"
+vehicle1,depot,depot,car,1,time,60,1,"monday_v01,tuesday_v01,wednesday_v01,thursday_v01,friday_v01","cap1,cap2"

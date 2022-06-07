@@ -134,3 +134,12 @@ This gives the following project:
 Languages also available with swagger-codegen: 
 
 ActionScript, Ada, Apex, Bash, C# (.net 2.0, 3.5 or later), C++ (cpprest, Qt5, Tizen), Clojure, Dart, Elixir, Elm, Eiffel, Erlang, Go, Groovy, Haskell (http-client, Servant), Java (Jersey1.x, Jersey2.x, OkHttp, Retrofit1.x, Retrofit2.x, Feign, RestTemplate, RESTEasy, Vertx, Google API Client Library for Java, Rest-assured), Kotlin, Lua, Node.js (ES5, ES6, AngularJS with Google Closure Compiler annotations) Objective-C, Perl, PHP, PowerShell, Python, R, Ruby, Rust (rust, rust-server), Scala (akka, http4s, swagger-async-httpclient), Swift (2.x, 3.x, 4.x, 5.x), Typescript (Angular1.x, Angular2.x, Fetch, jQuery, Node)
+
+## User UI
+
+Some UI are available in order to test the features of the API using JSON or CSV files.
+
+* `http://localhost:1791/index.html?api_key=demo` lets you transmit a JSON file corresponding to the Optimizer-API VRP format.
+* `http://localhost:1791/scheduling.html?api_key=demo` expects multiple CSV files corresponding to the main concepts of Optimizer-API and a JSON file defining the expected configuration applied to solve the VRP. Some exemple files are available in the [examples folder](examples/).
+* `http://localhost:1791/pickup_delivery.html?api_key=demo` is a deprecated UI using our legacy CSV format which has no direct correspondance with the API.
+* `http://localhost:1791/result.html?api_key=demo` allows to display a solution and eventually display the polylines if requested in the configuration.

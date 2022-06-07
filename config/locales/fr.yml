@@ -74,6 +74,8 @@ fr:
       csv_shipments_label: 'Shipments (CSV) :'
       json_config_label: 'Configuration (JSON) :'
       waiting_submit: 'En attente de l''envoi du problème'
+      documentation:
+        examples_template: 'Les fichiers modèles se trouvent dans le <a href="https://github.com/Mapotempo/optimizer-api/tree/master/docs/examples/" target="_blank">dossier examples</a> du projet'
     pickup_delivery:
       optim_options_legend: 'Options de l''optimisation :'
       optim_duration_label: 'Durée maximale :'

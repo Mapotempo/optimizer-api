@@ -1,0 +1,34 @@
+
+{
+    "preprocessing":
+    {
+        "first_solution_strategy": ["periodic"],
+        "partitions": [{
+            "method": "balanced_kmeans",
+            "metric": "kg",
+            "entity": "vehicle"
+        }]
+    },
+    "resolution":
+    {
+
+        "solver": false,
+        "same_point_day": true,
+        "duration": 225000,
+        "minimum_duration": 112500,
+        "time_out_multiplier": 2
+    },
+    "schedule":
+    {
+        "range_indices":
+        {
+            "start": 0,
+            "end": 83
+        }
+    },
+    "restitution":
+    {
+        "csv": true,
+        "intermediate_solutions": false
+    }
+}
