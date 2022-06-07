@@ -1,6 +1,6 @@
 # Changelog
 
-## [v1.9.0-dev] - Unreleased
+## [v1.9.0] - 2022-06-07
 
 ### Added
 
@@ -21,6 +21,7 @@
 - Mapotempo github wiki is now directly part of the project [#351](https://github.com/Mapotempo/optimizer-api/pull/351)
 - Empty/Fill behavior changed so that the loads are naturally managed within optimizer-ortools [#370](https://github.com/Mapotempo/optimizer-api/pull/370)
 - Allow multiple rests with the same day index in periodic heuristic algorithm (`first_solution_strategy='periodic'`) [#273](https://github.com/Mapotempo/optimizer-api/pull/273)
+- OR-Tools may be used after `periodic heuristic` for small problems [#396](https://github.com/Mapotempo/optimizer-api/pull/396)
 - Conditions to benefit from `cluster_threshold` parameter are more strict -- to avoid time-window and capacity constraint violations [#407](https://github.com/Mapotempo/optimizer-api/pull/407)
 
 ### Removed
@@ -34,7 +35,8 @@
 - Fix find_best_heuristic selection logic [#337](https://github.com/Mapotempo/optimizer-api/pull/337)
 - Prevent periodic heuristic overwriting supplied initial routes [#318](https://github.com/Mapotempo/optimizer-api/pull/318)
 - Rests now have a correct timewindow according to the vehicle in periodic heuristic algorithm (`first_solution_strategy='periodic'`) [#273](https://github.com/Mapotempo/optimizer-api/pull/273)
-- Split independent VRP respects the skills of services in relations  [#379](https://github.com/Mapotempo/optimizer-api/pull/379)
+- Split independent VRP respects the skills of services in relations [#379](https://github.com/Mapotempo/optimizer-api/pull/379)
+- Http headers are now correctly defined for CSV format [#396](https://github.com/Mapotempo/optimizer-api/pull/396)
 
 ## [v1.8.2] - 2022-01-19
 
