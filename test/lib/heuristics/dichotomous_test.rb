@@ -39,11 +39,11 @@ class DichotomousTest < Minitest::Test
       if active_route_size > 12
         assert solution.unassigned_stops.size <= 13, soln_quality_assert_message
       elsif active_route_size == 12
-        assert solution.unassigned_stops.size <= 21, soln_quality_assert_message
+        assert solution.unassigned_stops.size <= 23, soln_quality_assert_message
       elsif active_route_size == 11
-        assert solution.unassigned_stops.size <= 31, soln_quality_assert_message
+        assert solution.unassigned_stops.size <= 33, soln_quality_assert_message
       else
-        assert solution.unassigned_stops.size <= 40, soln_quality_assert_message
+        assert solution.unassigned_stops.size <= 43, soln_quality_assert_message
       end
 
       # Check elapsed time
@@ -59,7 +59,7 @@ class DichotomousTest < Minitest::Test
              "the minimum duration asked (#{min_dur})."
       # Due to API overhead, it can be violated (randomly but very rarely).
       # Since the optimisation time is short the relative overhead is big.
-      assert t2 - t1 < max_dur * 2,
+      assert t2 - t1 < max_dur * 2.5,
              "Time spend in the API (#{t2 - t1}) is too big compared to maximum " \
              "optimization duration asked (#{max_dur})."
     end
