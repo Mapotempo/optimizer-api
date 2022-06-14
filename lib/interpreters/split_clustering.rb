@@ -331,7 +331,7 @@ module Interpreters
       sub_vrp.services.concat ss_data[:transferred_empties_or_fills]
 
       # only necessary points -- because compute_matrix doesn't check the difference
-      sub_vrp.points = sub_vrp.services.map{ |s| s.activity.point } |
+      sub_vrp.points = sub_vrp.services.flat_map{ |s| s.activity ? s.activity.point : s.activities.map(&:point) } |
                        sub_vrp.vehicles.flat_map{ |v| [v.start_point, v.end_point].compact }
 
       # only necessary relations
