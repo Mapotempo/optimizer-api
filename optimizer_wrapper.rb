@@ -183,6 +183,7 @@ module OptimizerWrapper
 
     solution ||= solve(service_vrp, job, block)
 
+    Cleanse.cleanse(vrp, solution)
     if service_vrp[:service] != :demo # demo solver returns a fixed solution
       check_solutions_consistency(expected_activity_count, [solution])
     end
@@ -326,7 +327,6 @@ module OptimizerWrapper
         end
       end
 
-      Cleanse.cleanse(vrp, optim_solution)
       optim_solution.name = vrp.name
       optim_solution.configuration.csv = vrp.configuration.restitution.csv
       optim_solution.configuration.geometry = vrp.configuration.restitution.geometry

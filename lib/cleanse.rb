@@ -21,6 +21,7 @@ module Cleanse
     return unless solution
 
     cleanse_empties_fills(vrp, solution)
+    cleanse_duplicate_empties_fills(vrp, solution)
     # cleanse_empty_routes(result)
   end
 

@@ -295,7 +295,6 @@ module Interpreters
         log "<-- split_solve_core level: #{split_level}"
 
         solution = solutions.reduce(&:+)
-        Cleanse.cleanse_duplicate_empties_fills(service_vrp[:vrp], solution)
       else # Stopping condition -- the problem is small enough
         # Finally generate the sub-vrp without hard-copy and solve it
         solution = split_solve_sub_vrp(service_vrp, job, &block)
