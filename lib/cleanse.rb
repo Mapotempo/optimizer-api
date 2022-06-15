@@ -98,6 +98,25 @@ module Cleanse
     }
   end
 
+  def self.cleanse_duplicate_empties_fills(vrp, solution)
+    count_services = vrp.empties_or_fills.map{ |service| [service.id, 0] }.to_h
+
+    # count empties or fills already part of the routes
+    solution.routes.each{ |route|
+      route.stops.each{ |stop|
+        count_services[stop.service_id] += 1 if count_services.key?(stop.service_id)
+      }
+    }
+
+    # remove duplicated unused empties or fills from unassigned
+    solution.unassigned_stops.delete_if{ |a|
+      if count_services.key?(a.service_id)
+        count_services[a.service_id] += 1
+        true if count_services[a.service_id] > 1
+      end
+    }
+  end
+
   def self.add_unnassigned(unassigned, route_stop, reason)
     route_stop.reason = reason
     unassigned << route_stop

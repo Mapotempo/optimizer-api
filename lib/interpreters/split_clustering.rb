@@ -134,7 +134,7 @@ module Interpreters
     def self.split_solve_candidate?(service_vrp)
       vrp = service_vrp[:vrp]
       if service_vrp[:split_level].nil?
-        empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
+        empties_or_fills = vrp.empties_or_fills
 
         !vrp.schedule? &&
           vrp.configuration.preprocessing.max_split_size &&
@@ -195,7 +195,7 @@ module Interpreters
     def self.initialize_split_data(service_vrp, _job = nil)
       # Initialize by first split_by_vehicle and keep the assignment info (don't generate the sub-VRPs yet)
       vrp = service_vrp[:vrp]
-      empties_or_fills = vrp.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
+      empties_or_fills = vrp.empties_or_fills
       vrp.services -= empties_or_fills
       split_by_vehicle = split_balanced_kmeans(service_vrp, vrp.vehicles.size,
                                                cut_symbol: :duration, restarts: 2, build_sub_vrps: false)
@@ -294,13 +294,15 @@ module Interpreters
         ss_data[:cannot_split_further] = false
         log "<-- split_solve_core level: #{split_level}"
 
-        solutions.reduce(&:+)
+        solution = solutions.reduce(&:+)
+        Cleanse.cleanse_duplicate_empties_fills(service_vrp[:vrp], solution)
       else # Stopping condition -- the problem is small enough
         # Finally generate the sub-vrp without hard-copy and solve it
         solution = split_solve_sub_vrp(service_vrp, job, &block)
         transfer_unused_resources(ss_data, service_vrp[:vrp], solution)
-        solution
+
       end
+      solution
     end
 
     def self.split_solve_sub_vrp(service_vrp, job = nil, &block)
@@ -331,7 +333,7 @@ module Interpreters
       sub_vrp.services.concat ss_data[:transferred_empties_or_fills]
 
       # only necessary points -- because compute_matrix doesn't check the difference
-      sub_vrp.points = sub_vrp.services.flat_map{ |s| s.activity ? s.activity.point : s.activities.map(&:point) } |
+      sub_vrp.points = sub_vrp.services.flat_map{ |s| s.activity&.point || s.activities.map(&:point) } |
                        sub_vrp.vehicles.flat_map{ |v| [v.start_point, v.end_point].compact }
 
       # only necessary relations

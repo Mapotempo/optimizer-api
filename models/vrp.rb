@@ -127,6 +127,10 @@ module Models
       )
     end
 
+    def empties_or_fills
+      self.services.select{ |s| s.quantities.any?(&:fill) || s.quantities.any?(&:empty) }
+    end
+
     def unassigned_visits(unassigned_with_reason)
       unassigned_hash = unassigned_with_reason.map{ |un| [un.id, un.reason] }.to_h
       if self.schedule?
