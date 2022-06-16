@@ -117,8 +117,14 @@ module OptimizerWrapper
           end
         }
       log "Ending job... #{options['checksum']}"
+      best_solution = final_solution.min(&:count_assigned_services)
+      # WARNING: the following log is used for server performance comparison automation
       log "Elapsed time: #{(Time.now - job_started_at).round(2)}s Vrp size: #{services_vrps.size} "\
-          "Key print: #{key_print} Names: #{services_vrps.map{ |sv| sv[:vrp].name }}"
+          "Key print: #{key_print} Names: #{services_vrps.map{ |sv| sv[:vrp].name }} "\
+          "Checksum: #{options['checksum']} "\
+          "Assigned services: #{best_solution&.count_assigned_services} "\
+          "Unassigned services: #{best_solution&.count_unassigned_services} "\
+          "Used routes: #{best_solution&.count_used_routes}"
 
       # Add values related to the current solve status
       p = Result.get(self.uuid) || {}
