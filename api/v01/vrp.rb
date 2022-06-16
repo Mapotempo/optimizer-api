@@ -104,7 +104,8 @@ module Api
             # Api key is not declared as part of the VRP and must be handled carefully and separatly from other parameters
             api_key = params[:api_key]
             profile = APIBase.profile(api_key)
-            checksum = Digest::MD5.hexdigest Marshal.dump(params)
+            d_params = declared(params, include_missing: false)
+            checksum = Digest::MD5.hexdigest d_params.to_json
 
             Raven.tags_context(vrp_checksum: checksum)
             key_print = params[:api_key].rpartition('-')[0]
@@ -112,9 +113,8 @@ module Api
             Raven.tags_context(key_print: key_print)
             Raven.user_context(api_key: params[:api_key]) # Filtered in sentry if user_context
 
-            d_params = declared(params, include_missing: false)
             vrp_params = d_params[:points] ? d_params : d_params[:vrp]
-            APIBase.dump_vrp_dir.write([api_key, vrp_params[:name], checksum].compact.join('_'), d_params.to_json) if OptimizerWrapper.config[:dump][:vrp]
+            APIBase.dump_vrp_dir.write([key_print, vrp_params[:name] || "no_vrp_name", checksum].compact.join('_'), d_params.to_json) if OptimizerWrapper.config[:dump][:vrp]
 
             Raven.extra_context(vrp_name: vrp_params[:name])
 

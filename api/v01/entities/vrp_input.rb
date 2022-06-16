@@ -609,7 +609,7 @@ module VrpVehicles
     optional :width, type: Float, desc: 'Width in meters'
     optional :length, type: Float, desc: 'Length in meters'
     optional :hazardous_goods, type: Symbol, values: [:explosive, :gas, :flammable, :combustible, :organic, :poison, :radio_active, :corrosive, :poisonous_inhalation, :harmful_to_water, :other], desc: 'List of hazardous materials in the vehicle'
-    optional :max_walk_distance, type: Float, default: 750, desc: 'Max distance by walk'
+    optional :max_walk_distance, type: Float, default: 750.0, desc: 'Max distance by walk'
     optional :approach, type: Symbol, values: [:unrestricted, :curb], default: :unrestricted, desc: 'Arrive/Leave in the traffic direction'
     optional :snap, type: Float, desc: 'Snap waypoint to junction close by snap distance'
     optional :strict_restriction, type: Boolean, desc: 'Strict compliance with truck limitations'
