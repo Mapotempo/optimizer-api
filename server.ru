@@ -39,7 +39,12 @@ use Rack::ServerPages do |config|
 end
 run Rack::ServerPages::NotFound
 
-# \ -p 1791
+#\ -p 1791 # rubocop:disable Layout/LeadingCommentSpace
+# The above cop disable is necessary.
+# Please find some explanation in the links below:
+# https://stackoverflow.com/a/39260752/1200528
+# https://www.rubydoc.info/gems/puma/3.6.2#rackup
+
 run Api::Root
 
 use ActionDispatch::RemoteIp
