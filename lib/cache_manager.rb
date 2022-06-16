@@ -23,46 +23,51 @@ class CacheManager
 
   def initialize(cache)
     @cache = cache
-    @filesize_limit = 100 # in megabytes
+    @data_bytesize_limit_in_mb = 500 # in megabytes
     FileUtils.mkdir_p(@cache)
   end
 
   def read(name, _options = nil)
     filtered_name = name.to_s.parameterize(separator: '')
-    if File.exist?(File.join(@cache, filtered_name))
+    if File.exist?(File.join(@cache, filtered_name) + '.gz') # Gzip dumps
+      Zlib::GzipReader.open(File.join(@cache, filtered_name) + '.gz', &:read)
+    elsif File.exist?(File.join(@cache, filtered_name)) # Zlib (and uncompressed) dumps
       content = File.read(File.join(@cache, filtered_name), mode: 'r')
       begin
         Zlib::Inflate.inflate(content)
-      rescue Zlib::DataError # Previously dumped files were not compressed, protect them
+      rescue Zlib::DataError # Previously dumped files were not compressed, protect them with a fallback
         content
       end
     end
   rescue StandardError => e
     if !cache.is_a? ActiveSupport::Cache::NullStore
-      raise CacheError.new("Got error #{e} attempting to read cache #{name}.")
+      raise CacheError.new("Got error \"#{e}\" attempting to read cache \"#{name}\".")
     end
   end
 
   def write(name, value, options = { mode: 'w' })
     raise CacheError.new('Stored value is not a String') if !value.is_a? String
 
-    File.open(File.join(@cache, name.to_s.parameterize(separator: '')), options[:mode]) do |f|
-      compressed = Zlib::Deflate.deflate(value)
-      if compressed.bytesize < @filesize_limit.megabytes
-        f.write(compressed)
+    File.open(File.join(@cache, name.to_s.parameterize(separator: '')) + '.gz', options[:mode]) do |f|
+      gz = Zlib::GzipWriter.new(f)
+      if value.bytesize < @data_bytesize_limit_in_mb.megabytes
+        gz.write value
       else
-        f.write("File size is greater than #{@filesize_limit} Mb after compression.")
+        gz.write "Data size is greater than #{@data_bytesize_limit_in_mb} Mb."
       end
+      gz.close
     end
   rescue StandardError => e
     if !cache.is_a? ActiveSupport::Cache::NullStore
-      raise CacheError.new("Got error #{e} attempting to write cache #{name}.")
+      raise CacheError.new("Got error \"#{e}\" attempting to write cache \"#{name}\".")
     end
   end
 
   def cleanup(options = nil)
     @cache.cleanup(options)
   rescue StandardError => e
-    raise CacheError.new("Got error #{e} attempting to clean cache.") if !cache.is_a? ActiveSupport::Cache::NullStore
+    if !cache.is_a? ActiveSupport::Cache::NullStore
+      raise CacheError.new("Got error \"#{e}\" attempting to clean cache.")
+    end
   end
 end

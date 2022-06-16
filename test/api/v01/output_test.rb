@@ -205,8 +205,8 @@ class Api::V01::OutputTest < Minitest::Test
     file = OutputHelper::Clustering.generate_files(all_services_vrps, true)
     generated_file = File.join(Api::V01::APIBase.dump_vrp_dir.cache, file)
 
-    assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
-    assert File.exist?(generated_file + '_csv'), 'Csv file not found'
+    assert File.exist?(generated_file + '_geojson.gz'), 'Geojson file not found'
+    assert File.exist?(generated_file + '_csv.gz'), 'Csv file not found'
     csv = CSV.parse(Api::V01::APIBase.dump_vrp_dir.read(file + '_csv'))
 
     assert_equal all_services_vrps.sum{ |service| service[:vrp].services.size } + 1, csv.size
@@ -221,8 +221,8 @@ class Api::V01::OutputTest < Minitest::Test
     file = OutputHelper::Clustering.generate_files(all_services_vrps)
     generated_file = File.join(Api::V01::APIBase.dump_vrp_dir.cache, file)
 
-    assert File.exist?(generated_file + '_geojson'), 'Geojson file not found'
-    assert File.exist?(generated_file + '_csv'), 'Csv file not found'
+    assert File.exist?(generated_file + '_geojson.gz'), 'Geojson file not found'
+    assert File.exist?(generated_file + '_csv.gz'), 'Csv file not found'
     csv = CSV.parse(Api::V01::APIBase.dump_vrp_dir.read(file + '_csv'))
 
     assert_equal all_services_vrps.sum{ |service| service[:vrp].services.size } + 1, csv.size
@@ -240,14 +240,14 @@ class Api::V01::OutputTest < Minitest::Test
     file = 'periodic_construction_test_fake_job'
     filepath = File.join(Api::V01::APIBase.dump_vrp_dir.cache, file)
 
-    refute File.exist?(filepath), 'File created before end of generation'
+    refute File.exist?(filepath + '.gz'), 'File created before end of generation'
 
     output_tool.add_comment('my comment')
     days = [0, 2, 4]
     output_tool.insert_visits(days, 'service_id', 3)
     output_tool.close_file
 
-    assert File.exist?(filepath), 'File not found'
+    assert File.exist?(filepath + '.gz'), 'File not found'
 
     csv = CSV.parse(Api::V01::APIBase.dump_vrp_dir.read(file))
     assert(csv.any?{ |line| line.first == 'my comment' })
@@ -291,9 +291,11 @@ class Api::V01::OutputTest < Minitest::Test
     files = Dir.glob(File.join(OptimizerWrapper.dump_vrp_dir.cache, "*#{name}*"))
 
     assert_equal 3, files.size
-    assert_includes files, File.join(OptimizerWrapper.dump_vrp_dir.cache, "periodic_construction_#{name}")
-    assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('csv') }, 'Geojson file not found')
-    assert(files.any?{ |f| f.include?("generated_clusters_#{name}") && f.include?('json') }, 'Csv file not found')
+    assert_includes files, File.join(OptimizerWrapper.dump_vrp_dir.cache, "periodic_construction_#{name}.gz")
+    assert(files.any?{ |f| f.end_with?('_csv.gz') && f.include?("generated_clusters_#{name}") },
+           'CSV file not found')
+    assert(files.any?{ |f| f.end_with?('_geojson.gz') && f.include?("generated_clusters_#{name}") },
+           'Geojson file not found')
   end
 
   def test_provided_language
