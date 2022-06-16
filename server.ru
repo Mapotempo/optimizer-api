@@ -39,7 +39,7 @@ use Rack::ServerPages do |config|
 end
 run Rack::ServerPages::NotFound
 
-#\ -p 1791 # rubocop # rubocop:disable Layout/LeadingCommentSpace
+#\ -p 1791 # rubocop:disable Layout/LeadingCommentSpace
 # The above cop disable is necessary.
 # Please find some explanation in the links below:
 # https://stackoverflow.com/a/39260752/1200528
