@@ -57,7 +57,6 @@ module Models
         raise 'A route stop cannot be nil' unless parsed_object
 
         super(parsed_object)
-        set_info_end_time
       end
 
       def vrp_result(options = {})
@@ -79,8 +78,8 @@ module Models
         hash
       end
 
-      def set_info_end_time
-        info.end_time = info.begin_time + activity.duration
+      def compute_info_end_time(options)
+        info.end_time = info.begin_time + activity.duration_on(service_id ? options[:vehicle] : nil)
         info.departure_time = info.end_time
       end
 

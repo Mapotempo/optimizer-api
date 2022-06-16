@@ -1578,6 +1578,8 @@ module Wrappers
         overall_total_travel_time_correction = 0
         solution.routes.each{ |route|
           vehicle = vehicles_grouped_by_vehicle_id[route[:vehicle_id]].first
+          vehicle.coef_setup = vehicle[:simplified_coef_setup]
+          vehicle.additional_setup = vehicle[:simplified_additional_setup]
           total_travel_time_correction = 0
           previous_point_id = nil
           route.stops.each{ |stop|
@@ -1602,6 +1604,10 @@ module Wrappers
 
           overall_total_travel_time_correction += total_travel_time_correction
           route.info.total_travel_time -= total_travel_time_correction.round
+
+          # Solution patcher must let the problem untouched
+          vehicle.coef_setup = 1
+          vehicle.additional_setup = 0
         }
         solution.info.total_travel_time -= overall_total_travel_time_correction.round
 

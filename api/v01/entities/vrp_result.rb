@@ -62,6 +62,7 @@ module Api
       expose :travel_time, documentation: { type: Integer, desc: 'Travel time from previous point (in s)' }
       expose :travel_value, documentation: { type: Integer, desc: 'Travel value from previous point' }
       expose :waiting_time, documentation: { type: Integer, desc: 'Idle time (in s)' }
+      expose :setup_time, documentation: { type: Integer, desc: 'Effective setup duration (in s)'}
       expose :begin_time, documentation: { type: Integer, desc: 'Time visit starts' }
       expose :end_time, documentation: { type: Integer, desc: 'Time visit ends' }
       expose :departure_time, documentation: { type: Integer, desc: '' }

@@ -20,6 +20,7 @@ require './models/base'
 module Models
   class Solution < Base
     class Route < Base
+      MISSION_TYPES = [:service, :pickup, :delivery].freeze
       field :geometry
 
       has_many :stops, class_name: 'Models::Solution::Stop'
@@ -38,6 +39,7 @@ module Models
         options[:vehicle] = vehicle
         hash = super(options)
         hash['activities'] = hash.delete('stops')
+        compute_setup_times(hash)
         hash['cost_details'] = hash.delete('cost_info')
         hash['detail'] = hash.delete('info')
         hash.merge!(info.vrp_result(options))
@@ -51,6 +53,7 @@ module Models
           stop = Models::Solution::Stop.new(stop) if stop.is_a? Hash
           stop.info.router_mode ||= vehicle&.router_mode
           stop.info.speed_multiplier ||= vehicle&.speed_multiplier
+          stop.compute_info_end_time(vehicle: vehicle)
           stop
         }
       end
@@ -62,6 +65,19 @@ module Models
       def insert_stop(_vrp, stop, index, idle_time = 0)
         stops.insert(index, stop)
         shift_route_times(idle_time + stop.activity.duration, index)
+      end
+
+      def compute_setup_times(hash)
+        previous_point_id = nil
+        stops.each.with_index{ |stop, stop_index|
+          hash['activities'][stop_index]['setup_time'] =
+            if MISSION_TYPES.include?(stop.type) && stop.activity.point_id != previous_point_id
+              stop.activity.setup_duration_on(vehicle)
+            else
+              0
+            end
+          previous_point_id = stop.activity.point_id if stop.activity.point_id
+        }
       end
 
       def shift_route_times(shift_amount, shift_start_index = 0)
