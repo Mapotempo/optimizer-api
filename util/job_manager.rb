@@ -79,7 +79,7 @@ module OptimizerWrapper
 
       ask_restitution_csv = services_vrps.any?{ |s_v| s_v[:vrp].configuration.restitution.csv }
       ask_restitution_geojson = services_vrps.flat_map{ |s_v| s_v[:vrp].configuration.restitution.geometry }.uniq
-      final_solution =
+      final_solutions =
         OptimizerWrapper.define_main_process(
           services_vrps, self.uuid
         ) { |wrapper, avancement, total, message, cost, time, solution|
@@ -117,7 +117,7 @@ module OptimizerWrapper
           end
         }
       log "Ending job... #{options['checksum']}"
-      best_solution = final_solution.min(&:count_assigned_services)
+      best_solution = final_solutions.min(&:count_assigned_services)
       # WARNING: the following log is used for server performance comparison automation
       log "Elapsed time: #{(Time.now - job_started_at).round(2)}s Vrp size: #{services_vrps.size} "\
           "Key print: #{key_print} Names: #{services_vrps.map{ |sv| sv[:vrp].name }} "\
@@ -132,7 +132,7 @@ module OptimizerWrapper
         csv: ask_restitution_csv,
         geometry: ask_restitution_geojson
       }
-      p[:result] = final_solution.vrp_result
+      p[:result] = final_solutions.vrp_result
       if services_vrps.size == 1 && p && p[:result].any? && p[:graph]&.any?
         p[:result].first[:iterations] = p[:graph].last[:iteration]
         p[:result].first[:elapsed] = p[:graph].last[:time]
