@@ -63,6 +63,7 @@ module OptimizerWrapper
           max_split_size: services_vrps.first[:vrp].configuration&.preprocessing&.max_split_size,
           partitions: services_vrps.first[:vrp].configuration&.preprocessing&.partitions&.size,
           schedule: !services_vrps.first[:vrp].configuration&.schedule&.range_indices.nil?,
+          random_seed: services_vrps.first[:vrp].configuration&.resolution&.random_seed,
         }
       )
 
@@ -122,6 +123,7 @@ module OptimizerWrapper
       log "Elapsed time: #{(Time.now - job_started_at).round(2)}s Vrp size: #{services_vrps.size} "\
           "Key print: #{key_print} Names: #{services_vrps.map{ |sv| sv[:vrp].name }} "\
           "Checksum: #{options['checksum']} "\
+          "Random seed: #{services_vrps.first[:vrp].configuration&.resolution&.random_seed} "\
           "Assigned services: #{best_solution&.count_assigned_services} "\
           "Unassigned services: #{best_solution&.count_unassigned_services} "\
           "Used routes: #{best_solution&.count_used_routes}"

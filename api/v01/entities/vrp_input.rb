@@ -192,6 +192,8 @@ module VrpConfiguration
     optional(:repetition, type: Integer, documentation: { hidden: true }, desc: 'Number of times the optimization process is going to be repeated. Only the best solution is returned.')
     optional(:dicho_algorithm_service_limit, type: Integer, documentation: { hidden: true }, desc: 'Minimum number of services required to allow a call to heuristic dichotomous_approach')
     optional(:dicho_inclusion_rate, type: Float, values: ->(v) { v > 0 }, documentation: { hidden: true }, desc: 'Approximate minimum load rate for the solver to consider using a vehicle during an optimization via heuristic dichotomous_approach')
+    # :random_seed number is used to set the Random.srand globally for the worker but a more elagant way would be to generate random streams (stream1 = Random.new(seed1)) and use these streams inside the algorithms to gemnerate random number when needed without effecting the default stream
+    optional(:random_seed, type: Integer, default: Random.new_seed, values: ->(v) { v.positive? }, allow_blank: false, desc: 'The random seed used within clustering based methods (max_split_size and dicho_algorithm) and partitioning')
     at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
     mutually_exclusive :initial_time_out, :minimum_duration
     mutually_exclusive :solver, :solver_parameter

@@ -77,6 +77,10 @@ module Models
     field :batch_heuristic, default: false
     field :repetition, default: nil
 
+    # random_seed parameter is set by the API during the POST process before dumping the VRP
+    # it is to make the runs repeatable/reproducible and simplifies comparing different environments
+    field :random_seed, default: Random.new_seed
+
     def self.create(hash)
       super(hash)
     end

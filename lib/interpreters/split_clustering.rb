@@ -800,7 +800,8 @@ module Interpreters
         ratio = 0.9 + 0.1 * (options[:restarts] - restart) / options[:restarts].to_f
 
         # TODO: move the creation of data_set to the gem side GEM should create it if necessary
-        options[:seed] = rand(1234567890) # gem does not initialise the seed randomly
+        options[:seed] ||= rand(1234567890) # gem does not initialise the seed randomly
+        options[:seed] += restart
         log "BalancedVRPClustering is launched with seed #{options[:seed]}"
         c.build(Ai4r::Data::DataSet.new(data_items: Marshal.load(Marshal.dump(data_items))),
                 options[:cut_symbol],
@@ -920,6 +921,8 @@ module Interpreters
             tic = Time.now
 
             options[:clusters_infos] = collect_cluster_data(vrp, nb_clusters)
+
+            options[:seed] = vrp.configuration.resolution.random_seed
 
             clusters = kmeans_process(nb_clusters, data_items, related_item_indices, limits, options, &block)
 
