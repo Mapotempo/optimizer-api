@@ -190,7 +190,7 @@ module VrpConfiguration
     optional(:batch_heuristic, type: Boolean, default: OptimizerWrapper.config[:debug][:batch_heuristic], desc: 'Compute each heuristic solution')
     optional(:variation_ratio, type: Integer, desc: 'Value of the ratio that will change the matrices')
     optional(:repetition, type: Integer, documentation: { hidden: true }, desc: 'Number of times the optimization process is going to be repeated. Only the best solution is returned.')
-    optional(:dicho_algorithm_service_limit, type: Integer, documentation: { hidden: true }, desc: 'Minimum number of services required to allow a call to heuristic dichotomous_approach')
+    optional(:dicho_algorithm_service_limit, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'Minimum number of services required to allow a call to heuristic dichotomous_approach -- 0: disabled')
     optional(:dicho_inclusion_rate, type: Float, values: ->(v) { v > 0 }, documentation: { hidden: true }, desc: 'Approximate minimum load rate for the solver to consider using a vehicle during an optimization via heuristic dichotomous_approach')
     at_least_one_of :duration, :iterations, :iterations_without_improvment, :stable_iterations, :stable_coefficient, :initial_time_out, :minimum_duration
     mutually_exclusive :initial_time_out, :minimum_duration

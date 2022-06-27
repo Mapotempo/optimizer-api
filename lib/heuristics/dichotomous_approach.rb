@@ -27,11 +27,13 @@ module Interpreters
       config = service_vrp[:vrp].configuration
       service_vrp[:dicho_level]&.positive? ||
         (
-          # TODO: remove cost_fixed condition after exclusion cost calculation is corrected.
+          # TODO: remove cost_fixed and duration conditions after exclusion cost calculation is corrected.
           service_vrp[:vrp].vehicles.none?{ |vehicle| vehicle.cost_fixed && !vehicle.cost_fixed.zero? } &&
+          service_vrp[:vrp].vehicles.all?{ |vehicle| vehicle.duration || vehicle.timewindow } &&
           service_vrp[:vrp].vehicles.size > config.resolution.dicho_algorithm_vehicle_limit &&
           (config.resolution.vehicle_limit.nil? ||
             config.resolution.vehicle_limit > config.resolution.dicho_algorithm_vehicle_limit) &&
+          config.resolution.dicho_algorithm_service_limit.to_i.positive? &&
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r.mission_ids.size }.sum >
             config.resolution.dicho_algorithm_service_limit &&
           !service_vrp[:vrp].schedule? &&
