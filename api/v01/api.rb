@@ -18,7 +18,7 @@
 
 require './api/v01/vrp'
 
-class QuotaExceeded < StandardError
+class QuotaExceededError < StandardError
   attr_reader :data
 
   def initialize(msg, data)
@@ -91,7 +91,7 @@ module Api
 
             quota.slice(:daily, :monthly, :yearly).each do |k, v|
               count = redis_count.get(count_base_key(op, k)).to_i
-              raise QuotaExceeded.new("Too many #{k} requests", limit: v, remaining: v - count, reset: k) if v && count + request_size > v
+              raise QuotaExceededError.new("Too many #{k} requests", limit: v, remaining: v - count, reset: k) if v && count + request_size > v
             end
           end
         end
@@ -146,7 +146,7 @@ module Api
           rack_response(format_message(response, e.backtrace), 400)
         elsif e.is_a?(Grape::Exceptions::MethodNotAllowed)
           rack_response(format_message(response, e.backtrace), 405)
-        elsif e.is_a?(QuotaExceeded)
+        elsif e.is_a?(QuotaExceededError)
           headers = { 'Content-Type' => content_type,
                       'X-RateLimit-Limit' => e.data[:limit],
                       'X-RateLimit-Remaining' => e.data[:remaining],

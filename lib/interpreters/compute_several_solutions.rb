@@ -125,9 +125,11 @@ module Interpreters
       repeated_service_vrps = [service_vrp]
       vrp_hash = service_vrp[:vrp].as_json
 
-      (service_vrp[:vrp].configuration.resolution.repetition - 1).times{
+      (service_vrp[:vrp].configuration.resolution.repetition - 1).times{ |repeat_index|
         sub_service_vrp = duplicate_service_vrp(service_vrp, vrp_hash)
         sub_service_vrp[:vrp].configuration.resolution.repetition = 1
+        # so that each repeatation generates a different split
+        sub_service_vrp[:vrp].configuration.resolution.random_seed += repeat_index
         sub_service_vrp[:vrp].configuration.preprocessing.partitions.each{ |partition|
           partition[:restarts] = [partition[:restarts], 5].compact.min
         } # change restarts ?

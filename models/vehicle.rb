@@ -112,7 +112,7 @@ module Models
       }.stringify_keys
     end
 
-    def self.create(hash, _options = {})
+    def initialize(hash, _options = {})
       if hash[:sequence_timewindows]&.size&.positive? &&
          hash[:unavailable_days]&.size&.positive? # X&.size&.positive? is not the same as !X&.empty?
         work_day_indices = hash[:sequence_timewindows].collect{ |tw| tw[:day_index] || (0..6).to_a }.flatten.uniq
@@ -122,11 +122,11 @@ module Models
       hash[:original_id] ||= hash[:id]
       hash[:original_skills] ||= hash[:skills]
 
-      vehicle = super(hash)
       # Default skills make the empty skill_set to share the same object_id to every vehicle with no skills
-      vehicle.skills = [[]] if vehicle.skills.to_a.empty?
-      vehicle.skills.each(&:sort!)
-      vehicle
+      hash[:skills] = [[]] if hash[:skills].to_a.empty?
+      hash[:skills].each(&:sort!)
+
+      super(hash)
     end
 
     def need_matrix_time?
