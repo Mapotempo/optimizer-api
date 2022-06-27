@@ -102,6 +102,9 @@ class DichotomousTest < Minitest::Test
       vrp[:services] << { id: "s#{limits[:service] + 1}", activity: { point_id: 'p1' }}
       vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
       vrp = TestHelper.create(vrp)
+      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :demo, dicho_level: 0)
+
+      vrp.vehicles.each{ |v| v.duration = 36000 }
       assert Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :demo, dicho_level: 0)
 
       vrp.configuration.resolution.dicho_algorithm_service_limit = 0
@@ -205,6 +208,7 @@ class DichotomousTest < Minitest::Test
 
     def test_no_dichotomous_when_no_location
       problem = VRP.basic
+      problem[:vehicles].each{ |v| v[:duration] = 36000 }
       problem[:vehicles] << problem[:vehicles].first.merge({ id: 'another_vehicle' })
       problem[:configuration][:resolution][:dicho_algorithm_service_limit] = 1
       vrp = TestHelper.create(problem)
