@@ -32,6 +32,7 @@ module Interpreters
           service_vrp[:vrp].vehicles.size > config.resolution.dicho_algorithm_vehicle_limit &&
           (config.resolution.vehicle_limit.nil? ||
             config.resolution.vehicle_limit > config.resolution.dicho_algorithm_vehicle_limit) &&
+          config.resolution.dicho_algorithm_service_limit.to_i.positive? &&
           service_vrp[:vrp].services.size - service_vrp[:vrp].routes.map{ |r| r.mission_ids.size }.sum >
             config.resolution.dicho_algorithm_service_limit &&
           !service_vrp[:vrp].schedule? &&

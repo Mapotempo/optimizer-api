@@ -103,6 +103,9 @@ class DichotomousTest < Minitest::Test
       vrp[:vehicles] << { id: "v#{limits[:vehicle] + 1}", router_mode: 'car', router_dimension: 'time', skills: [[]] }
       vrp = TestHelper.create(vrp)
       assert Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :demo, dicho_level: 0)
+
+      vrp.configuration.resolution.dicho_algorithm_service_limit = 0
+      refute Interpreters::Dichotomous.dichotomous_candidate?(vrp: vrp, service: :demo, dicho_level: 0)
     end
 
     def test_infinite_loop_due_to_impossible_to_cluster
@@ -203,11 +206,11 @@ class DichotomousTest < Minitest::Test
     def test_no_dichotomous_when_no_location
       problem = VRP.basic
       problem[:vehicles] << problem[:vehicles].first.merge({ id: 'another_vehicle' })
-      problem[:configuration][:resolution][:dicho_algorithm_service_limit] = 0
+      problem[:configuration][:resolution][:dicho_algorithm_service_limit] = 1
       vrp = TestHelper.create(problem)
       service_vrp = { vrp: vrp, service: :demo }
 
-      vrp.configuration.resolution.dicho_algorithm_vehicle_limit = 0
+      vrp.configuration.resolution.dicho_algorithm_vehicle_limit = 1
 
       refute Interpreters::Dichotomous.dichotomous_candidate?(service_vrp), 'no dicho if no location'
 
