@@ -66,7 +66,7 @@ module Models
       # configuration.schedule.indices (not date) to do work_day check with lapses
       self.ensure_retrocompatibility(hash)
       self.filter(hash) if options[:check] # TODO : add filters.rb here
-      vrp.check_consistency(hash) if options[:check]
+      vrp.check_consistency(hash) if options[:check] # TODO: this check can be directly done on the hash without concern
       [:name, :matrices, :units, :points, :rests, :zones, :capacities, :quantities, :timewindows,
        :vehicles, :services, :relations, :subtours, :routes, :configuration].each{ |key|
         vrp.send("#{key}=", hash[key]) if hash[key]

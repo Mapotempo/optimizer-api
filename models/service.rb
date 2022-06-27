@@ -64,7 +64,7 @@ module Models
     has_many :quantities, class_name: 'Models::Quantity'
     has_many :relations, class_name: 'Models::Relation', as_json: :none
 
-    def self.create(hash)
+    def initialize(hash)
       hash[:original_id] ||= hash[:id]
       hash[:original_skills] ||= hash[:skills] if hash[:skills]&.none?{ |skill|
         skill.to_s.include?('vehicle_partition_') ||

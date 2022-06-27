@@ -20,13 +20,13 @@ require './test/test_helper'
 module Models
   class TimewindowTest < Minitest::Test
     def test_compatibility_between_timewindows
-      tw1 = Models::Timewindow.new(start: 10, end: 20, day_index: 0)
+      tw1 = Models::Timewindow.new(start: 10, end: 20, day_index: 0, maximum_lateness: 0)
       assert_raises RuntimeError do
         tw1.compatible_with?([0, 10], false)
       end
       assert tw1.compatible_with?(tw1, false)
 
-      tw2 = Models::Timewindow.new(start: 10, end: 20, day_index: 1)
+      tw2 = Models::Timewindow.new(start: 10, end: 20, day_index: 1, maximum_lateness: 1)
       assert tw1.compatible_with?(tw2, false)
       refute tw1.compatible_with?(tw2)
       refute tw1.compatible_with?(tw2, true) # lateness has no impact on days incompatibility
