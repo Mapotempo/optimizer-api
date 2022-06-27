@@ -84,6 +84,62 @@ class Api::V01::OutputTest < Minitest::Test
     }
   end
 
+  def test_setup_duration_timings
+    vrp = VRP.basic
+
+    vrp[:matrices].first[:time] = [
+      [0, 4, 0, 5],
+      [6, 0, 0, 5],
+      [1, 0, 0, 5],
+      [5, 5, 5, 0]
+    ]
+
+    vrp[:services] << { id: 'service_4', activity: { point_id: 'point_1' } }
+    vrp[:services].each{ |service|
+      service[:activity][:setup_duration] = 1
+      service[:activity][:duration] = 2
+    }
+    vrp[:services].first[:activity][:timewindows] = [{ start: 50, end: 55 }]
+    vrp[:vehicles].first[:force_start] = true
+    vrp[:vehicles].first[:additional_setup] = 3
+    vrp[:vehicles].first[:additional_service] = 4
+
+    response = post '/0.1/vrp/submit', { api_key: 'solvers', vrp: vrp }.to_json, 'CONTENT_TYPE' => 'application/json'
+    result = JSON.parse(response.body, symbolize_names: true)
+
+    route = result[:solutions].first[:routes].first
+    travel_times, setup_times, waiting_times, begin_times, departure_times = [], [], [], [], []
+    expected_durations, expected_setup_durations = [], []
+
+    previous_point_id = nil
+    route[:activities].each{ |act|
+      travel_times << act[:travel_time]
+      setup_times << act[:setup_time]
+      waiting_times << act[:waiting_time]
+      begin_times << act[:begin_time]
+      departure_times << act[:departure_time]
+
+      expected_durations << act[:detail][:duration] +
+                            (act[:service_id] ? vrp[:vehicles].first[:additional_service] : 0)
+      expected_setup_durations <<
+        if act[:service_id] && act[:point_id] != previous_point_id
+          act[:detail][:setup_duration] + vrp[:vehicles].first[:additional_setup]
+        else
+          0
+        end
+
+      previous_point_id = act[:point_id] unless act[:rest_id]
+    }
+
+    begin_times.each.with_index{ |b_t, index|
+      assert_equal setup_times[index], expected_setup_durations[index]
+      assert_equal departure_times[index], b_t + expected_durations[index]
+      next if index == 0
+
+      assert_equal b_t, departure_times[index - 1] + travel_times[index] + waiting_times[index] + setup_times[index]
+    }
+  end
+
   def test_day_week_num_and_other_periodic_fields
     vrp = VRP.periodic
     vrp[:services].first[:visits_number] = 2
