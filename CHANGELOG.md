@@ -10,6 +10,8 @@
 
 ### Fixed
 
+- In some cases, the jobs were impossible to remove [#432](https://github.com/Mapotempo/optimizer-api/pull/432)
+
 ## [v1.9.0] - 2022-06-07
 
 ### Added

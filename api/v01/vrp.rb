@@ -306,8 +306,8 @@ module Api
                 }, with: VrpResult)
               end
               result_object = nil # rubocop:disable Lint/UselessAssignment
-              OptimizerWrapper.job_remove(params[:api_key], id)
             end
+            OptimizerWrapper.job_remove(params[:api_key], id) if job&.dig('options', 'api_key') == params[:api_key]
           end
         end
       end
