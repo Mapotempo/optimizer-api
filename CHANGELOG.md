@@ -5,6 +5,7 @@
 ### Added
 
 - Exclusive position for activities that needs to be both first and last position [#438](https://github.com/Mapotempo/optimizer-api/pull/438)
+- The intermediate solutions are now cleaned similarly to the final solution [#435](https://github.com/Mapotempo/optimizer-api/pull/435)
 
 ### Changed
 

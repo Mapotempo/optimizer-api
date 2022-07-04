@@ -105,7 +105,10 @@ module OptimizerWrapper
               geometry: ask_restitution_geojson
             }
             p[:graph] << { iteration: avancement, cost: cost, time: time }
-            p[:result] = [solution.vrp_result].flatten if solution
+            if solution
+              Cleanse.cleanse(services_vrps.first[:vrp], solution)
+              p[:result] = [solution.vrp_result].flatten
+            end
             begin
               Result.set(self.uuid, p)
             rescue Redis::BaseError => e

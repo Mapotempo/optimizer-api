@@ -74,4 +74,33 @@ class Api::V01::WithSolverTest < Minitest::Test
     end
     delete_completed_job @job_id, api_key: 'ortools' if @job_id
   end
+
+  def test_filter_intermediate_solution
+    # Verify that intermediate solution are correctly filtered
+    asynchronously start_worker: true do
+      vrp = VRP.lat_lon
+      vrp[:configuration][:resolution][:duration] = 2000
+      vrp[:units] = [{ id: 'unit_1' }]
+      vrp[:services].each{ |s|
+        s[:quantities] = [{ unit_id: 'unit_1', value: 1 }]
+      }
+      vrp[:services] << {
+        id: 'vidage_1',
+        activity: {
+          point_id: 'point_0'
+        },
+        quantities: [{
+          unit_id: 'unit_1',
+          empty: true
+        }]
+      }
+      vrp[:vehicles].first[:capacities] = [{ unit_id: 'unit_1', limit: 10 }]
+      vrp[:services] << vrp[:services].last.dup.tap{ |s| s[:id] = 'vidage_2' }
+      vrp[:configuration][:restitution][:intermediate_solutions] = true
+      @job_id = submit_vrp api_key: 'ortools', vrp: vrp
+      result = wait_avancement_match(@job_id, /run optimization, iterations/, api_key: 'ortools')
+      assert_equal "Duplicate empty service.", result['solutions'].first['unassigned'].first['reason']
+    end
+    delete_job(@job_id, api_key: 'ortools') if @job_id
+  end
 end
