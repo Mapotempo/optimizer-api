@@ -848,4 +848,35 @@ class Wrappers::VroomTest < Minitest::Test
       vroom.solve(TestHelper.create(problem))
     end
   end
+
+  def test_setup_duration
+    vroom = OptimizerWrapper.config[:services][:vroom]
+    problem = VRP.basic
+
+    problem[:matrices].first[:time] = [
+      [0, 4, 0, 5],
+      [6, 0, 0, 5],
+      [1, 0, 0, 5],
+      [5, 5, 5, 0]
+    ]
+
+    problem[:services] << problem[:services].first.dup.tap{ |s| s[:id] = 'service_4' }
+    problem[:services].first[:activity][:timewindows] = [{
+      start: 10,
+      end: 20
+    }]
+    problem[:services][1][:activity][:timewindows] = [{
+      start: 1,
+      end: 1
+    }]
+    problem[:services].each{ |service|
+      service[:activity][:setup_duration] = 1
+    }
+    vrp = TestHelper.create(problem)
+    solution = vroom.solve(vrp, 'test')
+    act_s_one = solution.routes.first.stops.find{ |act| act.service_id == 'service_1' }
+    act_s_two = solution.routes.first.stops.find{ |act| act.service_id == 'service_2' }
+    assert_equal 10, act_s_one.info.begin_time
+    assert_equal 1, act_s_two.info.begin_time
+  end
 end
