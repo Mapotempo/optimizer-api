@@ -323,7 +323,6 @@ DEPENDENCIES
   minitest-reporters
   minitest-retry
   minitest-stub_any_instance
-  nokogiri
   oj
   polylines
   puma

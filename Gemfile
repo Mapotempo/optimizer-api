@@ -34,7 +34,6 @@ gem 'oj'
 gem 'charlock_holmes'
 gem 'http_accept_language'
 gem 'i18n'
-gem 'nokogiri'
 
 # Queue
 gem 'redis', '<4'
