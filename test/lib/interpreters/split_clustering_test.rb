@@ -818,6 +818,7 @@ class SplitClusteringTest < Minitest::Test
       ], Models::Relation::FORCING_RELATIONS, 'Forcing relation constant has changed'
 
       assert_equal %i[
+      exclusive
       force_end
       force_first
       never_first

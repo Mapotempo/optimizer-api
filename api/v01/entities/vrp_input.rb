@@ -262,7 +262,7 @@ module VrpMisc
                                                                  minimum_day_lapse maximum_day_lapse
                                                                  shipment meetup
                                                                  minimum_duration_lapse maximum_duration_lapse
-                                                                 force_first never_first force_end
+                                                                 force_first never_first force_end exclusive
                                                                  vehicle_trips
                                                                  vehicle_group_duration vehicle_group_duration_on_weeks
                                                                  vehicle_group_duration_on_months vehicle_group_number],
@@ -438,7 +438,7 @@ module VrpShared
   extend Grape::API::Helpers
 
   params :vrp_request_activity do
-    optional(:position, type: Symbol, default: :neutral, values: [:neutral, :always_first, :always_middle, :always_last, :never_first, :never_middle, :never_last], desc: 'Provides an indication on when to do this service among whole route', coerce_with: ->(value) { value.to_sym })
+    optional(:position, type: Symbol, default: :neutral, values: [:neutral, :always_first, :always_middle, :always_last, :never_first, :never_middle, :never_last, :exclusive], desc: 'Provides an indication on when to do this service among whole route', coerce_with: ->(value) { value.to_sym })
     optional(:duration, type: Integer, values: ->(v) { !v.negative? }, default: 0, desc: 'Time (in seconds) while the current activity stands until it\'s over', coerce_with: ->(value) { ScheduleType.type_cast(value) })
     optional(:additional_value, type: Integer, desc: 'Additional value associated to the visit')
     optional(:setup_duration, type: Integer, values: ->(v) { !v.negative? }, default: 0, desc: 'Time (in seconds) at destination before the proper activity is effectively performed', coerce_with: ->(value) { ScheduleType.type_cast(value) })

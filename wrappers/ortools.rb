@@ -668,10 +668,10 @@ module Wrappers
     end
 
     def update_services_positions(services, services_positions, id, position, service_index)
-      services_positions[:always_first] << id.to_s if position == :always_first
+      services_positions[:always_first] << id.to_s if [:always_first, :exclusive].include?(position)
       services_positions[:never_first] << id.to_s if [:never_first, :always_middle].include?(position)
       services_positions[:never_last] << id.to_s if [:never_last, :always_middle].include?(position)
-      services_positions[:always_last] << id.to_s if position == :always_last
+      services_positions[:always_last] << id.to_s if [:always_last, :exclusive].include?(position)
 
       return services if position != :never_middle
 

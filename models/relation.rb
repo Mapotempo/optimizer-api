@@ -32,6 +32,7 @@ module Models
       force_first
       never_first
       force_end
+      exclusive
     ].freeze
 
     # Relations that link multiple services to be on the same route
@@ -56,6 +57,7 @@ module Models
     NO_LAPSE_TYPES = %i[
       force_end
       force_first
+      exclusive
       same_route
       same_vehicle
       sequence
@@ -91,6 +93,7 @@ module Models
     ON_SERVICES_TYPES = %i[
       force_end
       force_first
+      exclusive
       maximum_day_lapse
       maximum_duration_lapse
       meetup

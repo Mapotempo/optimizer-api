@@ -4,6 +4,8 @@
 
 ### Added
 
+- Exclusive position for activities that needs to be both first and last position [#438](https://github.com/Mapotempo/optimizer-api/pull/438)
+
 ### Changed
 
 ### Removed
