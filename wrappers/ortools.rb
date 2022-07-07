@@ -28,11 +28,8 @@ module Wrappers
         'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'
       @optimize_time = hash[:optimize_time]
       @previous_result = nil
-      @killed ||= nil
       @iterations_without_improvment ||= nil
       @time_out_multiplier ||= nil
-
-      @semaphore = Mutex.new
     end
 
     def solver_constraints
@@ -372,10 +369,6 @@ module Wrappers
       run_ortools(problem, vrp, thread_proc, &block)
     end
 
-    def kill
-      @killed = true
-    end
-
     private
 
     def build_cost_details(cost_details)
@@ -570,25 +563,12 @@ module Wrappers
 
       log cmd
 
-      stdin, stdout_and_stderr, @thread =
-        @semaphore.synchronize {
-        Open3.popen2e(cmd) if !@killed
-      }
+      block&.call() # before creating the optimization process in case optim is canceled
+
+      # Thread.abort_on_exception = true # This doesn't work with Open3.popen
+      stdin, stdout_and_stderr, @thread = Open3.popen2e(cmd)
 
       return if !@thread
-
-      pipe =
-        @semaphore.synchronize {
-          IO.popen("ps -ef | grep #{@thread.pid}")
-        }
-
-      childs = pipe.readlines.map do |line|
-        parts = line.split(/\s+/)
-        parts[1].to_i if parts[2] == @thread.pid.to_s
-      end.compact || []
-      childs << @thread.pid
-
-      thread_proc&.call(childs)
 
       out = ''
       iterations = 0
@@ -632,6 +612,9 @@ module Wrappers
         end
       }
 
+      stdin&.close
+      stdout_and_stderr&.close
+
       result = out.split("\n")[-1]
       if @thread.value.success?
         @previous_result =
@@ -641,8 +624,6 @@ module Wrappers
             parse_output(vrp, output)
           end
         @previous_result
-      elsif @thread.value.signaled? && @thread.value.termsig == 9
-        raise OptimizerWrapper::JobKilledError
       else # Fatal Error
         message =
           case @thread.value
@@ -659,10 +640,19 @@ module Wrappers
       input&.unlink
       output&.close
       output&.unlink
-      @thread&.value # wait for the termination of the thread in case there is one
       stdin&.close
       stdout_and_stderr&.close
-      pipe&.close
+      if @thread&.alive? # Need to kill the job and its children if it is still alive
+        child_pids = []
+        IO.popen("ps -ef | grep #{@thread.pid}") { |io|
+          child_pids = io.readlines.map do |line|
+            parts = line.split(/\s+/)
+            parts[1].to_i if parts[2] == @thread.pid.to_s
+          end.compact || []
+        }
+        child_pids << @thread.pid
+        child_pids.each{ |pid| Process.kill('KILL', pid) }
+      end
       thread_proc&.call([])
       log "<---- run_ortools #{Time.now - tic}sec elapsed", level: :debug
     end
