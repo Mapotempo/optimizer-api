@@ -298,33 +298,22 @@ module Models
     def self.convert_position_relations(hash)
       relations_to_remove = []
       error_msg = ' relation with service with activities. Use position field instead.'
+      type_conversion = {
+        force_first: :always_first,
+        never_first: :never_first,
+        force_end: :always_last,
+        exclusive: :exclusive
+      }
       hash[:relations]&.each_with_index{ |r, r_i|
-        case r[:type]
-        when :force_first
-          r[:linked_service_ids].each{ |id|
-            to_modify = hash[:services].find{ |s| s[:id] == id }
-            raise OptimizerWrapper::DiscordantProblemError.new(r[:type].to_s + error_msg) unless to_modify[:activity]
+        next unless type_conversion.key?(r[:type])
 
-            to_modify[:activity][:position] = :always_first
-          }
-          relations_to_remove << r_i
-        when :never_first
-          r[:linked_service_ids].each{ |id|
-            to_modify = hash[:services].find{ |s| s[:id] == id }
-            raise OptimizerWrapper::DiscordantProblemError.new(r[:type].to_s + error_msg) unless to_modify[:activity]
+        r[:linked_service_ids]&.each{ |id|
+          to_modify = hash[:services].find{ |s| s[:id] == id }
+          raise OptimizerWrapper::DiscordantProblemError.new(r[:type].to_s + error_msg) unless to_modify[:activity]
 
-            to_modify[:activity][:position] = :never_first
-          }
-          relations_to_remove << r_i
-        when :force_end
-          r[:linked_service_ids].each{ |id|
-            to_modify = hash[:services].find{ |s| s[:id] == id }
-            raise OptimizerWrapper::DiscordantProblemError.new(r[:type].to_s + error_msg) unless to_modify[:activity]
-
-            to_modify[:activity][:position] = :always_last
-          }
-          relations_to_remove << r_i
-        end
+          to_modify[:activity][:position] = type_conversion[r[:type]]
+        }
+        relations_to_remove << r_i
       }
 
       relations_to_remove.reverse_each{ |index| hash[:relations].delete_at(index) }

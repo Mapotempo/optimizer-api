@@ -50,7 +50,7 @@ module Models
         lapses = index.zero? ? [] : [1]
         types.each{ |rel_type|
           # those are supported with periodic heuristic
-          next if %i[force_end force_first never_first].include?(rel_type)
+          next if %i[force_end force_first never_first exclusive].include?(rel_type)
 
           linked_ids = %w[service_1 service_2] if Models::Relation::ON_SERVICES_TYPES.include?(rel_type)
           linked_vehicle_ids = %w[vehicle_0 vehicle_0_dup] if Models::Relation::ON_VEHICLES_TYPES.include?(rel_type)

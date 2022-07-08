@@ -433,7 +433,7 @@ module ValidateData
 
     if periodic_heuristic
       incompatible_relation_types =
-        @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end same_vehicle]
+        @hash[:relations].collect{ |r| r[:type] }.uniq - %i[force_first never_first force_end exclusive same_vehicle]
       err_msg = "#{incompatible_relation_types} relations not available with specified first_solution_strategy"
       raise OptimizerWrapper::UnsupportedProblemError.new(err_msg) if incompatible_relation_types.any?
     end
@@ -459,6 +459,7 @@ module ValidateData
       force_end
       force_first
       never_first
+      exclusive
       same_vehicle
       vehicle_trips
       vehicle_group_duration
