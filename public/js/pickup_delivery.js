@@ -775,6 +775,11 @@ $(document).ready(function() {
       $('#infos').html('');
       $('#result').html('');
       $('#result-graph').hide();
+      data = {
+        customers: [],
+        vehicles: []
+      };
+      customers = [];
       $('#file-customers').parse({
         config: configParse,
         before: beforeFn
