@@ -9,6 +9,8 @@
 
 ### Changed
 
+- Base `setup_duration` within optimizer-ortools on `point_id` instead of `matrix_index` [#444] (https://github.com/Mapotempo/optimizer-api/pull/444)
+
 ### Removed
 
 ### Fixed

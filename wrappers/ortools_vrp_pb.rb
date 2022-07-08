@@ -30,6 +30,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :exclusion_cost, :float, 13
       repeated :refill_quantities, :bool, 14
       optional :problem_index, :uint32, 15
+      optional :point_id, :string, 16
     end
     add_message "ortools_vrp.Rest" do
       optional :time_window, :message, 1, "ortools_vrp.TimeWindow"
@@ -72,6 +73,7 @@ Google::Protobuf::DescriptorPool.generated_pool.build do
       optional :additional_setup, :uint32, 26
       optional :free_approach, :bool, 27
       optional :free_return, :bool, 28
+      optional :start_point_id, :string, 29
     end
     add_message "ortools_vrp.Relation" do
       optional :type, :string, 1

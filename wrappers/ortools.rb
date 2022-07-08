@@ -190,6 +190,7 @@ module Wrappers
               !q.nil? && (q.fill || q.empty)
             },
             problem_index: service_index,
+            point_id: service.activity.point_id
           )
 
           services = update_services_positions(services, services_positions, service.id,
@@ -237,6 +238,7 @@ module Wrappers
                 !q.nil? && (q.fill || q.empty)
               },
               problem_index: service_index,
+              point_id: possible_activity.point_id
             )
 
             services = update_services_positions(services, services_positions, service.id,
@@ -310,7 +312,8 @@ module Wrappers
             max_ride_time: vehicle.maximum_ride_time || 0,
             max_ride_distance: vehicle.maximum_ride_distance || 0,
             free_approach: vehicle.free_approach || false,
-            free_return: vehicle.free_return || false
+            free_return: vehicle.free_return || false,
+            start_point_id: vehicle.start_point_id.to_s
           )
         }
 
