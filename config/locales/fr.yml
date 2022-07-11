@@ -52,6 +52,7 @@ fr:
       type_visit: visite
       visit_index: indice de la visite
       wait_time: attente
+      setup_time: durée client appliquée
     tags: libellés
   views:
     shared:

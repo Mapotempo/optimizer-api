@@ -52,6 +52,7 @@ en:
       type_visit: visit
       visit_index: visit index
       wait_time: waiting time
+      setup_time: applied duration per destination
     tags: tags
   views:
     shared:

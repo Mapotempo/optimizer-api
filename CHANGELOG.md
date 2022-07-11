@@ -4,6 +4,7 @@
 
 ### Added
 
+- Return the effective `setup_duration` in the solution as `setup_time` [#428](https://github.com/Mapotempo/optimizer-api/pull/428) [#445](https://github.com/Mapotempo/optimizer-api/pull/445)
 - Exclusive position for activities that needs to be both first and last position [#438](https://github.com/Mapotempo/optimizer-api/pull/438)
 - The intermediate solutions are now cleaned similarly to the final solution [#435](https://github.com/Mapotempo/optimizer-api/pull/435)
 
