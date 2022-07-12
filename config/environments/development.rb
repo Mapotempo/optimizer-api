@@ -48,7 +48,7 @@ module OptimizerWrapper
 
   OptimizerLogger.level = ENV['LOG_LEVEL']&.to_sym || :debug
   OptimizerLogger.with_datetime = true
-  OptimizerLogger.caller_location = :relative
+  OptimizerLogger.caller_location = ENV['CALLER_LOCATION']&.to_sym || :relative
 
   @@c = {
     product_title: 'Optimizers API',
