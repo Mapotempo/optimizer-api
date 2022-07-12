@@ -52,6 +52,7 @@ es:
       type_visit: visita
       visit_index: índice de la visita
       wait_time: tiempo de espera
+      setup_time: duración de preparación aplicado
     tags: etiquetas
   views:
     shared:

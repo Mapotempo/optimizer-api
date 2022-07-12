@@ -52,4 +52,5 @@ legacy:
       type_visit: visit
       visit_index: visit_index
       wait_time: waiting_time
+      setup_time: setup_time
     tags: tags

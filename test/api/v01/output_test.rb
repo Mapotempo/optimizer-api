@@ -493,7 +493,7 @@ class Api::V01::OutputTest < Minitest::Test
 
     expected_route_keys = %w[vehicle_id original_vehicle_id total_travel_time total_travel_distance total_waiting_time]
     expected_activities_keys = %w[
-                                  point_id waiting_time begin_time end_time id original_id lat lon duration
+                                  point_id setup_time waiting_time begin_time end_time id original_id lat lon duration
                                   setup_duration additional_value skills tags travel_time travel_distance
                                 ]
     expected_unassigned_keys = %w[point_id id type unassigned_reason]
