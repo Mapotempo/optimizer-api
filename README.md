@@ -172,8 +172,7 @@ SKIP_REAL_CASES=true APP_ENV=test bundle exec rake test
 
 To test on Github Actions with a optimizer-ortools different than the latest version, specify in your Actions configuration the following environment variable : OPTIMIZER_ORTOOLS_VERSION with you github owner nick.
 
-## Docker
-
+# Docker
 Start the services `docker compose up -d`
 
 Start the api `docker compose exec api bundle exec rackup -o 0.0.0.0`
