@@ -12,7 +12,7 @@ FROM vroomvrp/vroom-docker:${VROOM_VERSION:-v1.8.0} as vroom
 # optimizer-api repo to force the CI to use a specific mapotempo/optimizer-ortools image.
 # Mapotempo devs can also set this variable to their github username on their own optimizer-api repo
 # to force the CI to use the last succesful username/optimizer-ortools image.
-FROM ${REGISTRY:-registry.mapotempo.com/}mapotempo-${BRANCH:-ce}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.15.0}
+FROM ${REGISTRY:-registry.mapotempo.com/}mapotempo-${BRANCH:-ce}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.16.0}
 ARG BUNDLE_WITHOUT
 
 ENV LANG C.UTF-8
