@@ -244,10 +244,10 @@ $(document).ready(function() {
             return el && el.length > 0;
           }),
           timewindow: {
-            start: duration(vehicle[mapping.start_time || 'start_time']) || null,
-            end: duration(vehicle[mapping.end_time || 'end_time']) || null
+            start: vehicle[mapping.start_time || 'start_time'] || null,
+            end: vehicle[mapping.end_time || 'end_time'] || null
           },
-          duration: duration(vehicle[mapping.route_duration || 'duration']) || null,
+          duration: vehicle[mapping.route_duration || 'duration'] || null,
           router_mode: vehicle[mapping.router_mode || 'router_mode'] || 'car',
           router_dimension: vehicle[mapping.router_dimension || 'router_dimension'] || 'time',
           speed_multiplier: (vehicle[mapping.speed_multiplier || 'speed_multiplier'] || '').replace(',', '.') || 1,
@@ -265,24 +265,24 @@ $(document).ready(function() {
           });
           vrp.shipments.push({
             id: customer[mapping.reference || 'reference'],
-            maximum_inroute_duration: duration(customer[mapping.shipment_inroute || 'shipment_inroute']) || null,
+            maximum_inroute_duration: customer[mapping.shipment_inroute || 'shipment_inroute'] || null,
             pickup: {
               point_id: customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.'),
               timewindows: [{
-                start: duration(customer[mapping.pickup_start || 'pickup_start']) || null,
-                end: duration(customer[mapping.pickup_end || 'pickup_end']) || null
+                start: customer[mapping.pickup_start || 'pickup_start'] || null,
+                end: customer[mapping.pickup_end || 'pickup_end'] || null
               }],
-              setup_duration: duration(customer[mapping.pickup_setup || 'pickup_setup']) || null,
-              duration: duration(customer[mapping.pickup_duration || 'pickup_duration']) || null
+              setup_duration: customer[mapping.pickup_setup || 'pickup_setup'] || null,
+              duration: customer[mapping.pickup_duration || 'pickup_duration'] || null
             },
             delivery: {
               point_id: customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.'),
               timewindows: [{
-                start: duration(customer[mapping.delivery_start || 'delivery_start']) || null,
-                end: duration(customer[mapping.delivery_end || 'delivery_end']) || null
+                start: customer[mapping.delivery_start || 'delivery_start'] || null,
+                end: customer[mapping.delivery_end || 'delivery_end'] || null
               }],
-              setup_duration: duration(customer[mapping.delivery_setup || 'delivery_setup']) || null,
-              duration: duration(customer[mapping.delivery_duration || 'delivery_duration']) || null
+              setup_duration: customer[mapping.delivery_setup || 'delivery_setup'] || null,
+              duration: customer[mapping.delivery_duration || 'delivery_duration'] || null
             },
             quantities: $.map(quantities.filter(function(n) {return n != undefined;}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key});}),
             skills: $.map(customer, function(val, key) {
@@ -305,11 +305,11 @@ $(document).ready(function() {
             activity: {
               point_id: customer[mapping.pickup_lat || 'pickup_lat'].replace(',', '.') + ',' + customer[mapping.pickup_lon || 'pickup_lon'].replace(',', '.'),
               timewindows: [{
-                start: duration(customer[mapping.pickup_start || 'pickup_start']) || null,
-                end: duration(customer[mapping.pickup_end || 'pickup_end']) || null
+                start: customer[mapping.pickup_start || 'pickup_start'] || null,
+                end: customer[mapping.pickup_end || 'pickup_end'] || null
               }],
-              setup_duration: duration(customer[mapping.pickup_setup || 'pickup_setup']) || null,
-              duration: duration(customer[mapping.pickup_duration || 'pickup_duration']) || null
+              setup_duration: customer[mapping.pickup_setup || 'pickup_setup'] || null,
+              duration: customer[mapping.pickup_duration || 'pickup_duration'] || null
             },
             quantities: $.map(quantities.filter(function(n) {return n != undefined;}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key});}),
             skills: $.map(customer, function(val, key) {
@@ -332,11 +332,11 @@ $(document).ready(function() {
             activity: {
               point_id: customer[mapping.delivery_lat || 'delivery_lat'].replace(',', '.') + ',' + customer[mapping.delivery_lon || 'delivery_lon'].replace(',', '.'),
               timewindows: [{
-                start: duration(customer[mapping.delivery_start || 'delivery_start']) || null,
-                end: duration(customer[mapping.delivery_end || 'delivery_end']) || null
+                start: customer[mapping.delivery_start || 'delivery_start'] || null,
+                end: customer[mapping.delivery_end || 'delivery_end'] || null
               }],
-              setup_duration: duration(customer[mapping.delivery_setup || 'delivery_setup']) || null,
-              duration: duration(customer[mapping.delivery_duration || 'delivery_duration']) || null
+              setup_duration: customer[mapping.delivery_setup || 'delivery_setup'] || null,
+              duration: customer[mapping.delivery_duration || 'delivery_duration'] || null
             },
             quantities: $.map(quantities.filter(function(n) {return n != undefined;}), function(val, key) {return $.extend(val, {unit_id: 'unit'+ key});}),
             skills: $.map(customer, function(val, key) {
