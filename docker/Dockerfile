@@ -5,7 +5,7 @@ ARG REGISTRY
 ARG VROOM_VERSION
 
 # Install Vroom
-FROM vroomvrp/vroom-docker:${VROOM_VERSION:-v1.8.0} as vroom
+FROM vroomvrp/vroom-docker:${VROOM_VERSION:-v1.12.0} as vroom
 
 # optimizer-ortools
 # Set OPTIMIZER_ORTOOLS_VERSION to a tag from mapotempo/optimizer-ortools repo as a secret on your
@@ -35,7 +35,7 @@ RUN mv /etc/apt/sources.list.d.bak /etc/apt/sources.list.d
 
 RUN apt-get update > /dev/null && \
   libgeos=$(apt-cache search 'libgeos-' | grep -P 'libgeos-\d.*' | awk '{print $1}') && \
-  apt-get install -y git libgeos-dev ${libgeos} libicu-dev nano > /dev/null
+  apt-get install -y git libgeos-dev ${libgeos} libicu-dev libglpk-dev nano > /dev/null
 
 COPY --chown=app . /srv/app/
 RUN install -d --owner app /srv/app/archives

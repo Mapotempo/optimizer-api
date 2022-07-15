@@ -207,7 +207,7 @@ module Wrappers
       service = @object_id_map[act_step['id']]
       point = service.activity.point
       route_data = compute_route_data(vrp, point, act_step)
-      begin_time = act_step['arrival'] && (act_step['arrival'] + act_step['waiting_time'])
+      begin_time = act_step['arrival'] && (act_step['arrival'] + act_step['waiting_time'] + act_step['setup'])
       times = {
         begin_time: begin_time,
         end_time: begin_time && (begin_time + act_step['service']),
@@ -260,10 +260,14 @@ module Wrappers
         {
           id: index,
           location_index: service.activity.point.matrix_index,
-          service: service.activity.duration.to_i,
+          service: service.activity.duration,
+          setup: service.activity.setup_duration,
           skills: collect_skills(service, vrp_skills),
           priority: (100 * (8 - service.priority).to_f / 8).to_i, # Scale from 0 to 100 (higher is more important)
-          time_windows: service.activity.timewindows.map{ |timewindow| [timewindow.start, timewindow.end || 2**30] },
+          time_windows: service.activity.timewindows.map{ |timewindow|
+            [timewindow.start - service.activity.setup_duration,
+             (timewindow.end || 2**30) - service.activity.setup_duration]
+          },
           delivery: vrp_units.map{ |unit|
             q = service.quantities.find{ |quantity| quantity.unit.id == unit.id && quantity.value.negative? }
             @total_quantities[unit.id] -= q&.value || 0
@@ -311,14 +315,22 @@ module Wrappers
         pickup: {
           id: pickup_index,
           service: pickup_service.activity.duration,
+          setup: pickup_service.activity.setup_duration,
           location_index: pickup_service.activity.point.matrix_index,
-          time_windows: pickup_service.activity.timewindows.map{ |tw| [tw.start, tw.end || 2**30] }
+          time_windows: pickup_service.activity.timewindows.map{ |tw|
+            [tw.start - pickup_service.activity.setup_duration,
+             (tw.end || 2**30) - pickup_service.activity.setup_duration]
+          }
         }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? },
         delivery: {
           id: delivery_index,
           service: delivery_service.activity.duration,
+          setup: delivery_service.activity.setup_duration,
           location_index: delivery_service.activity.point.matrix_index,
-          time_windows: delivery_service.activity.timewindows.map{ |tw| [tw.start, tw.end || 2**30] }
+          time_windows: delivery_service.activity.timewindows.map{ |tw|
+            [tw.start - delivery_service.activity.setup_duration,
+             (tw.end || 2**30) - delivery_service.activity.setup_duration]
+          }
         }.delete_if{ |_k, v| v.nil? || v.is_a?(Array) && v.empty? }
       }.delete_if{ |_k, v|
         v.nil? || v.is_a?(Array) && v.empty?
