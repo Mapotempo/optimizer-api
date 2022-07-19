@@ -1496,6 +1496,8 @@ module Wrappers
           first_activity = service_group.first.activity
 
           vrp.matrices.each{ |matrix|
+            next if vehicles_grouped_by_matrix_id[matrix.id].nil?
+
             vehicle = vehicles_grouped_by_matrix_id[matrix.id].first
 
             # WARNING: In the following logic we assume that matrix indices are unique.
@@ -1538,6 +1540,8 @@ module Wrappers
           next if setup_duration.zero?
 
           vrp.matrices.each{ |matrix|
+            next if vehicles_grouped_by_matrix_id[matrix.id].nil?
+
             vehicle = vehicles_grouped_by_matrix_id[matrix.id].first
             coef_setup = vehicle[:simplified_coef_setup] || 1
             additional_setup = vehicle[:simplified_additional_setup].to_i
