@@ -11,7 +11,7 @@
 
 ### Changed
 
-- Base `setup_duration` within optimizer-ortools on `point_id` instead of `matrix_index` [#444] (https://github.com/Mapotempo/optimizer-api/pull/444) [#446](https://github.com/Mapotempo/optimizer-api/pull/446]
+- Base `setup_duration` within optimizer-ortools on `point_id` instead of `matrix_index` [#444] (https://github.com/Mapotempo/optimizer-api/pull/444) [#446](https://github.com/Mapotempo/optimizer-api/pull/446])
 - Bump VROOM to v1.12.0 [#436](https://github.com/Mapotempo/optimizer-api/pull/436/)
 
 ### Removed
@@ -19,6 +19,7 @@
 ### Fixed
 
 - In some cases, the jobs were impossible to remove [#432](https://github.com/Mapotempo/optimizer-api/pull/432)
+- `encoded_polylines` geometry were unreachable [#447](https://github.com/Mapotempo/optimizer-api/pull/447)
 
 ## [v1.9.0] - 2022-06-07
 

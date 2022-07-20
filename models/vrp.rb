@@ -376,9 +376,15 @@ module Models
       hash[:configuration][:restitution][:geometry] -=
         if hash[:configuration][:restitution][:geometry_polyline]
           [:polylines]
-        else
+        elsif hash[:configuration][:restitution][:geometry_polyline] == false
           [:encoded_polylines]
+        else
+          []
         end
+      if hash[:configuration][:restitution][:geometry].include?(:polylines) &&
+         hash[:configuration][:restitution][:geometry].include?(:encoded_polylines)
+        hash[:configuration][:restitution][:geometry] -= [:encoded_polylines]
+      end
       hash[:configuration][:restitution].delete(:geometry_polyline)
     end
 
