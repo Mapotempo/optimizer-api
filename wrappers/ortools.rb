@@ -249,9 +249,11 @@ module Wrappers
 
       matrices =
         vrp.matrices.collect{ |matrix|
+          matrix_size = (matrix[:time] || matrix[:distance]).size
           OrtoolsVrp::Matrix.new(
-            time: matrix[:time] ? matrix[:time].flatten : [],
-            distance: matrix[:distance] ? matrix[:distance].flatten : [],
+            size: matrix_size,
+            time: matrix[:time] ? matrix[:time].flatten : Array.new(matrix_size**2, 0),
+            distance: matrix[:distance] ? matrix[:distance].flatten : Array.new(matrix_size**2, 0),
             value: matrix[:value] ? matrix[:value].flatten : []
           )
         }
