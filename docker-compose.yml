@@ -1,0 +1,75 @@
+version: '3.7'
+
+x-app-args: &app-args
+  APP_BASE: ${APP_BASE}
+  BUNDLE_VERSION: ${BUNDLE_VERSION}
+  RUBY_VERSION: ${RUBY_VERSION}
+  BUNDLE_WITHOUT: production
+
+# keep command outside anchor because of performance problems
+x-default-redis: &default-redis
+  image: redis:${REDIS_VERSION:-6.2.5-alpine}
+  volumes:
+    - ${APP_HOME:-..}/redis:/data
+
+x-default-environment: &default-environment
+  CALLER_LOCATION: absolute
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  OPTIM_DEFAULT_MAX_LATENESS_RATIO: 1
+  OPTIM_GENERATE_GEOJSON_POLYLINES: 'true'
+  REDIS_COUNT_HOST: redis-count
+  REDIS_HOST: redis-cache
+  REDIS_RESQUE_HOST: redis
+  REDIS_RESULT_TTL_DAYS: ${REDIS_RESULT_TTL_DAYS}
+  ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
+  ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
+  SENTRY_DSN: ${SENTRY_DSN}
+
+x-environment-resque: &environment-resque
+  <<: *default-environment
+
+x-default-service: &default-service
+  build:
+    args:
+      <<: *app-args
+    context: .
+    dockerfile: docker/Dockerfile
+  image: dev.example.com/mapotempo/mt-optimizer
+  depends_on:
+    - base
+  volumes:
+      - ./:/srv/app/
+      - app_cache_vendor:/srv/app/vendor
+  environment:
+    <<: *default-environment
+
+services:
+  redis:
+    <<: *default-redis
+    hostname: redis
+    command: redis-server --appendonly yes
+
+  redis-cache:
+    hostname: redis-cache
+    <<: *default-redis
+    command: redis-server --save ""
+
+  redis-count:
+    <<: *default-redis
+    volumes:
+      - ${APP_HOME:-..}/redis-count:/data
+    hostname: redis-count
+    command: redis-server --appendonly yes
+
+  main:
+    <<: *default-service
+    environment:
+      <<: *environment-resque
+      COUNT: 1
+      QUEUES: DEFAULT
+    ports:
+      - "1791:1791"
+    tty: true
+
+volumes:
+  app_cache_vendor:

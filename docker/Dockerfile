@@ -64,9 +64,3 @@ RUN rm -f /etc/service/nginx/down && \
 ADD docker/env.d/* /etc/nginx/main.d/
 ADD docker/snippets/* /etc/nginx/snippets/
 ADD docker/webapp.conf /etc/nginx/sites-enabled/webapp.conf
-
-RUN apt-get remove -y git build-essential && \
-  apt-get autoremove -y && \
-  apt-get clean && \
-  echo -n > /var/lib/apt/extended_states && \
-  rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/*
