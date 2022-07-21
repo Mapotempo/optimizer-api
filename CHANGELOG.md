@@ -13,6 +13,7 @@
 
 - Base `setup_duration` within optimizer-ortools on `point_id` instead of `matrix_index` [#444] (https://github.com/Mapotempo/optimizer-api/pull/444) [#446](https://github.com/Mapotempo/optimizer-api/pull/446])
 - Bump VROOM to v1.12.0 [#436](https://github.com/Mapotempo/optimizer-api/pull/436/)
+- Optimizer-ortools uses the protobuf contained into the protobuf binary instead of reloading it locally [#450](https://github.com/Mapotempo/optimizer-api/pull/450)
 
 ### Removed
 

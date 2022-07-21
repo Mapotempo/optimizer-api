@@ -6,6 +6,7 @@ require 'google/protobuf'
 Google::Protobuf::DescriptorPool.generated_pool.build do
   add_file("ortools_vrp.proto", :syntax => :proto3) do
     add_message "ortools_vrp.Matrix" do
+      optional :size, :uint32, 1
       repeated :time, :float, 2
       repeated :distance, :float, 3
       repeated :value, :float, 4
