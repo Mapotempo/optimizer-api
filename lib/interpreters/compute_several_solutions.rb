@@ -15,7 +15,6 @@
 # along with Mapotempo. If not, see:
 # <http://www.gnu.org/licenses/agpl.html>
 #
-
 module Interpreters
   class SeveralSolutions
     def self.duplicate_service_vrp(service_vrp, vrp_hash = nil)
