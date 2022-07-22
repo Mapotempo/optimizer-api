@@ -169,10 +169,11 @@ class RealCasesTest < Minitest::Test
       assert solutions[0]
       # Check stops
       assert_equal check_vrp_services_size, (solutions[0].routes.sum{ |r| r.stops.count(&:service_id) })
-      services_by_routes = vrp.services.group_by(&:sticky_vehicle_ids)
-
+      services_by_routes = vrp.services.group_by{ |s| s.skills.find{ |skill| skill.to_s.include?("sticky_skill") } }
       services_by_routes.each{ |k, v|
-        assert_equal v.size, solutions[0].routes.find{ |r| r.vehicle.id == k[0] }.stops.count(&:service_id)
+        assert_equal v.size, solutions[0].routes.find{ |r|
+          k.to_s == "sticky_skill_#{r.vehicle.id}"
+        }.stops.count(&:service_id)
       }
 
       # Check routes
@@ -197,9 +198,11 @@ class RealCasesTest < Minitest::Test
       # Check stops
       assert_equal check_vrp_services_size,
                    (solutions[0].routes.sum{ |r| r.stops.count(&:service_id) })
-      services_by_routes = vrp.services.group_by{ |s| s.sticky_vehicles.map(&:id) }
+      services_by_routes = vrp.services.group_by{ |s| s.skills.find{ |skill| skill.to_s.include?("sticky_skill") } }
       services_by_routes.each{ |k, v|
-        assert_equal v.size, solutions[0].routes.find{ |r| r.vehicle.id == k[0] }.stops.count(&:service_id)
+        assert_equal v.size, solutions[0].routes.find{ |r|
+          k.to_s == "sticky_skill_#{r.vehicle.id}"
+        }.stops.count(&:service_id)
       }
 
       # Check routes

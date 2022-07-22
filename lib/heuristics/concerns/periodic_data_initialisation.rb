@@ -148,7 +148,6 @@ module PeriodicDataInitialization
                       service.activities.collect{ |a| a.point.id || a.point.matrix_id },
         tws_sets: service.activity ? [service.activity.timewindows] : service.activities.collect(&:timewindows),
         priority: service.priority,
-        sticky_vehicles_ids: service.sticky_vehicles.collect(&:id),
         positions_in_route: service.activity ? [service.activity.position] : service.activities.collect(&:position),
         nb_activities: service.activity ? 1 : service.activities.size,
       }
