@@ -429,7 +429,8 @@ module OptimizerWrapper
       # If one sub vrp has no vehicle or no service, duration can be zero.
       # We only split duration among sub_service_vrps that have at least one vehicle and one service.
       this_sub_size =
-        vrp.services.all?{ |service| service.sticky_vehicle_ids.any? } ? sub_vrp.vehicles.size :
+        vrp.services.all?{ |service| service.skills.any?{ |skill| skill.to_s.include?("sticky_skill") } } ?
+         sub_vrp.vehicles.size :
                sub_vrp.services.size * [1, sub_vrp.vehicles.size].min
       Interpreters::SplitClustering.adjust_independent_duration(sub_vrp, this_sub_size, total_size)
     }

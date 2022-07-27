@@ -233,11 +233,6 @@ module Interpreters
 
       @equivalent_vehicles[vehicle.original_id] << [new_vehicle.id, new_vehicle.global_day_index]
       vrp.rests += new_vehicle.rests
-      vrp.services.select{ |service|
-        service.sticky_vehicles.any?{ |sticky_vehicle| sticky_vehicle == vehicle }
-      }.each{ |service|
-        service.sticky_vehicles.insert(-1, new_vehicle)
-      }
       new_vehicle
     end
 

@@ -73,6 +73,7 @@ module ExpandData
         sticky_hash[key] = service.sticky_vehicle_ids
         service.sticky_vehicles.each{ |vehicle| vehicle.skills.each{ |skill_set| skill_set << skill } }
       end
+      service.sticky_vehicles = []
       service.skills << skill
     }
   end

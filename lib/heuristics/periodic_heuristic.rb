@@ -1023,9 +1023,7 @@ module Wrappers
       point = @services_data[service_id][:points_ids].first
       (!@same_point_day && !@relaxed_same_point_day || @points_assignment[point][:vehicles].empty? ||
         @points_assignment[point][:vehicles].include?(route_data[:vehicle_original_id])) &&
-        route_data[:skills].any?{ |skill_set| (service_data[:raw].skills - skill_set).empty? } &&
-        (service_data[:sticky_vehicles_ids].empty? ||
-          service_data[:sticky_vehicles_ids].include?(route_data[:vehicle_original_id]))
+        route_data[:skills].any?{ |skill_set| (service_data[:raw].skills - skill_set).empty? }
     end
 
     def service_does_not_violate_capacity(service_id, route_data, first_visit)

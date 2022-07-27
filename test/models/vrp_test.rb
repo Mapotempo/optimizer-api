@@ -104,10 +104,10 @@ module Models
       vrp[:configuration][:preprocessing] = { partitions: [{ entity: :vehicle }] }
       generated_vrp = TestHelper.create(vrp)
 
-      assert(generated_vrp.services[0].sticky_vehicle_ids.any?)
-      assert(generated_vrp.services[2].sticky_vehicle_ids.any?)
+      assert(generated_vrp.services[0].skills.any?{ |s| s.to_s.include?("sticky_skill_") })
+      assert(generated_vrp.services[2].skills.any?{ |s| s.to_s.include?("sticky_skill_") })
 
-      assert_empty(generated_vrp.services[1].sticky_vehicle_ids)
+      assert(generated_vrp.services[1].skills.none?{ |s| s.to_s.include?("sticky_skill_") })
     end
 
     def test_solver_parameter_retrocompatibility
@@ -260,9 +260,11 @@ module Models
       }
 
       vrp = TestHelper.create(vrp)
-      assert_equal 2, (vrp.services.count{ |s| s.sticky_vehicle_ids.any? })
-      assert_includes(vrp.services.find{ |s| s.id == 'service_1' }.sticky_vehicle_ids, vrp.vehicles.first.id)
-      assert_includes(vrp.services.find{ |s| s.id == 'service_7' }.sticky_vehicle_ids, vrp.vehicles.last.id)
+      assert_equal 2, (vrp.services.count{ |s| s.skills.any? })
+      assert_includes(vrp.services.find{ |s| s.id == 'service_1' }.skills,
+                      "sticky_skill_#{vrp.vehicles.first.id}".to_sym)
+      assert_includes(vrp.services.find{ |s| s.id == 'service_7' }.skills,
+                      "sticky_skill_#{vrp.vehicles.last.id}".to_sym)
     end
 
     def test_transform_route_indice_into_index
