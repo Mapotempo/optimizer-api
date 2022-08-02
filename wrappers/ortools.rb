@@ -136,7 +136,7 @@ module Wrappers
       relations = []
       services = []
       routes = []
-      services_positions = { always_first: [], always_last: [], never_first: [], never_last: [] }
+      services_activity_positions = { always_first: [], always_last: [], never_first: [], never_last: [] }
       vrp.services.each_with_index{ |service, service_index|
         vehicles_indices = []
         detect_unfeasible_services(vrp) if service.vehicle_compatibility.nil?
@@ -190,13 +190,14 @@ module Wrappers
               !q.nil? && (q.fill || q.empty)
             },
             problem_index: service_index,
-            point_id: service.activity.point_id
+            point_id: service.activity.point_id,
+            alternative_index: 0
           )
 
-          services = update_services_positions(services, services_positions, service.id,
-                                               service.activity.position, service_index)
+          services = update_services_activity_positions(services, services_activity_positions, service.id,
+                                                        service.activity.position, service_index, 0)
         elsif service.activities
-          service.activities.each{ |possible_activity|
+          service.activities.each_with_index{ |possible_activity, activity_index|
             services << OrtoolsVrp::Service.new(
               time_windows: possible_activity.timewindows.collect{ |tw|
                 OrtoolsVrp::TimeWindow.new(start: tw.start, end: tw.end || 2147483647,
@@ -238,11 +239,12 @@ module Wrappers
                 !q.nil? && (q.fill || q.empty)
               },
               problem_index: service_index,
-              point_id: possible_activity.point_id
+              point_id: possible_activity.point_id,
+              alternative_index: activity_index
             )
 
-            services = update_services_positions(services, services_positions, service.id,
-                                                 possible_activity.position, service_index)
+            services = update_services_activity_positions(services, services_activity_positions, service.id,
+                                                          possible_activity.position, service_index, activity_index)
           }
         end
       }
@@ -349,17 +351,21 @@ module Wrappers
         )
       }
 
-      unless services_positions[:always_first].empty?
-        relations << OrtoolsVrp::Relation.new(type: :force_first, linked_ids: services_positions[:always_first])
+      unless services_activity_positions[:always_first].empty?
+        relations << OrtoolsVrp::Relation.new(type: :force_first,
+                                              linked_ids: services_activity_positions[:always_first])
       end
-      unless services_positions[:never_first].empty?
-        relations << OrtoolsVrp::Relation.new(type: :never_first, linked_ids: services_positions[:never_first])
+      unless services_activity_positions[:never_first].empty?
+        relations << OrtoolsVrp::Relation.new(type: :never_first,
+                                              linked_ids: services_activity_positions[:never_first])
       end
-      unless services_positions[:never_last].empty?
-        relations << OrtoolsVrp::Relation.new(type: :never_last, linked_ids: services_positions[:never_last])
+      unless services_activity_positions[:never_last].empty?
+        relations << OrtoolsVrp::Relation.new(type: :never_last,
+                                              linked_ids: services_activity_positions[:never_last])
       end
-      unless services_positions[:always_last].empty?
-        relations << OrtoolsVrp::Relation.new(type: :force_end, linked_ids: services_positions[:always_last])
+      unless services_activity_positions[:always_last].empty?
+        relations << OrtoolsVrp::Relation.new(type: :force_end,
+                                              linked_ids: services_activity_positions[:always_last])
       end
 
       problem = OrtoolsVrp::Problem.new(
@@ -662,17 +668,22 @@ module Wrappers
       log "<---- run_ortools #{Time.now - tic}sec elapsed", level: :debug
     end
 
-    def update_services_positions(services, services_positions, id, position, service_index)
-      services_positions[:always_first] << id.to_s if [:always_first, :exclusive].include?(position)
-      services_positions[:never_first] << id.to_s if [:never_first, :always_middle].include?(position)
-      services_positions[:never_last] << id.to_s if [:never_last, :always_middle].include?(position)
-      services_positions[:always_last] << id.to_s if [:always_last, :exclusive].include?(position)
+    def update_services_activity_positions(services, services_activity_positions,
+                                           id, position, service_index, alternative_index)
+      services_activity_positions[:always_first] << "#{id}##{alternative_index}" if
+        [:always_first, :exclusive].include?(position)
+      services_activity_positions[:never_first] << "#{id}##{alternative_index}" if
+        [:never_first, :always_middle].include?(position)
+      services_activity_positions[:never_last] << "#{id}##{alternative_index}" if
+        [:never_last, :always_middle].include?(position)
+      services_activity_positions[:always_last] << "#{id}##{alternative_index}" if
+        [:always_last, :exclusive].include?(position)
 
       return services if position != :never_middle
 
       services + services.select{ |s| s.problem_index == service_index }.collect{ |s|
-        services_positions[:always_first] << id.to_s
-        services_positions[:always_last] << "#{id}_alternative"
+        services_activity_positions[:always_first] << id.to_s
+        services_activity_positions[:always_last] << "#{id}_alternative"
         copy_s = s.dup
         copy_s.id += '_alternative'
         copy_s
