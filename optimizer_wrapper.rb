@@ -222,8 +222,7 @@ module OptimizerWrapper
       unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 
       # TODO: Eliminate the points which has no feasible vehicle or service
-
-      vrp.compute_matrix(&block)
+      vrp.compute_matrix(job, &block)
 
       config[:services][service].check_distances(vrp, unfeasible_services)
 

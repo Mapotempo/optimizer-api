@@ -39,6 +39,7 @@ x-default-service: &default-service
     - base
   volumes:
       - ./:/srv/app/
+      - ./archives/dump:/tmp/optimizer-api/dump
       - app_cache_vendor:/srv/app/vendor
   environment:
     <<: *default-environment
