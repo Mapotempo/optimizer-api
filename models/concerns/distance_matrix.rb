@@ -19,8 +19,8 @@
 module DistanceMatrix
   extend ActiveSupport::Concern
 
-  def compute_matrix(&block)
-    compute_need_matrix(&block)
+  def compute_matrix(job_id = nil, &block)
+    compute_need_matrix(job_id, &block)
   end
 
   private
@@ -33,7 +33,7 @@ module DistanceMatrix
     ].compact
   end
 
-  def compute_need_matrix(&block)
+  def compute_need_matrix(job_id = nil, &block)
     vrp_need_matrix = compute_vrp_need_matrix
     need_matrix =
       vehicles.collect{ |vehicle| [vehicle, vehicle.dimensions] }.select{ |vehicle, dimensions|
@@ -57,9 +57,18 @@ module DistanceMatrix
       i = 0
       uniq_need_matrix = Hash[uniq_need_matrix.collect{ |mode, dimensions, options|
         block&.call(nil, i += 1, uniq_need_matrix.size, 'compute matrix', nil, nil, nil)
+        lats = matrix_points.map{ |pt| pt[0] }.sort
+        lons = matrix_points.map{ |pt| pt[1] }.sort
+        dist = distance(lats.last, lons.last, lats.first, lons.first)
         # set matrix_time and matrix_distance depending of dimensions order
-        log "matrix computation #{matrix_points.size}x#{matrix_points.size} "\
+        log "matrix computation #{matrix_points.size}x#{matrix_points.size} (#{dist} km) "\
             "-- #{services.size} services, #{vehicles.size} vehicles"
+
+        Api::V01::APIBase.dump_vrp_dir.write(
+          "#{job_id}_requests.curl", router.send('params', mode, dimensions.join('_'), options)
+          .merge({ src: matrix_points.flatten.join(',') }.compact).to_json + "\n", { mode: 'a', gz: false }
+        )
+
         tic = Time.now
         router_matrices = router.matrix(OptimizerWrapper.config[:router][:url],
                                         mode, dimensions, matrix_points, matrix_points, options)
@@ -103,5 +112,30 @@ module DistanceMatrix
 
   def need_matrix_value?
     false
+  end
+
+  def distance(lat1, lon1, lat2, lon2, unit = 'K')
+    if (lat1 == lat2) && (lon1 == lon2)
+      0
+    else
+      theta = lon1 - lon2
+      dist = Math.sin(lat1 * Math::PI / 180) *
+             Math.sin(lat2 * Math::PI / 180) +
+             Math.cos(lat1 * Math::PI / 180) *
+             Math.cos(lat2 * Math::PI / 180) *
+             Math.cos(theta * Math::PI / 180)
+      dist = Math.acos(dist)
+      dist = dist * 180 / Math::PI
+      miles = dist * 60 * 1.1515
+      unit = unit.upcase
+
+      if unit == 'K'
+        (miles * 1.609344).round(2)
+      elsif unit == 'N'
+        (miles * 0.8684).round(2)
+      else
+        miles.round(2)
+      end
+    end
   end
 end
