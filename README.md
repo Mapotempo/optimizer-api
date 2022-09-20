@@ -60,7 +60,7 @@ bundle install
 
 This project requires some solver and interface projects in order to be fully functional!
 * [Vroom v1.12.0](https://github.com/VROOM-Project/vroom/releases/tag/v1.12.0)
-* [Optimizer-ortools v1.17.0](https://github.com/Mapotempo/optimizer-ortools) & [OR-Tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8) (use the version corresponding to your system operator, not source code).
+* [Optimizer-ortools v1.17.1](https://github.com/Mapotempo/optimizer-ortools) & [OR-Tools v7.8](https://github.com/google/or-tools/releases/tag/v7.8) (use the version corresponding to your system operator, not source code).
 
 Note : when updating OR-Tools you should to recompile optimizer-ortools.
 
@@ -172,8 +172,7 @@ SKIP_REAL_CASES=true APP_ENV=test bundle exec rake test
 
 To test on Github Actions with a optimizer-ortools different than the latest version, specify in your Actions configuration the following environment variable : OPTIMIZER_ORTOOLS_VERSION with you github owner nick.
 
-## Docker
-
+# Docker
 Start the services `docker compose up -d`
 
 Start the api `docker compose exec api bundle exec rackup -o 0.0.0.0`
