@@ -3770,6 +3770,24 @@ class Wrappers::OrtoolsTest < Minitest::Test
     assert_equal 0, solution.routes.first.stops[1].alternative
   end
 
+  def test_position_alternative_activities
+    ortools = OptimizerWrapper.config[:services][:ortools]
+    problem = VRP.basic
+    problem[:services] = [{
+      id: 'service_1',
+      activities: [{
+        point_id: 'point_1',
+        position: :never_first
+      }, {
+        point_id: 'point_2'
+      }]
+    }]
+    problem[:configuration][:resolution][:duration] = 20
+    solution = ortools.solve(TestHelper.create(problem), 'test')
+    assert_equal 2, solution.routes.first.stops.size
+    assert_equal 1, solution.routes.first.stops.last.alternative
+  end
+
   def test_rest_with_exclusion_cost
     problem = {
       matrices: [{
