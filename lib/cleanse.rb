@@ -116,6 +116,16 @@ module Cleanse
         true if count_services[a.service_id] > 1
       end
     }
+    solution.routes.each{ |route|
+      if route.stops.map{ |s| s.activity.point_id }.uniq.size == 1
+        route.stops.map{ |stop|
+          if stop.loads&.first&.quantity&.empty
+            add_unnassigned(solution.unassigned_stops, stop, 'Unnecessary empty stop.')
+            route.stops.delete(stop)
+          end
+        }
+      end
+    }
   end
 
   def self.add_unnassigned(unassigned, route_stop, reason)

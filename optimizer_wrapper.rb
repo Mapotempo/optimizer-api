@@ -331,6 +331,7 @@ module OptimizerWrapper
       optim_solution.configuration.csv = vrp.configuration.restitution.csv
       optim_solution.configuration.geometry = vrp.configuration.restitution.geometry
       optim_solution.unassigned_stops += unfeasible_services.values.flatten
+      Cleanse.cleanse(vrp, optim_solution)
       optim_solution.parse(vrp)
 
       if vrp.configuration.preprocessing.first_solution_strategy
