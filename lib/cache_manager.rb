@@ -45,17 +45,21 @@ class CacheManager
     end
   end
 
-  def write(name, value, options = { mode: 'w' })
+  def write(name, value, mode = 'w', gz = true)
     raise CacheError.new('Stored value is not a String') if !value.is_a? String
 
-    File.open(File.join(@cache, name.to_s.parameterize(separator: '')) + '.gz', options[:mode]) do |f|
-      gz = Zlib::GzipWriter.new(f)
-      if value.bytesize < @data_bytesize_limit_in_mb.megabytes
-        gz.write value
-      else
-        gz.write "Data size is greater than #{@data_bytesize_limit_in_mb} Mb."
+    if gz
+      File.open(File.join(@cache, name.to_s.parameterize(separator: '')) + '.gz', mode) do |f|
+        gz = Zlib::GzipWriter.new(f)
+        if value.bytesize < @data_bytesize_limit_in_mb.megabytes
+          gz.write value
+        else
+          gz.write "Data size is greater than #{@data_bytesize_limit_in_mb} Mb."
+        end
+        gz.close
       end
-      gz.close
+    else
+      File.write(File.join(@cache, name.to_s), value, mode: mode)
     end
   rescue StandardError => e
     if !cache.is_a? ActiveSupport::Cache::NullStore
