@@ -63,7 +63,7 @@ module Interpreters
 
         # Must be called to be sure matrices are complete in vrp and be able to switch vehicles between sub_vrp
         if service_vrp[:dicho_level].zero?
-          service_vrp[:vrp].compute_matrix
+          service_vrp[:vrp].compute_matrix(job)
           service_vrp[:vrp].calculate_service_exclusion_costs(:time, true)
           update_exclusion_cost(service_vrp)
         # Do not solve if vrp has too many vehicles or services - init_duration is set in set_config()
