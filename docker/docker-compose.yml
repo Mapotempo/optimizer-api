@@ -32,10 +32,12 @@ x-default-redis: &default-redis
     - ${APP_HOME:-..}/redis:/data
 
 x-default-environment: &default-environment
+  COUNT_AUTH_TOKEN: ${COUNT_AUTH_TOKEN}
   LOG_LEVEL: ${LOG_LEVEL:-info}
   OPTIM_DEFAULT_MAX_LATENESS_RATIO: 1
   OPTIM_GENERATE_GEOJSON_POLYLINES: 'true'
   PASSENGER_APP_ENV: production
+  PROJECT_NAME: ${PROJECT_NAME}
   REDIS_COUNT_HOST: redis-count
   REDIS_HOST: redis-cache
   REDIS_RESQUE_HOST: redis
@@ -109,6 +111,22 @@ services:
         order: stop-first
     command: redis-server --appendonly yes
     networks:
+      - redis_count
+
+  count-explorer:
+    image: quay.mapotempo.com/mapotempo/count-exporter:0.1.0
+    environment:
+      AUTH_TOKEN: ${COUNT_AUTH_TOKEN}
+      CONTROL_URL: http://${PROJECT_NAME}-api/0.1
+    deploy:
+      labels:
+        - "prometheus-job=count_exporter"
+        - "prometheus-port=9090"
+        - "prometheus-instance=${APP_URL}"
+        - "prometheus-stack=${PROJECT_NAME}"
+    networks:
+      - base
+      - prometheus
       - redis_count
 
   api:
@@ -249,6 +267,9 @@ services:
 
 networks:
   base:
+    external: ${EXTERNAL_NETWORK:-true}
+    driver: overlay
+  prometheus:
     external: ${EXTERNAL_NETWORK:-true}
     driver: overlay
   redis_cache:
