@@ -21,6 +21,7 @@ module OptimizerWrapper
     'demo' => { profile: :demo, params_limit: { points: nil, vehicles: nil }},
     'quota' => { profile: :demo, quotas: [{ operation: :optimize, daily: 4 }, { monthly: 6 }] },
     'quota_nil' => { profile: :quotas, quotas: [{ operation: :optimize, daily: nil }] },
+    'metrics' => { profile: :demo, params_limit: { points: nil, vehicles: nil }, metrics: true},
     'expired' => { profile: :standard, expire_at: '2000-01-01' },
     'solvers' => { profile: :solvers },
     'vroom' => { profile: :vroom },
