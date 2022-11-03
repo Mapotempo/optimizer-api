@@ -321,7 +321,7 @@ module OptimizerWrapper
         end
         # Reintegrate unfeasible services deleted from vrp.services to help ortools
         vrp.services += services_to_reinject
-      end  
+      end
     end
     if optim_solution # Job might have been killed
       if periodic_heuristic_flag
