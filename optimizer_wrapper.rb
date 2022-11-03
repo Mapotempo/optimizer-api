@@ -221,101 +221,108 @@ module OptimizerWrapper
     else
       unfeasible_services = config[:services][service].detect_unfeasible_services(vrp)
 
-      # TODO: Eliminate the points which has no feasible vehicle or service
-      vrp.compute_matrix(job, &block)
+      # if all services are unfeasible just return an empty solution
+      if vrp.services.size == unfeasible_services.size
+        optim_solution = Models::Solution.new(
+          solvers: [service.to_s],
+          routes: vrp.vehicles.map{ |v| vrp.empty_route(v) },
+          unassigned_stops: []
+        )
+      else
+        # TODO: Eliminate the points which has no feasible vehicle or service
+        vrp.compute_matrix(job, &block)
 
-      config[:services][service].check_distances(vrp, unfeasible_services)
+        config[:services][service].check_distances(vrp, unfeasible_services)
 
-      # TODO: Eliminate the vehicles which cannot serve any
-      # service vrp.services.all?{ |s| s.vehicle_compatibility[v.id] == false }
+        # TODO: Eliminate the vehicles which cannot serve any
+        # service vrp.services.all?{ |s| s.vehicle_compatibility[v.id] == false }
 
-      # Remove infeasible services
-      services_to_reinject = []
-      unfeasible_services.each_key{ |una_service_id|
-        index = vrp.services.find_index{ |s| s.id == una_service_id }
-        if index
-          services_to_reinject << vrp.services.slice!(index)
-        end
-      }
+        # Remove infeasible services
+        services_to_reinject = []
+        unfeasible_services.each_key{ |una_service_id|
+          index = vrp.services.find_index{ |s| s.id == una_service_id }
+          if index
+            services_to_reinject << vrp.services.slice!(index)
+          end
+        }
 
-      # vrp.periodic_heuristic check the first_solution_stategy which may change right after periodic heuristic
-      periodic_heuristic_flag = vrp.periodic_heuristic?
-      # TODO: refactor with dedicated class
-      if vrp.schedule?
-        periodic = Interpreters::PeriodicVisits.new(vrp)
-        vrp = periodic.expand(vrp, job, &block)
-        if vrp.periodic_heuristic?
-          optim_solution = vrp.configuration.preprocessing.heuristic_result
-          if vrp.configuration.resolution.solver
-            first_solution_strategy = vrp.configuration.preprocessing.first_solution_strategy
-            first_solution_strategy.delete('periodic')
-            first_solution_strategy << 'global_cheapest_arc' if first_solution_strategy.empty?
+        # vrp.periodic_heuristic check the first_solution_stategy which may change right after periodic heuristic
+        periodic_heuristic_flag = vrp.periodic_heuristic?
+        # TODO: refactor with dedicated class
+        if vrp.schedule?
+          periodic = Interpreters::PeriodicVisits.new(vrp)
+          vrp = periodic.expand(vrp, job, &block)
+          if vrp.periodic_heuristic?
+            optim_solution = vrp.configuration.preprocessing.heuristic_result
+            if vrp.configuration.resolution.solver
+              first_solution_strategy = vrp.configuration.preprocessing.first_solution_strategy
+              first_solution_strategy.delete('periodic')
+              first_solution_strategy << 'global_cheapest_arc' if first_solution_strategy.empty?
+            end
           end
         end
-      end
 
-      if vrp.configuration.resolution.solver && (!periodic_heuristic_flag || vrp.services.size < 200)
-        if vrp.configuration.preprocessing.cluster_threshold.to_f.positive?
-          block&.call(nil, nil, nil,
-                      "process clique clustering : threshold "\
-                      "(#{vrp.configuration.preprocessing.cluster_threshold.to_f}) ",
-                      nil, nil, nil)
-        end
-        optim_solution =
-          clique_cluster(vrp, vrp.configuration.preprocessing.cluster_threshold) { |cliqued_vrp|
-            time_start = Time.now
+        if vrp.configuration.resolution.solver && (!periodic_heuristic_flag || vrp.services.size < 200)
+          if vrp.configuration.preprocessing.cluster_threshold.to_f.positive?
+            block&.call(nil, nil, nil,
+                        "process clique clustering : threshold "\
+                        "(#{vrp.configuration.preprocessing.cluster_threshold.to_f}) ",
+                        nil, nil, nil)
+          end
+          optim_solution =
+            clique_cluster(vrp, vrp.configuration.preprocessing.cluster_threshold) { |cliqued_vrp|
+              time_start = Time.now
 
-            optim_wrapper_config.simplify_constraints(cliqued_vrp)
+              optim_wrapper_config.simplify_constraints(cliqued_vrp)
 
-            block&.call(nil, 0, nil, 'run optimization', nil, nil, nil) if dicho_level.nil? || dicho_level.zero?
+              block&.call(nil, 0, nil, 'run optimization', nil, nil, nil) if dicho_level.nil? || dicho_level.zero?
 
-            # TODO: Move select best heuristic in each solver
-            Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
+              # TODO: Move select best heuristic in each solver
+              Interpreters::SeveralSolutions.custom_heuristics(service, vrp, block)
 
-            cliqued_solution =
-              optim_wrapper_config.solve(
-                cliqued_vrp,
-                job,
-                proc{ |pids|
-                  next unless job
+              cliqued_solution =
+                optim_wrapper_config.solve(
+                  cliqued_vrp,
+                  job,
+                  proc{ |pids|
+                    next unless job
 
-                  result_object = Result.get(job) || { pids: [] }
-                  result_object[:pids] = pids
-                  Result.set(job, result_object)
-                }
-              ) { |wrapper, avancement, total, _message, cost, _time, solution|
-                solution =
-                  if solution.is_a?(Models::Solution)
-                    optim_wrapper_config.patch_simplified_constraints_in_solution(solution, cliqued_vrp)
+                    result_object = Result.get(job) || { pids: [] }
+                    result_object[:pids] = pids
+                    Result.set(job, result_object)
+                  }
+                ) { |wrapper, avancement, total, _message, cost, _time, solution|
+                  solution =
+                    if solution.is_a?(Models::Solution)
+                      optim_wrapper_config.patch_simplified_constraints_in_solution(solution, cliqued_vrp)
+                    end
+                  if dicho_level.nil? || dicho_level.zero?
+                    block&.call(wrapper, avancement, total,
+                                'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution)
                   end
-                if dicho_level.nil? || dicho_level.zero?
-                  block&.call(wrapper, avancement, total,
-                              'run optimization, iterations', cost, (Time.now - time_start) * 1000, solution)
-                end
-                solution
-              }
-            optim_wrapper_config.patch_and_rewind_simplified_constraints(cliqued_vrp, cliqued_solution)
+                  solution
+                }
+              optim_wrapper_config.patch_and_rewind_simplified_constraints(cliqued_vrp, cliqued_solution)
 
-            if cliqued_solution.is_a?(Models::Solution)
-              block&.call(nil, nil, nil, 'run optimization', nil, nil, nil) if dicho_level&.positive?
-              cliqued_solution
-            elsif cliqued_solution.status == :killed
-              next
-            elsif cliqued_solution.is_a?(String)
-              raise cliqued_solution
-            elsif (vrp.configuration.preprocessing.heuristic_result.nil? ||
-                    vrp.configuration.preprocessing.heuristic_result.empty?) &&
-                  !vrp.configuration.restitution.allow_empty_result
-              puts cliqued_solution
-              raise 'No solution provided'
-            end
-          }
-      end
-
-      # Reintegrate unfeasible services deleted from vrp.services to help ortools
-      vrp.services += services_to_reinject
+              if cliqued_solution.is_a?(Models::Solution)
+                block&.call(nil, nil, nil, 'run optimization', nil, nil, nil) if dicho_level&.positive?
+                cliqued_solution
+              elsif cliqued_solution.status == :killed
+                next
+              elsif cliqued_solution.is_a?(String)
+                raise cliqued_solution
+              elsif (vrp.configuration.preprocessing.heuristic_result.nil? ||
+                      vrp.configuration.preprocessing.heuristic_result.empty?) &&
+                    !vrp.configuration.restitution.allow_empty_result
+                puts cliqued_solution
+                raise 'No solution provided'
+              end
+            }
+        end
+        # Reintegrate unfeasible services deleted from vrp.services to help ortools
+        vrp.services += services_to_reinject
+      end  
     end
-
     if optim_solution # Job might have been killed
       if periodic_heuristic_flag
         periodic_solution = vrp.configuration.preprocessing.heuristic_result
@@ -325,14 +332,12 @@ module OptimizerWrapper
           optim_solution = periodic_solution
         end
       end
-
       optim_solution.name = vrp.name
       optim_solution.configuration.csv = vrp.configuration.restitution.csv
       optim_solution.configuration.geometry = vrp.configuration.restitution.geometry
       optim_solution.unassigned_stops += unfeasible_services.values.flatten
       Cleanse.cleanse(vrp, optim_solution)
       optim_solution.parse(vrp)
-
       if vrp.configuration.preprocessing.first_solution_strategy
         optim_solution.heuristic_synthesis = vrp.configuration.preprocessing.heuristic_synthesis
       end
