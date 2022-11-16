@@ -84,7 +84,7 @@ services:
         limits:
           memory: 1G
         reservations:
-          memory: 2G
+          memory: 1G
     command: redis-server --appendonly yes
     networks:
       - resque
