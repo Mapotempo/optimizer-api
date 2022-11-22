@@ -52,6 +52,13 @@ module Api
         end
 
         def count_base_key(operation, period = :daily)
+          [
+            count_base_key_no_key(operation, period),
+            [:key, params[:api_key]]
+          ].map{ |a| a.join(':') }.join('_')
+        end
+
+        def count_base_key_no_key(operation, period = :daily)
           count_date =
             if period == :daily
               count_time.to_s[0..9]
@@ -60,10 +67,7 @@ module Api
             elsif period == :yearly
               count_time.to_s[0..3]
             end
-          [
-            [:optimizer, operation, count_date].compact,
-            [:key, params[:api_key]]
-          ].map{ |a| a.join(':') }.join('_')
+          [:optimizer, operation, count_date].compact
         end
 
         def count_key(operation)
@@ -116,6 +120,28 @@ module Api
             end
           end
         end
+
+        def split_key(key)
+          json = {}
+          key.split('_').each do |values|
+            rs = values.split(':')
+
+            case rs[0]
+            when "optimizer"
+              json['service'] = rs[0]
+              json['endpoint'] = rs[1]
+              json['date'] = rs[2]
+            when "key"
+              json['key'] = rs[1]
+            when "ip"
+              json['ip'] = rs[1]
+            when "asset"
+              json['asset'] = rs[1]
+            end
+          end
+
+          json
+        end
       end
 
       before do
@@ -161,6 +187,34 @@ module Api
         else
           Raven.capture_exception(e)
           rack_response(format_message(response, e.backtrace), 500)
+        end
+      end
+
+      ##
+      # Use to export prometheus metrics
+      resource :metrics do
+        desc 'Return Prometheus metrics', {}
+        get do
+          error!('Unauthorized', 401) unless OptimizerWrapper.access[params[:api_key]][:metrics] == true
+
+          status 200
+          present(
+            redis_count.keys("*#{count_base_key_no_key('optimize').join(':')}*").flat_map{ |key|
+              hkey = split_key(key)
+              hredis = redis_count.hgetall(key)
+
+              {
+                count_asset: hkey['asset'],
+                count_date: hkey['date'],
+                count_endpoint: hkey['endpoint'],
+                count_hits: hredis['hits'],
+                count_ip: hkey['ip'],
+                count_key: hkey['key'],
+                count_service: hkey['service'],
+                count_transactions: hredis['transactions'],
+              }
+            }, with: Metrics
+          )
         end
       end
 

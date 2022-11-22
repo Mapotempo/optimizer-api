@@ -93,6 +93,29 @@ class Api::V01::ApiTest < Minitest::Test
     )
   end
 
+  def test_metrics
+    clear_optim_redis_count
+    post '/0.1/vrp/submit?asset=myAsset', { api_key: 'demo', vrp: VRP.toy }.to_json, \
+         'CONTENT_TYPE' => 'application/json'
+    assert last_response.ok?, last_response.body
+
+    get '0.1/metrics', { api_key: 'demo'}
+    assert_equal 401, last_response.status
+
+    get '0.1/metrics', { api_key: 'metrics'}
+    assert last_response.ok?, last_response.body
+    json = JSON.parse(last_response.body).first
+
+    assert_equal Date.today.strftime("%Y-%m-%d"), json["count_date"]
+    assert_equal "1", json["count_hits"]
+    assert_equal "1", json["count_transactions"]
+    assert_equal "127.0.0.1", json["count_ip"]
+    assert_equal "demo", json["count_key"]
+    assert_equal "myAsset", json["count_asset"]
+    assert_equal "optimizer", json["count_service"]
+    assert_equal "optimize", json["count_endpoint"]
+  end
+
   def test_use_quota_nil
     clear_optim_redis_count
 
