@@ -41,6 +41,7 @@ module OptimizerWrapper
   PARAMS_LIMIT = { points: 150, vehicles: 10 }.freeze
   QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }].freeze # Only taken into account if REDIS_COUNT
   REDIS_COUNT = ENV['REDIS_COUNT_HOST'] && Redis.new(host: ENV['REDIS_COUNT_HOST']) || Redis.new
+  REDIS_RESQUE = ENV['REDIS_RESQUE_HOST'] && Redis.new(host: ENV['REDIS_RESQUE_HOST']) || Redis.new
 
   DUMP_DIR = File.join(Dir.tmpdir, 'optimizer-api', 'test', 'dump')
   FileUtils.mkdir_p(DUMP_DIR) unless File.directory?(DUMP_DIR)
@@ -128,5 +129,6 @@ module OptimizerWrapper
       allow_polylines: true
     },
     redis_count: REDIS_COUNT,
+    redis_resque: REDIS_RESQUE
   }
 end

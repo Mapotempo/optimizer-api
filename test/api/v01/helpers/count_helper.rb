@@ -23,4 +23,10 @@ module TestHelper
       OptimizerWrapper.config[:redis_count].del(to_remove)
     end
   end
+
+  def clear_optim_redis_resque
+    OptimizerWrapper.config[:redis_resque].each_key do |to_remove|
+      OptimizerWrapper.config[:redis_resque].del(to_remove)
+    end
+  end
 end
