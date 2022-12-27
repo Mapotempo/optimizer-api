@@ -95,9 +95,16 @@ class Api::V01::ApiTest < Minitest::Test
 
   def test_metrics
     clear_optim_redis_count
+    clear_optim_redis_resque
+
+    old_config_solve_synchronously = OptimizerWrapper.config[:solve][:synchronously]
+    OptimizerWrapper.config[:solve][:synchronously] = false
+    old_resque_inline = Resque.inline
+    Resque.inline = false
+
     post '/0.1/vrp/submit?asset=myAsset', { api_key: 'demo', vrp: VRP.toy }.to_json, \
          'CONTENT_TYPE' => 'application/json'
-    assert last_response.ok?, last_response.body
+    assert_equal 201, last_response.status
 
     get '0.1/metrics', { api_key: 'demo'}
     assert_equal 401, last_response.status
@@ -114,6 +121,10 @@ class Api::V01::ApiTest < Minitest::Test
     assert_equal "myAsset", json["count_asset"]
     assert_equal "optimizer", json["count_service"]
     assert_equal "optimize", json["count_endpoint"]
+    assert_equal "1", json["count_current_jobs"]
+  ensure
+    Resque.inline = old_resque_inline
+    OptimizerWrapper.config[:solve][:synchronously] = old_config_solve_synchronously
   end
 
   def test_use_quota_nil
