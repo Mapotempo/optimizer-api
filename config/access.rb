@@ -26,5 +26,6 @@ module OptimizerWrapper
     'solvers' => { profile: :solvers },
     'vroom' => { profile: :vroom },
     'ortools' => { profile: :ortools },
+    'localsearch' => { profile: :localsearch },
   }
 end
