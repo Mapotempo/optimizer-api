@@ -246,8 +246,8 @@ module OptimizerWrapper
           end
         }
 
-        # if unconstrainted_initialization parameter is true : 
-        # use Localsearch algorithm and inject routes in the vrp 
+        # if unconstrainted_initialization parameter is true :
+        # use Localsearch algorithm and inject routes in the vrp
 
         if vrp.configuration.preprocessing.unconstrainted_initialization
           initial_solution = OptimizerWrapper.config[:services][:localsearch].solve(vrp, 'test')
