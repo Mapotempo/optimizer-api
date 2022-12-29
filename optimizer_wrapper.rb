@@ -246,19 +246,46 @@ module OptimizerWrapper
           end
         }
 
-        # vrp.periodic_heuristic check the first_solution_stategy which may change right after periodic heuristic
-        periodic_heuristic_flag = vrp.periodic_heuristic?
-        # TODO: refactor with dedicated class
-        if vrp.schedule?
-          periodic = Interpreters::PeriodicVisits.new(vrp)
-          vrp = periodic.expand(vrp, job, &block)
-          if vrp.periodic_heuristic?
-            optim_solution = vrp.configuration.preprocessing.heuristic_result
-            if vrp.configuration.resolution.solver
-              first_solution_strategy = vrp.configuration.preprocessing.first_solution_strategy
-              first_solution_strategy.delete('periodic')
-              first_solution_strategy << 'global_cheapest_arc' if first_solution_strategy.empty?
-            end
+      # Remove infeasible services
+      services_to_reinject = []
+      unfeasible_services.each_key{ |una_service_id|
+        index = vrp.services.find_index{ |s| s.id == una_service_id }
+        if index
+          services_to_reinject << vrp.services.slice!(index)
+        end
+      }
+
+      # if unconstrainted_initialization parameter is true : 
+      # use Localsearch algorithm and inject routes in the vrp 
+
+      if vrp.configuration.preprocessing.unconstrainted_initialization
+        initial_solution = OptimizerWrapper.config[:services][:localsearch].solve(vrp, 'test')
+        routes = initial_solution[:routes].map{ |r| r[:stops].map{ |s| s[:id] } }
+        routes.each_with_index{ |route, index|
+          mission_ids = route
+          r = Models::Route.create(
+            vehicle: vrp.vehicles[index],
+            mission_ids: mission_ids
+          )
+          vrp.routes << r
+        }
+      end
+      initial_solution_elapsed_time = tic - Time.now
+      vrp.configuration.resolution.duration =
+        [1, vrp.configuration.resolution.duration - initial_solution_elapsed_time,
+         vrp.configuration.resolution.minimum_duration].max
+      # vrp.periodic_heuristic check the first_solution_stategy which may change right after periodic heuristic
+      periodic_heuristic_flag = vrp.periodic_heuristic?
+      # TODO: refactor with dedicated class
+      if vrp.schedule?
+        periodic = Interpreters::PeriodicVisits.new(vrp)
+        vrp = periodic.expand(vrp, job, &block)
+        if vrp.periodic_heuristic?
+          optim_solution = vrp.configuration.preprocessing.heuristic_result
+          if vrp.configuration.resolution.solver
+            first_solution_strategy = vrp.configuration.preprocessing.first_solution_strategy
+            first_solution_strategy.delete('periodic')
+            first_solution_strategy << 'global_cheapest_arc' if first_solution_strategy.empty?
           end
         end
 
