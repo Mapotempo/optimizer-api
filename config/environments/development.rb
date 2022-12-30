@@ -19,6 +19,7 @@
 require './wrappers/demo'
 require './wrappers/vroom'
 require './wrappers/ortools'
+require './wrappers/unconstrainted_initialization'
 
 require './lib/cache_manager'
 require './util/logger'
@@ -37,6 +38,7 @@ module OptimizerWrapper
   ORTOOLS_EXEC =
     'LD_LIBRARY_PATH=../or-tools/dependencies/install/lib/:../or-tools/lib/ ../optimizer-ortools/tsp_simple'.freeze
   ORTOOLS = Wrappers::Ortools.new(tmp_dir: TMP_DIR, exec_ortools: ORTOOLS_EXEC)
+  UNCONSTRAINTED_INITIALIZATION = Wrappers::UnconstraintedInitialization.new(tmp: TMP_DIR)
 
   PARAMS_LIMIT = { points: 100000, vehicles: 1000 }.freeze
   QUOTAS = [{ daily: 100000, monthly: 1000000, yearly: 10000000 }].freeze # Only taken into account if REDIS_COUNT
@@ -63,6 +65,7 @@ module OptimizerWrapper
       demo: DEMO,
       vroom: VROOM,
       ortools: ORTOOLS,
+      unconstrainted_initialization: UNCONSTRAINTED_INITIALIZATION,
     },
     profiles: {
       demo: {
@@ -72,7 +75,15 @@ module OptimizerWrapper
         },
         params_limit: PARAMS_LIMIT,
         quotas: QUOTAS, # Only taken into account if REDIS_COUNT
-      }
+      },
+      unconstrainted_initialization: {
+        queue: 'DEFAULT',
+        services: {
+          vrp: [:unconstrainted_initialization]
+        },
+        params_limit: PARAMS_LIMIT,
+        quotas: QUOTAS,
+      },
     },
     solve: {
       synchronously: ENV['OPTIM_SOLVE_SYNCHRONOUSLY'] == 'true',
