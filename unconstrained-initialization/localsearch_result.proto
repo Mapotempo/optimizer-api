@@ -1,0 +1,43 @@
+syntax = "proto3";
+package ortools_result;
+
+option optimize_for = SPEED;
+
+message Activity {
+  int32 index               = 1;
+  repeated float quantities = 2;
+  int32 start_time          = 3;
+  string type               = 4;
+  int32 alternative         = 5;
+  int32 current_distance    = 6;
+  string id                 = 7;
+  int64 lateness            = 8;
+}
+
+message CostDetails {
+  float fixed = 1;
+  float distance = 2;
+  float distance_balance = 3;
+  float distance_fake = 4;
+  float distance_order = 5;
+  float time = 6;
+  float time_balance = 7;
+  float time_fake = 8;
+  float time_order = 9;
+  float time_without_wait = 10;
+  float value = 11;
+  float lateness = 12;
+  float overload = 13;
+}
+
+message Route {
+  repeated Activity activities = 1;
+  CostDetails cost_details = 2;
+}
+
+message Result {
+  float cost            = 1;
+  float duration        = 2;
+  int32 iterations      = 3;
+  repeated Route routes = 4;
+}

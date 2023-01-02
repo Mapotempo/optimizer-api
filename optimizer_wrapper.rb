@@ -246,11 +246,11 @@ module OptimizerWrapper
           end
         }
 
-        # if unconstrainted_initialization parameter is true :
+        # if unconstrained_initialization parameter is true :
         # use Localsearch algorithm and inject routes in the vrp
 
-        if vrp.configuration.preprocessing.unconstrainted_initialization
-          initial_solution = OptimizerWrapper.config[:services][:localsearch].solve(vrp, 'test')
+        if vrp.configuration.preprocessing.unconstrained_initialization
+          initial_solution = OptimizerWrapper.config[:services][:unconstrained_initialization].solve(vrp, 'test')
           routes = initial_solution[:routes].map{ |r| r[:stops].map{ |s| s[:id] } }
           routes.each_with_index{ |route, index|
             mission_ids = route
@@ -260,11 +260,11 @@ module OptimizerWrapper
             )
             vrp.routes << r
           }
+          initial_solution_elapsed_time = tic - Time.now
+          vrp.configuration.resolution.duration =
+            [1, vrp.configuration.resolution.duration - initial_solution_elapsed_time,
+             vrp.configuration.resolution.minimum_duration].max
         end
-        initial_solution_elapsed_time = tic - Time.now
-        vrp.configuration.resolution.duration =
-          [1, vrp.configuration.resolution.duration - initial_solution_elapsed_time,
-           vrp.configuration.resolution.minimum_duration].max
         # vrp.periodic_heuristic check the first_solution_stategy which may change right after periodic heuristic
         periodic_heuristic_flag = vrp.periodic_heuristic?
         # TODO: refactor with dedicated class
@@ -280,7 +280,6 @@ module OptimizerWrapper
             end
           end
         end
-
         if vrp.configuration.resolution.solver && (!periodic_heuristic_flag || vrp.services.size < 200)
           if vrp.configuration.preprocessing.cluster_threshold.to_f.positive?
             block&.call(nil, nil, nil,
