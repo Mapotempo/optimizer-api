@@ -1,0 +1,102 @@
+syntax = "proto3";
+package ortools_vrp;
+
+option optimize_for = SPEED;
+
+message Matrix {
+  uint32 size             = 1;
+  repeated float time     = 2 [ packed = true ];
+  repeated float distance = 3 [ packed = true ];
+  repeated float value    = 4 [ packed = true ];
+}
+
+message TimeWindow {
+  uint32 start            = 1;
+  uint32 end              = 2;
+  uint32 maximum_lateness = 3;
+}
+
+message Service {
+  repeated TimeWindow time_windows = 1;
+  repeated float quantities        = 2;
+  uint32 duration                  = 3;
+  uint32 priority                  = 4;
+  repeated uint32 vehicle_indices  = 5;
+  uint32 matrix_index              = 6;
+  uint32 setup_duration            = 7;
+  string id                        = 9;
+  float late_multiplier            = 10;
+  repeated float setup_quantities  = 11;
+  uint32 additional_value          = 12;
+  float exclusion_cost             = 13;
+  repeated bool refill_quantities  = 14;
+  uint32 problem_index             = 15;
+  string point_id                  = 16;
+  uint32 alternative_index         = 17;
+}
+
+message Rest {
+  TimeWindow time_window           = 1;
+  uint32 duration                  = 2;
+  string id                        = 3;
+  float late_multiplier            = 4;
+  float exclusion_cost             = 5;
+}
+
+message Capacity {
+  float limit               = 1;
+  float overload_multiplier = 2;
+  bool counting             = 3;
+  float initial_limit       = 4;
+  float initial_load        = 5;
+}
+
+message Vehicle {
+  string id                          = 1;
+  repeated Capacity capacities       = 3;
+  TimeWindow time_window             = 4;
+  repeated Rest rests                = 5;
+  float cost_fixed                   = 6;
+  float cost_distance_multiplier     = 7;
+  float cost_time_multiplier         = 8;
+  float cost_waiting_time_multiplier = 9;
+  uint32 matrix_index                = 10;
+  sint32 start_index                 = 11;
+  sint32 end_index                   = 12;
+  uint32 duration                    = 13;
+  string shift_preference            = 14;
+  float cost_late_multiplier         = 15;
+  sint32 day_index                   = 16;
+  uint32 value_matrix_index          = 17;
+  float cost_value_multiplier        = 18;
+  uint32 max_ride_time               = 19;
+  uint32 max_ride_distance           = 20;
+  uint32 distance                    = 22;
+  float coef_service                 = 23;
+  float coef_setup                   = 24;
+  uint32 additional_service          = 25;
+  uint32 additional_setup            = 26;
+  bool free_approach                 = 27;
+  bool free_return                   = 28;
+  string start_point_id              = 29;
+}
+
+message Relation {
+  string type                        = 1;
+  repeated string linked_ids         = 2;
+  uint32 lapse                       = 3;
+  repeated string linked_vehicle_ids = 4;
+}
+
+message Route {
+  string vehicle_id           = 1;
+  repeated string service_ids = 2;
+}
+
+message Problem {
+  repeated Vehicle vehicles   = 3;
+  repeated Service services   = 4;
+  repeated Matrix matrices    = 5;
+  repeated Relation relations = 6;
+  repeated Route routes       = 7;
+}

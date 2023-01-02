@@ -44,3 +44,4 @@ archives/
 *.aof
 *.code-workspace
 TAGS
+*.pyc
