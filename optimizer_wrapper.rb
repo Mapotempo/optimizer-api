@@ -246,11 +246,11 @@ module OptimizerWrapper
           end
         }
 
-        # if unconstrainted_initialization parameter is true :
+        # if unconstrained_initialization parameter is true :
         # use Localsearch algorithm and inject routes in the vrp
 
-        if vrp.configuration.preprocessing.unconstrainted_initialization
-          initial_solution = OptimizerWrapper.config[:services][:unconstrainted_initialization].solve(vrp, 'test')
+        if vrp.configuration.preprocessing.unconstrained_initialization
+          initial_solution = OptimizerWrapper.config[:services][:unconstrained_initialization].solve(vrp, 'test')
           routes = initial_solution[:routes].map{ |r| r[:stops].map{ |s| s[:id] } }
           routes.each_with_index{ |route, index|
             mission_ids = route

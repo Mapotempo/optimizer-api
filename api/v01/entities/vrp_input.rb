@@ -152,7 +152,7 @@ module VrpConfiguration
   end
 
   params :vrp_request_preprocessing do
-    optional(:unconstrainted_initialization, type: Boolean, desc: 'Use experimental algorithm to find an initial solution')
+    optional(:unconstrained_initialization, type: Boolean, desc: 'Use experimental algorithm to find an initial solution')
     optional(:max_split_size, type: Integer, desc: 'Divide the problem into clusters beyond this threshold')
     optional(:partition_method, type: String, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')
     optional(:partition_metric, type: Symbol, documentation: { hidden: true }, desc: '[ DEPRECATED : use partitions structure instead ]')

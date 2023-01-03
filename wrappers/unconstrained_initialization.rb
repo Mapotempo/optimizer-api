@@ -19,9 +19,9 @@ require './wrappers/wrapper'
 require './wrappers/ortools_vrp_pb'
 require './wrappers/ortools_result_pb'
 module Wrappers
-  class UnconstraintedInitialization < Ortools
+  class UnconstrainedInitialization < Ortools
     def initialize(hash = {})
-      hash[:exec_ortools] = 'python3 UnconstraintedInitialization/wrapper.py'
+      hash[:exec_ortools] = 'python3 unconstrainted-initialization/wrapper.py'
       super(hash)
     end
   end
