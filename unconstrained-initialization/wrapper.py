@@ -2,7 +2,7 @@ import numpy
 import timeit
 import random
 import logging as log
-from fastvrpy.core import algorithm
+from fastvrpy.core.solutions import cvrptw
 import cProfile
 from sklearn.metrics import pairwise_distances
 from sklearn.cluster import KMeans, AgglomerativeClustering, OPTICS, SpectralClustering, MiniBatchKMeans, DBSCAN
@@ -63,6 +63,7 @@ with open(instance, 'rb') as f:
                 vehicles_overload_multiplier.append(0)
         else :
             vehicles_capacity.append(-1)
+            vehicles_overload_multiplier.append(0)
         if vehicle['costDistanceMultiplier']:
             cost_distance_multiplier.append(vehicle['costDistanceMultiplier'])
         else :
@@ -164,16 +165,16 @@ with open(instance, 'rb') as f:
     end_tw              = numpy.array(services_TW_ends, dtype=numpy.float64)
     durations           = numpy.array(services_duration, dtype=numpy.float64)
     setup_durations     = numpy.array(services_setup_duration, dtype=numpy.float64)
-    services_quantities = numpy.array(services_quantities, dtype=numpy.int32)
+    services_volume     = numpy.array(services_quantities, dtype=numpy.float64)
 
     # Vehicles attributes
-    cost_time_multiplier     = numpy.array(cost_time_multiplier,     dtype=numpy.float64)
-    cost_distance_multiplier = numpy.array(cost_distance_multiplier, dtype=numpy.float64)
-    vehicle_capacity         = numpy.array(vehicles_capacity,        dtype=numpy.float64)
-    vehicles_TW_starts       = numpy.array(vehicles_TW_starts,       dtype=numpy.float64)
-    vehicles_TW_ends         = numpy.array(vehicles_TW_ends,         dtype=numpy.float64)
-    vehicles_distance_max    = numpy.array(vehicles_distance_max,    dtype=numpy.float64)
-    vehicles_fixed_costs     = numpy.array(vehicles_fixed_costs,    dtype=numpy.float64)
+    cost_time_multiplier         = numpy.array(cost_time_multiplier,     dtype=numpy.float64)
+    cost_distance_multiplier     = numpy.array(cost_distance_multiplier, dtype=numpy.float64)
+    vehicle_capacity             = numpy.array(vehicles_capacity,        dtype=numpy.float64)
+    vehicles_TW_starts           = numpy.array(vehicles_TW_starts,       dtype=numpy.float64)
+    vehicles_TW_ends             = numpy.array(vehicles_TW_ends,         dtype=numpy.float64)
+    vehicles_distance_max        = numpy.array(vehicles_distance_max,    dtype=numpy.float64)
+    vehicles_fixed_costs         = numpy.array(vehicles_fixed_costs,    dtype=numpy.float64)
     vehicles_overload_multiplier = numpy.array(vehicles_overload_multiplier,    dtype=numpy.float64)
 
     # Matrices
@@ -219,13 +220,11 @@ with open(instance, 'rb') as f:
 
     cost_matrix = 0.3 * distance_matrix + 15 * time_matrix
 
-    services_volume = numpy.array(services_quantities, dtype=numpy.float64)
-
     paths = process_initial_solution(NUM_VEHICLE, time_matrix[0])
 
 
 
-    solution = algorithm.Solution(
+    solution = cvrptw.CVRPTW(
         paths,
         distance_matrix,
         time_matrix,
