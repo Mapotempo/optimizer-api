@@ -8,7 +8,7 @@ import math
 import numpy
 
 
-class CreateMatrices(AbstractKnowledgeSource):
+class CreateMatricesFromProblem(AbstractKnowledgeSource):
     """
     Create Matrices from problem
     """

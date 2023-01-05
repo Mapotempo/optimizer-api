@@ -5,6 +5,21 @@ import traceback
 import os, sys
 import logging as log
 
+from knowledge_sources.create_services_attributes_from_problem import CreateServicesAttributesFromProblem
+from knowledge_sources.create_vehicles_attributes_from_problem import CreateVehiclesAttributesFromProblem
+from knowledge_sources.create_matrices_from_problem import CreateMatricesFromProblem
+from knowledge_sources.deserialize_problem import DeserializeProblem
+from knowledge_sources.get_arguments import GetArguments
+from knowledge_sources.optimize_solution import OptimizeSolution
+from knowledge_sources.process_clustering_initial_paths import ProcessClusteringInitialPaths
+from knowledge_sources.process_initial_solution import ProcessInitialSolution
+from knowledge_sources.create_services_attributes_from_problem import CreateServicesAttributesFromProblem
+from knowledge_sources.parse_and_serialize_solution import ParseAndSerializeSolution
+from knowledge_sources.print_kpis import PrintKpis
+
+
+
+
 def main():
     """Main function to run the model
     """
@@ -16,6 +31,16 @@ def main():
         blackboard = Blackboard()
 
         # Add the knowledge sources
+        blackboard.add_knowledge_source(GetArguments)
+        blackboard.add_knowledge_source(DeserializeProblem)
+        blackboard.add_knowledge_source(CreateServicesAttributesFromProblem)
+        blackboard.add_knowledge_source(CreateVehiclesAttributesFromProblem)
+        blackboard.add_knowledge_source(CreateMatricesFromProblem)
+        blackboard.add_knowledge_source(ProcessClusteringInitialPaths)
+        blackboard.add_knowledge_source(ProcessInitialSolution)
+        blackboard.add_knowledge_source(OptimizeSolution)
+        blackboard.add_knowledge_source(ParseAndSerializeSolution)
+        blackboard.add_knowledge_source(PrintKpis)
 
         # Initialize the controller and run it
         controller = Controller(blackboard)
