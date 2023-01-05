@@ -67,5 +67,5 @@ class ParseAndSerializeSolution(AbstractKnowledgeSource):
                 end_route.start_time = 0
 
         f = open(self.blackboard.output_file, "wb")
-        f.write(route.SerializeToString())
+        f.write(result.SerializeToString())
         f.close()

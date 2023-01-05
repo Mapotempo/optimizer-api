@@ -5,6 +5,7 @@ log = log.getLogger(__file__)
 
 #KS imports
 import sys
+import re
 
 class GetArguments(AbstractKnowledgeSource):
     """
@@ -16,8 +17,8 @@ class GetArguments(AbstractKnowledgeSource):
         # Check arguments exists
         needed_arguments = [
             "-time_limit_in_ms",
-            "-optimize-or-tools-input",
-            "-optimize-or-tools-output",
+            "-instance_file",
+            "-solution_file",
         ]
         args = sys.argv[1:]
 
@@ -35,9 +36,9 @@ class GetArguments(AbstractKnowledgeSource):
         index = args.index("-time_limit_in_ms")
         self.blackboard.time_limit = int(args[index + 1]) / 1000
 
-        index = args.index("-optimize-or-tools-input")
+        index = args.index("-instance_file")
         self.blackboard.instance = args[index + 1]
 
-        index = args.index("-optimize-or-tools-output")
+        index = args.index("-solution_file")
         self.blackboard.output_file = args[index + 1]
-
+        print("output_file : ",  self.blackboard.output_file)

@@ -14,8 +14,8 @@ class ProcessClusteringInitialPaths(AbstractKnowledgeSource):
 
     def verify(self):
 
-        if self.blackboard.num_vehicles is None:
-            raise AttributeError("num_vehicles not specified can't initilaize paths")
+        if self.blackboard.num_vehicle is None:
+            raise AttributeError("num_vehicle not specified can't initilaize paths")
 
         if self.blackboard.time_matrices is None:
             raise AttributeError("No distance matrix can't initialize paths")
@@ -49,5 +49,3 @@ class ProcessClusteringInitialPaths(AbstractKnowledgeSource):
             position = num_services[vehicle]
             self.blackboard.paths[vehicle][position] = i
             num_services[vehicle] += 1
-
-
