@@ -7,7 +7,7 @@ log = log.getLogger(Path(__file__).stem)
 #KS imports
 import math
 import numpy
-
+from schema import Use, Const, And, Schema, Or
 
 class CreateMatricesFromProblem(AbstractKnowledgeSource):
     """
@@ -20,6 +20,27 @@ class CreateMatricesFromProblem(AbstractKnowledgeSource):
             raise AttributeError("Problem is None, not possible to create matrices")
         if not isinstance(self.blackboard.problem, dict):
             raise AttributeError("Problem is not of type dict, not possible to create matrices")
+
+
+        problem_schema = Schema(
+            {
+                "matrices" : [{
+                    "time":[[Or(float, int)]],
+                    "distance":[[Or(float, int)]]
+                }],
+                "vehicles" : [{
+                    'endIndex': int,
+                    'startIndex': int,
+                }],
+                "services" : [
+                    {
+                        'matrixIndex':int,
+                    }
+                ]
+            },
+            ignore_extra_keys=True
+        )
+        problem_schema.validate(self.blackboard.problem)
 
         return True
 
