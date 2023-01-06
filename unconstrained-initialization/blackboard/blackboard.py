@@ -18,6 +18,32 @@ class Blackboard(object):
 
         # Specific data structures needed by the model to be completed by the user
         #...
+        self.solution = None
+        self.time_limit = None
+        self.instance = None
+        self.output_file = None
+        self.problem = None
+        self.max_capacity = None
+        self.distance_matrices = None
+        self.time_matrices = None
+        self.start_tw = None
+        self.end_tw = None
+        self.durations = None
+        self.setup_durations = None
+        self.services_volume = None
+        self.size = None
+        self.num_vehicle = None
+        self.max_capacity = None
+        self.cost_time_multiplier = None
+        self.cost_distance_multiplier = None
+        self.vehicle_capacity = None
+        self.vehicles_TW_starts = None
+        self.vehicles_TW_ends = None
+        self.vehicles_distance_max = None
+        self.vehicles_fixed_costs = None
+        self.vehicles_overload_multiplier = None
+        self.previous_vehicle = None
+        self.paths = None
 
 
     def add_knowledge_source(self, knowledge_source):
