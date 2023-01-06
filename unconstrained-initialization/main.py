@@ -16,6 +16,7 @@ from knowledge_sources.process_initial_solution import ProcessInitialSolution
 from knowledge_sources.create_services_attributes_from_problem import CreateServicesAttributesFromProblem
 from knowledge_sources.parse_and_serialize_solution import ParseAndSerializeSolution
 from knowledge_sources.print_kpis import PrintKpis
+from knowledge_sources.create_dictionnary_index_to_id import CreateDictionnaryIndexId
 
 
 
@@ -34,6 +35,7 @@ def main():
         blackboard.add_knowledge_source(GetArguments(blackboard))
         blackboard.add_knowledge_source(DeserializeProblem(blackboard))
         blackboard.add_knowledge_source(CreateServicesAttributesFromProblem(blackboard))
+        blackboard.add_knowledge_source(CreateDictionnaryIndexId(blackboard))
         blackboard.add_knowledge_source(CreateVehiclesAttributesFromProblem(blackboard))
         blackboard.add_knowledge_source(CreateMatricesFromProblem(blackboard))
         blackboard.add_knowledge_source(ProcessClusteringInitialPaths(blackboard))

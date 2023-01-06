@@ -44,7 +44,7 @@ class ParseAndSerializeSolution(AbstractKnowledgeSource):
                 for stop_index,stop in enumerate(path):
                     if stop != -1 :
                         activity = route.activities.add()
-                        activity.id = "service" + str(stop-1)
+                        activity.id = self.blackboard.service_index_to_id[stop]
                         activity.index = stop-1
                         activity.start_time = int(self.blackboard.solution.starts[path_index, stop_index+1])
                         activity.type = "service"
