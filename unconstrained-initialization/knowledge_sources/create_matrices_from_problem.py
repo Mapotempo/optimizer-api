@@ -25,8 +25,8 @@ class CreateMatricesFromProblem(AbstractKnowledgeSource):
         problem_schema = Schema(
             {
                 "matrices" : [{
-                    "time":[[Or(float, int)]],
-                    "distance":[[Or(float, int)]]
+                    "time":[Or(float, int)],
+                    "distance":[Or(float, int)]
                 }],
                 "vehicles" : [{
                     'endIndex': int,

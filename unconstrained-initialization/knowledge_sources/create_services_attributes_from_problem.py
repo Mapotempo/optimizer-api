@@ -19,12 +19,15 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
         if not isinstance(self.blackboard.problem, dict):
             raise AttributeError("Problem is not of type dict, not possible to create services attributes")
 
+        for service in self.blackboard.problem["services"]:
+            if not all(key in service for key in ("matrixIndex", "timeWindows", "id")):
+                raise AttributeError("API did not provide any TW for at least one service")
+
         return True
 
     def process(self):
-        
-        problem = self.blackboard.problem
 
+        problem = self.blackboard.problem
         # Services attributes
         services_TW_starts        = [0]
         services_TW_ends          = [200000]
@@ -59,5 +62,4 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
         self.blackboard.durations           = numpy.array(services_duration, dtype=numpy.float64)
         self.blackboard.setup_durations     = numpy.array(services_setup_duration, dtype=numpy.float64)
         self.blackboard.services_volume     = numpy.array(services_quantities, dtype=numpy.float64)
-        self.blackboard.size = len(problem['services'])
-
+        self.blackboard.size                = len(problem['services'])

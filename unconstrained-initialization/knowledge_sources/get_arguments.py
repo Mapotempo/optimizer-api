@@ -26,6 +26,12 @@ class GetArguments(AbstractKnowledgeSource):
             if needed_argument not in args:
                 raise AttributeError(f"{needed_argument} nor specified")
 
+        index = args.index("-time_limit_in_ms")
+        time_limit = args[index + 1]
+
+        if not time_limit.isnumeric():
+            raise ValueError("time limit should be numeric")
+
         return True
 
     def process(self):

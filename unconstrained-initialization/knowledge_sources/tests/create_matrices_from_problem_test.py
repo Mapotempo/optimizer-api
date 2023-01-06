@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 import pytest
 
-from knowledge_sources.create_matrices_from_problem import CreateMatricesFromProblem 
+from knowledge_sources.create_matrices_from_problem import CreateMatricesFromProblem
 import schema
 import numpy
 
@@ -24,8 +24,8 @@ def test_verify_problem_missing_keys():
 
 problem = {
     "matrices" : [{
-        "time":[[1,2,3],[4,5,6],[7,8,9]],
-        "distance":[[1,2,3],[4,5,6],[7,8,9]]
+        "time":[1,2,3,4,5,6,7,8,9],
+        "distance":[1,2,3,4,5,6,7,8,9]
     }],
     "vehicles" : [{
         'endIndex': 0,
@@ -37,10 +37,10 @@ problem = {
     }],
     "services" : [
         {
-            'matrixIndex':0,
+            'matrixIndex':1,
         },
         {
-            'matrixIndex':0,
+            'matrixIndex':2,
         }
     ]
 }
@@ -62,4 +62,3 @@ def test_process():
     print(blackboard.time_matrices)
     assert (blackboard.distance_matrices == numpy.array([[[1,2,3],[4,5,6],[7,8,9]]], dtype=numpy.float64)).all()
     assert (blackboard.time_matrices == numpy.array([[[1,2,3],[4,5,6],[7,8,9]]], dtype=numpy.float64)).all()
-
