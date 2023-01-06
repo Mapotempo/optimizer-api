@@ -1,7 +1,8 @@
 #base imports
 from knowledge_sources.abstract_knowledge_source import AbstractKnowledgeSource
 import logging as log
-log = log.getLogger(__file__)
+from pathlib import Path
+log = log.getLogger(Path(__file__).stem)
 
 #KS imports
 from fastvrpy import solver
