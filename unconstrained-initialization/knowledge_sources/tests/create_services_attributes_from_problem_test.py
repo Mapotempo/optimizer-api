@@ -42,7 +42,6 @@ problem =  { "services": [
 def test_verify_missing_TW_on_service():
     blackboard = Mock(problem = copy.deepcopy(problem))
     del blackboard.problem["services"][1]['timeWindows']
-    print(blackboard.problem["services"][1])
     knowledge_source = CreateServicesAttributesFromProblem(blackboard)
 
     with pytest.raises(AttributeError):
@@ -88,25 +87,25 @@ def test_durations_array():
     knowledge_source = CreateServicesAttributesFromProblem(blackboard)
     knowledge_source.process()
 
-    assert blackboard.durations.all() ==  numpy.array([ 0., 20., 20.]).all()
+    assert (blackboard.durations ==  numpy.array([ 0., 20., 20.])).all()
 
 def test_setup_durations_array():
     blackboard = Mock(problem = problem)
     knowledge_source = CreateServicesAttributesFromProblem(blackboard)
     knowledge_source.process()
 
-    assert blackboard.setup_durations.all() ==  numpy.array([ 0., 0., 0.]).all()
+    assert (blackboard.setup_durations ==  numpy.array([ 0., 0., 0.])).all()
 
 def test_start_tw_array():
     blackboard = Mock(problem = problem)
     knowledge_source = CreateServicesAttributesFromProblem(blackboard)
     knowledge_source.process()
 
-    assert blackboard.start_tw.all() ==  numpy.array([ 0., 0., 0.]).all()
+    assert (blackboard.start_tw ==  numpy.array([ 0., 0., 0.])).all()
 
 def test_end_tw_array():
     blackboard = Mock(problem = problem)
     knowledge_source = CreateServicesAttributesFromProblem(blackboard)
     knowledge_source.process()
 
-    assert blackboard.end_tw.all() ==  numpy.array([ -1., -1., -1.]).all()
+    assert (blackboard.end_tw ==  numpy.array([ -1., -1., -1.])).all()

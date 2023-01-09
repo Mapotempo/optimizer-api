@@ -57,8 +57,5 @@ def test_process():
     knowledge_source = CreateMatricesFromProblem(blackboard)
 
     knowledge_source.process()
-    print(blackboard.distance_matrices)
-
-    print(blackboard.time_matrices)
     assert (blackboard.distance_matrices == numpy.array([[[1,2,3],[4,5,6],[7,8,9]]], dtype=numpy.float64)).all()
     assert (blackboard.time_matrices == numpy.array([[[1,2,3],[4,5,6],[7,8,9]]], dtype=numpy.float64)).all()

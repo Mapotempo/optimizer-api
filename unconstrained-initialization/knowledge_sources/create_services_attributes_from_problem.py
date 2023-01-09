@@ -30,7 +30,7 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
         problem = self.blackboard.problem
         # Services attributes
         services_TW_starts        = [0]
-        services_TW_ends          = [200000]
+        services_TW_ends          = [-1]
         services_duration         = [0]
         services_setup_duration   = [0]
         services_quantities       = [0]
