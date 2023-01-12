@@ -21,7 +21,7 @@ class ProcessClusteringInitialPaths(AbstractKnowledgeSource):
         if self.blackboard.time_matrices is None:
             raise AttributeError("No distance matrix can't initialize paths")
 
-        if self.blackboard.time_matrices.shape[1] != self.blackboard.distance_matrices.shape[2]:
+        if self.blackboard.time_matrices[0].shape[0] != self.blackboard.time_matrices[0].shape[1]:
             raise AttributeError("time_matrices must be a square matrices")
 
         return True
