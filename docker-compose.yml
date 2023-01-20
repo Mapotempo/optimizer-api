@@ -1,10 +1,11 @@
 version: '3.7'
 
 x-app-args: &app-args
-  APP_BASE: ${APP_BASE}
+  ARCHITECTURE: ${ARCHITECTURE}
   BUNDLE_VERSION: ${BUNDLE_VERSION}
-  RUBY_VERSION: ${RUBY_VERSION}
   BUNDLE_WITHOUT: production
+  OPTIMIZER_ORTOOLS_VERSION: latest
+  REGISTRY_URL: ${REGISTRY_URL}
 
 # keep command outside anchor because of performance problems
 x-default-redis: &default-redis
@@ -21,8 +22,8 @@ x-default-environment: &default-environment
   REDIS_HOST: redis-cache
   REDIS_RESQUE_HOST: redis
   REDIS_RESULT_TTL_DAYS: ${REDIS_RESULT_TTL_DAYS}
-  ROUTER_API_KEY: ${ROUTER_API_KEY:-demo}
-  ROUTER_URL: ${ROUTER_URL:-http://localhost:4899/0.1}
+  ROUTER_API_KEY: ${ROUTER_API_KEY}
+  ROUTER_URL: ${ROUTER_URL}
   SENTRY_DSN: ${SENTRY_DSN}
 
 x-environment-resque: &environment-resque
@@ -35,8 +36,6 @@ x-default-service: &default-service
     context: .
     dockerfile: docker/Dockerfile
   image: dev.example.com/mapotempo/mt-optimizer
-  depends_on:
-    - base
   volumes:
       - ./:/srv/app/
       - ./archives/dump:/tmp/optimizer-api/dump
