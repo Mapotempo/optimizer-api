@@ -36,7 +36,7 @@ class Blackboard(object):
         self.max_capacity = None
         self.cost_time_multiplier = None
         self.cost_distance_multiplier = None
-        self.vehicle_capacity = None
+        self.vehicle_capacities = None
         self.vehicles_TW_starts = None
         self.vehicles_TW_ends = None
         self.vehicles_distance_max = None

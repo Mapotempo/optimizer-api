@@ -36,27 +36,30 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         self.blackboard.num_vehicle = len(problem['vehicles'])
         cost_distance_multiplier     = []
         cost_time_multiplier         = []
-        vehicles_capacity            = []
+        vehicles_capacities          = [[] for i in range (self.blackboard.num_vehicle) ]
         vehicles_TW_starts           = []
         vehicles_TW_ends             = []
         vehicles_distance_max        = []
         vehicles_fixed_costs         = []
-        vehicles_overload_multiplier = []
-        for vehicle in problem['vehicles'] :
+        vehicles_overload_multiplier = [[] for i in range (self.blackboard.num_vehicle) ]
+        vehicle_matrix_index = []
+        for vehicle_index,vehicle in enumerate(problem['vehicles']) :
+            vehicle_matrix_index.append(vehicle["matrixIndex"])
             if "costFixed" in vehicle:
                 vehicles_fixed_costs.append(vehicle["costFixed"])
             else:
                 vehicles_fixed_costs.append(0)
             if 'capacities' in vehicle:
                 if len(vehicle['capacities']) > 0:
-                    vehicles_capacity.append(vehicle['capacities'][0]['limit'])
-                    if "overloadMultiplier" in vehicle['capacities'][0]:
-                        vehicles_overload_multiplier.append(vehicle['capacities'][0]["overloadMultiplier"])
-                    else:
-                        vehicles_overload_multiplier.append(0)
+                    for capacity in vehicle['capacities']:
+                        vehicles_capacities[vehicle_index].append(capacity['limit'])
+                        if "overloadMultiplier" in capacity:
+                            vehicles_overload_multiplier[vehicle_index].append(capacity["overloadMultiplier"])
+                        else:
+                            vehicles_overload_multiplier[vehicle_index].append(0)
             else :
-                vehicles_capacity.append(-1)
-                vehicles_overload_multiplier.append(0)
+                    vehicles_capacities[vehicle_index].append(-1)
+                    vehicles_overload_multiplier[vehicle_index].append(0)
             if 'costDistanceMultiplier' in vehicle:
                 cost_distance_multiplier.append(vehicle['costDistanceMultiplier'])
             else :
@@ -90,12 +93,13 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         # Vehicles attributes
         self.blackboard.cost_time_multiplier         = numpy.array(cost_time_multiplier,         dtype=numpy.float64)
         self.blackboard.cost_distance_multiplier     = numpy.array(cost_distance_multiplier,     dtype=numpy.float64)
-        self.blackboard.vehicle_capacity             = numpy.array(vehicles_capacity,            dtype=numpy.float64)
+        self.blackboard.vehicle_capacities           = numpy.array(vehicles_capacities,          dtype=numpy.float64)
         self.blackboard.vehicles_TW_starts           = numpy.array(vehicles_TW_starts,           dtype=numpy.float64)
         self.blackboard.vehicles_TW_ends             = numpy.array(vehicles_TW_ends,             dtype=numpy.float64)
         self.blackboard.vehicles_distance_max        = numpy.array(vehicles_distance_max,        dtype=numpy.float64)
         self.blackboard.vehicles_fixed_costs         = numpy.array(vehicles_fixed_costs,         dtype=numpy.float64)
         self.blackboard.vehicles_overload_multiplier = numpy.array(vehicles_overload_multiplier, dtype=numpy.float64)
+        self.blackboard.vehicles_matrix_index        = numpy.array(vehicle_matrix_index,         dtype=numpy.int32)
 
         vehicle_id_index = {}
         vehicle_index = 0

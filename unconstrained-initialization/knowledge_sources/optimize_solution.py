@@ -30,10 +30,9 @@ class OptimizeSolution(AbstractKnowledgeSource):
 
     def process(self):
 
-        solver.optimize(
+                solver.optimize(
                 solution = self.blackboard.solution,
                 max_execution_time=int(self.blackboard.time_limit/2),
                 problem=self.blackboard.problem,
                 groups_max_capacity = self.blackboard.max_capacity
         )
-

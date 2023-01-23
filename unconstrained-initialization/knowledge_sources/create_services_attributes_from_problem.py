@@ -33,8 +33,9 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
         services_TW_ends          = [-1]
         services_duration         = [0]
         services_setup_duration   = [0]
-        services_quantities       = [0]
-        for service in problem['services']:
+        services_quantities       = [[] for i in range(len(problem['services']) + 1)]
+        services_quantities[0]    = [0 for i in range (len(problem["services"][0]['quantities']))]
+        for service_index, service in enumerate(problem['services']):
             if len(service['timeWindows']) > 0:
                 services_TW_starts.append(service['timeWindows'][0]['start'])
                 if "maximumLateness" in service['timeWindows'][0] and service['lateMultiplier'] > 0:
@@ -51,15 +52,16 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
             else :
                 services_setup_duration.append(0)
             if len(service['quantities']) > 0 :
-                services_quantities.append(service['quantities'][0])
+                for quantity in service['quantities']:
+                    services_quantities[service_index+1].append(quantity)
             else :
                 services_quantities.append(0)
-
 
         # Services attributes
         self.blackboard.start_tw            = numpy.array(services_TW_starts, dtype=numpy.float64)
         self.blackboard.end_tw              = numpy.array(services_TW_ends, dtype=numpy.float64)
         self.blackboard.durations           = numpy.array(services_duration, dtype=numpy.float64)
         self.blackboard.setup_durations     = numpy.array(services_setup_duration, dtype=numpy.float64)
-        self.blackboard.services_volume     = numpy.array(services_quantities, dtype=numpy.float64)
+        self.blackboard.services_volumes    = numpy.array(services_quantities, dtype=numpy.float64)
         self.blackboard.size                = len(problem['services'])
+        self.blackboard.num_units           = len(problem['vehicles'][0]['capacities'])

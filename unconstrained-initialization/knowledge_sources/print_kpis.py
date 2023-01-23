@@ -20,14 +20,14 @@ class PrintKpis(AbstractKnowledgeSource):
         return True
 
     def process(self):
-        
+
         solution = self.blackboard.solution
 
         early = 0
         lates = 0
         cumul = 0
         max_late = 0
-        overload = 0
+        overload = [0 for i in range(solution.num_units)]
         vehicle_late = 0
         vehicle_late_time = 0
         vehicle_over_distance = 0
@@ -39,8 +39,9 @@ class PrintKpis(AbstractKnowledgeSource):
             total_travel_time += solution.travel_times[vehicle]
             if solution.vehicle_max_distance[vehicle] > -1 and solution.distances[vehicle] > solution.vehicle_max_distance[vehicle] :
                 vehicle_over_distance += 1
-            if solution.vehicle_capacity[vehicle] > -1 and solution.vehicle_occupancy[vehicle] > solution.vehicle_capacity[vehicle]:
-                overload += 1
+            for unit_index in range(solution.num_units):
+                if solution.vehicle_capacities[vehicle, unit_index] > -1 and solution.vehicle_occupancies[vehicle, unit_index] > solution.vehicle_capacities[vehicle, unit_index]:
+                    overload[unit_index] += 1
             if solution.vehicle_end_time_window[vehicle] > -1 and solution.vehicle_ends[vehicle] > solution.vehicle_end_time_window[vehicle]:
                 vehicle_late += 1
                 vehicle_late_time += solution.vehicle_ends[vehicle] - solution.vehicle_end_time_window[vehicle]

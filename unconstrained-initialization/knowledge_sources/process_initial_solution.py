@@ -35,11 +35,11 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
         if self.blackboard.cost_distance_multiplier.shape[0] != self.blackboard.num_vehicle :
             raise AttributeError("Lengh of cost distance multiplier vector is not equal to the number of vehicles, not possible to initialize a solution")
 
-        if self.blackboard.vehicle_capacity is None:
+        if self.blackboard.vehicle_capacities is None:
             raise AttributeError("Capacity vector is None, not possible to initialize a solution")
-        if not isinstance(self.blackboard.vehicle_capacity, numpy.ndarray):
+        if not isinstance(self.blackboard.vehicle_capacities, numpy.ndarray):
             raise AttributeError("Capacity vector is not of type numpy.array, not possible to initialize a solution")
-        if self.blackboard.vehicle_capacity.shape[0] != self.blackboard.num_vehicle :
+        if self.blackboard.vehicle_capacities.shape[0] != self.blackboard.num_vehicle :
             raise AttributeError("Lengh of Capacity vector is not equal to the number of vehicles, not possible to initialize a solution")
 
         if self.blackboard.vehicles_TW_starts is None:
@@ -76,7 +76,6 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
             raise AttributeError("vehicles_overload_multiplier vector is not of type numpy.array, not possible to initialize a solution")
         if self.blackboard.vehicles_overload_multiplier.shape[0] != self.blackboard.num_vehicle :
             raise AttributeError("Lengh of vehicles_overload_multiplier vector is not equal to the number of vehicles, not possible to initialize a solution")
-
         if self.blackboard.previous_vehicle is None:
             raise AttributeError("previous_vehicle vector is None, not possible to initialize a solution")
         if not isinstance(self.blackboard.previous_vehicle, numpy.ndarray):
@@ -112,11 +111,11 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
         if self.blackboard.setup_durations.shape[0] != self.blackboard.size + 1 :
             raise AttributeError("Lengh of setup_durations vector is not equal to the number of services, not possible to initialize a solution")
 
-        if self.blackboard.services_volume is None:
+        if self.blackboard.services_volumes is None:
             raise AttributeError("services_volume vector is None, not possible to initialize a solution")
-        if not isinstance(self.blackboard.services_volume, numpy.ndarray):
+        if not isinstance(self.blackboard.services_volumes, numpy.ndarray):
             raise AttributeError("services_volume vector is not of type numpy.array, not possible to initialize a solution")
-        if self.blackboard.services_volume.shape[0] != self.blackboard.size + 1 :
+        if self.blackboard.services_volumes.shape[0] != self.blackboard.size + 1 :
             raise AttributeError("Lengh of services_volume vector is not equal to the number of services, not possible to initialize a solution")
 
         return True
@@ -131,14 +130,16 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
             self.blackboard.end_tw,
             self.blackboard.durations,
             self.blackboard.setup_durations,
-            self.blackboard.services_volume,
+            self.blackboard.services_volumes,
             self.blackboard.cost_distance_multiplier,
             self.blackboard.cost_time_multiplier,
-            self.blackboard.vehicle_capacity,
+            self.blackboard.vehicle_capacities,
             self.blackboard.previous_vehicle,
             self.blackboard.vehicles_distance_max,
             self.blackboard.vehicles_fixed_costs,
             self.blackboard.vehicles_overload_multiplier,
             self.blackboard.vehicles_TW_starts,
-            self.blackboard.vehicles_TW_ends
+            self.blackboard.vehicles_TW_ends,
+            self.blackboard.vehicles_matrix_index,
+            self.blackboard.num_units
         )
