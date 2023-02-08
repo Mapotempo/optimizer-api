@@ -36,7 +36,9 @@ problem =  { "services": [
                 'refillQuantities': [],
                 'problemIndex': 0,
                 'alternativeIndex': 0}
-            ]
+            ],
+            "vehicles" :
+            [{"capacities": []}]
             }
 
 def test_verify_missing_TW_on_service():
@@ -76,36 +78,36 @@ def test_size_of_arrays():
     knowledge_source.process()
 
     assert blackboard.size                   == 2
-    assert blackboard.start_tw.size          == blackboard.size + 1
-    assert blackboard.end_tw.size            == blackboard.size + 1
-    assert blackboard.durations.size         == blackboard.size + 1
-    assert blackboard.setup_durations.size   == blackboard.size + 1
-    assert blackboard.services_volume.size   == blackboard.size + 1
+    assert blackboard.start_tw.size          == blackboard.size
+    assert blackboard.end_tw.size            == blackboard.size
+    assert blackboard.durations.size         == blackboard.size
+    assert blackboard.setup_durations.size   == blackboard.size
+    assert blackboard.services_volumes.size   == blackboard.size
 
 def test_durations_array():
     blackboard = Mock(problem = problem)
     knowledge_source = CreateServicesAttributesFromProblem(blackboard)
     knowledge_source.process()
 
-    assert (blackboard.durations ==  numpy.array([ 0., 20., 20.])).all()
+    assert (blackboard.durations ==  numpy.array([ 20., 20.])).all()
 
 def test_setup_durations_array():
     blackboard = Mock(problem = problem)
     knowledge_source = CreateServicesAttributesFromProblem(blackboard)
     knowledge_source.process()
 
-    assert (blackboard.setup_durations ==  numpy.array([ 0., 0., 0.])).all()
+    assert (blackboard.setup_durations ==  numpy.array([ 0., 0.])).all()
 
 def test_start_tw_array():
     blackboard = Mock(problem = problem)
     knowledge_source = CreateServicesAttributesFromProblem(blackboard)
     knowledge_source.process()
 
-    assert (blackboard.start_tw ==  numpy.array([ 0., 0., 0.])).all()
+    assert (blackboard.start_tw ==  numpy.array([ 0., 0.])).all()
 
 def test_end_tw_array():
     blackboard = Mock(problem = problem)
     knowledge_source = CreateServicesAttributesFromProblem(blackboard)
     knowledge_source.process()
 
-    assert (blackboard.end_tw ==  numpy.array([ -1., -1., -1.])).all()
+    assert (blackboard.end_tw ==  numpy.array([ -1., -1.])).all()

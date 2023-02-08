@@ -27,14 +27,16 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
 
     def process(self):
 
-        problem = self.blackboard.problem
+        problem     = self.blackboard.problem
+
+        num_units   = max(len(problem['vehicles'][0]['capacities']),1)
+
         # Services attributes
-        services_TW_starts        = [0]
-        services_TW_ends          = [-1]
-        services_duration         = [0]
-        services_setup_duration   = [0]
-        services_quantities       = [[] for i in range(len(problem['services']) + 1)]
-        services_quantities[0]    = [0 for i in range (len(problem["services"][0]['quantities']))]
+        services_TW_starts        = []
+        services_TW_ends          = []
+        services_duration         = []
+        services_setup_duration   = []
+        services_quantities       = [[] for i in problem['services']]
         for service_index, service in enumerate(problem['services']):
             if len(service['timeWindows']) > 0:
                 services_TW_starts.append(service['timeWindows'][0]['start'])
@@ -53,9 +55,9 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
                 services_setup_duration.append(0)
             if len(service['quantities']) > 0 :
                 for quantity in service['quantities']:
-                    services_quantities[service_index+1].append(quantity)
+                    services_quantities[service_index].append(quantity)
             else :
-                services_quantities.append(0)
+                services_quantities[service_index].append(0)
 
         # Services attributes
         self.blackboard.start_tw            = numpy.array(services_TW_starts, dtype=numpy.float64)
@@ -64,4 +66,4 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
         self.blackboard.setup_durations     = numpy.array(services_setup_duration, dtype=numpy.float64)
         self.blackboard.services_volumes    = numpy.array(services_quantities, dtype=numpy.float64)
         self.blackboard.size                = len(problem['services'])
-        self.blackboard.num_units           = len(problem['vehicles'][0]['capacities'])
+        self.blackboard.num_units           = num_units

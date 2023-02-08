@@ -26,4 +26,4 @@ def test_process():
 
     knowledge_source.process()
 
-    assert blackboard.service_index_to_id == { 1 : "service_1", 2 : "service_2", 3 : "service_3"}
+    assert blackboard.service_index_to_id == { 0 : "service_1", 1 : "service_2", 2 : "service_3"}

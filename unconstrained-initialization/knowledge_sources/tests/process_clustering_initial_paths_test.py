@@ -23,19 +23,22 @@ def test_matrix_is_none():
         knowledge_source.verify()
 
 def test_process():
-    blackboard = Mock(distance_matrices = numpy.array([[[0,1,1,1,1],
-                                                        [1,0,1,5,5],
-                                                        [1,1,0,5,5],
-                                                        [1,5,1,0,1],
-                                                        [1,5,1,1,0]]]),
-                     time_matrices      = numpy.array([[[0,1,1,1,1],
-                                                        [1,0,1,5,5],
-                                                        [1,1,0,5,5],
-                                                        [1,5,1,0,1],
-                                                        [1,5,1,1,0]]]),
+    blackboard = Mock(time_matrices     = numpy.array([[[0,0,5,5,1,1],
+                                                        [0,0,5,5,5,1],
+                                                        [5,5,0,0,5,1],
+                                                        [5,5,0,0,1,1],
+                                                        [1,5,1,1,0,1],
+                                                        [1,5,1,1,1,0]]]),
+                     distance_matrices  = numpy.array([[[0,1,1,1,1,1],
+                                                        [1,0,1,5,5,1],
+                                                        [1,1,0,5,5,1],
+                                                        [1,5,1,0,1,1],
+                                                        [1,5,1,1,0,1],
+                                                        [1,5,1,1,1,0]]]),
+                      vehicle_start_index = [4,5],
+                      vehicle_end_index   = [4,5],
                       num_vehicle = 2)
     knowledge_source = ProcessClusteringInitialPaths(blackboard)
 
     knowledge_source.process()
-    print(blackboard.paths)
-    assert paths_contains(blackboard.paths, [[1,2],[3,4]])
+    assert paths_contains(blackboard.paths, [[0,1],[2,3]])

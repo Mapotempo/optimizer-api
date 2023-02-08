@@ -31,12 +31,12 @@ class ProcessClusteringInitialPaths(AbstractKnowledgeSource):
         log.info("Process Initial Solution")
         log.debug("-- Clustering")
         num_vehicle = self.blackboard.num_vehicle
+        num_depots  = len(list(set(self.blackboard.vehicle_start_index)))
         matrix = self.blackboard.time_matrices[0]
         cluster = AgglomerativeClustering(n_clusters=min(num_vehicle, matrix.shape[0]), metric='precomputed', linkage='complete').fit(matrix)
-
         log.debug("-- Compute initial solution")
         num_services = numpy.zeros(num_vehicle, dtype=int)
-        for i in range(1, cluster.labels_.size):
+        for i in range(0, cluster.labels_.size-num_depots):
             vehicle = cluster.labels_[i]
             num_services[vehicle] += 1
 
@@ -45,7 +45,7 @@ class ProcessClusteringInitialPaths(AbstractKnowledgeSource):
 
         self.blackboard.paths = numpy.full((num_vehicle, max_capacity), -1, dtype=numpy.int32)
 
-        for i in range(1, cluster.labels_.size):
+        for i in range(0, cluster.labels_.size-num_depots):
             vehicle = cluster.labels_[i]
             position = num_services[vehicle]
             self.blackboard.paths[vehicle][position] = i

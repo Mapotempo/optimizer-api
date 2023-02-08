@@ -33,18 +33,38 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
 
         problem = self.blackboard.problem
         # Vehicle attributes
-        self.blackboard.num_vehicle = len(problem['vehicles'])
-        cost_distance_multiplier     = []
-        cost_time_multiplier         = []
-        vehicles_capacities          = [[] for i in range (self.blackboard.num_vehicle) ]
-        vehicles_TW_starts           = []
-        vehicles_TW_ends             = []
-        vehicles_distance_max        = []
-        vehicles_fixed_costs         = []
-        vehicles_overload_multiplier = [[] for i in range (self.blackboard.num_vehicle) ]
-        vehicle_matrix_index = []
+        self.blackboard.num_vehicle     = len(problem['vehicles'])
+        num_services                    = len(problem['services'])
+        cost_distance_multiplier        = []
+        cost_time_multiplier            = []
+        vehicles_capacities             = [[] for i in range (self.blackboard.num_vehicle) ]
+        vehicles_TW_starts              = []
+        vehicles_TW_ends                = []
+        vehicles_distance_max           = []
+        vehicles_fixed_costs            = []
+        vehicles_overload_multiplier    = [[] for i in range (self.blackboard.num_vehicle) ]
+        vehicle_matrix_index            = []
+        vehicle_start_index             = []
+        vehicle_end_index               = []
+        vehicle_id_index                = {}
+        previous_vehicle = problem['vehicles'][0]
+        differents_start_index      = 0
+        differents_end_index        = 0
+
         for vehicle_index,vehicle in enumerate(problem['vehicles']) :
+            vehicle_id_index[vehicle['id']] = vehicle_index
             vehicle_matrix_index.append(vehicle["matrixIndex"])
+
+            if vehicle_index > 0 :
+                if vehicle["startIndex"] != previous_vehicle["startIndex"]:
+                    differents_start_index += 1
+                if vehicle["endIndex"] != previous_vehicle["endIndex"]:
+                    differents_end_index += 1
+
+            vehicle_start_index.append(num_services + differents_start_index)
+
+            vehicle_end_index.append(num_services + differents_end_index)
+
             if "costFixed" in vehicle:
                 vehicles_fixed_costs.append(vehicle["costFixed"])
             else:
@@ -57,7 +77,7 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
                             vehicles_overload_multiplier[vehicle_index].append(capacity["overloadMultiplier"])
                         else:
                             vehicles_overload_multiplier[vehicle_index].append(0)
-            else :
+                else :
                     vehicles_capacities[vehicle_index].append(-1)
                     vehicles_overload_multiplier[vehicle_index].append(0)
             if 'costDistanceMultiplier' in vehicle:
@@ -84,7 +104,7 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
                 vehicles_distance_max.append(vehicle['distance'])
             else :
                 vehicles_distance_max.append(-1)
-
+            previous_vehicle = vehicle
         if 'capacities' in problem['vehicles'][0] and len(problem['vehicles'][0]['capacities']) > 0:
             self.blackboard.max_capacity = int(problem['vehicles'][0]['capacities'][0]['limit'])
         else:
@@ -101,12 +121,8 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         self.blackboard.vehicles_overload_multiplier = numpy.array(vehicles_overload_multiplier, dtype=numpy.float64)
         self.blackboard.vehicles_matrix_index        = numpy.array(vehicle_matrix_index,         dtype=numpy.int32)
 
-        vehicle_id_index = {}
-        vehicle_index = 0
-        for vehicle in problem['vehicles']:
-            vehicle_id_index[vehicle['id']] = vehicle_index
-            vehicle_index += 1
-
+        self.blackboard.vehicle_end_index            = numpy.array(vehicle_end_index, dtype=numpy.int32)
+        self.blackboard.vehicle_start_index          = numpy.array(vehicle_start_index, dtype=numpy.int32)
         self.blackboard.previous_vehicle = numpy.array([ -1 for _ in range(self.blackboard.num_vehicle)], dtype= numpy.int32)
         if "relations" in problem :
             for relation in problem['relations']:

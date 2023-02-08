@@ -31,4 +31,4 @@ class CreateDictionnaryIndexId(AbstractKnowledgeSource):
         # Services attributes
         self.blackboard.service_index_to_id = {}
         for service_index, service in enumerate(problem['services']):
-            self.blackboard.service_index_to_id[service_index + 1] = service["id"]
+            self.blackboard.service_index_to_id[service_index] = service["id"]

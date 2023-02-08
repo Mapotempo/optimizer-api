@@ -24,7 +24,10 @@ problem =  { "vehicles":
                         "end" : 900,
                         "maximumLateness": 100
                     },
-                    "distance": 1000
+                    "distance": 1000,
+                    "matrixIndex":0,
+                    "startIndex": 0,
+                    "endIndex": 0
                 },
                 {
                     "id" : "2",
@@ -43,14 +46,18 @@ problem =  { "vehicles":
                         "end" : 900,
                         "maximumLateness": 10
                     },
-                    "distance" : 1000
+                    "distance" : 1000,
+                    "matrixIndex":0,
+                    "startIndex": 0,
+                    "endIndex": 0
                 }
             ],
             "relations" : [{
                 "type": "vehicle_trips",
                 "linkedVehicleIds": ["1", "2"]
                 }
-            ]
+            ],
+            "services":[1,2]
         }
 
 def test_arrays():
@@ -59,11 +66,10 @@ def test_arrays():
     knowledge_source = CreateVehiclesAttributesFromProblem(blackboard)
 
     knowledge_source.process()
-
     assert (blackboard.vehicles_distance_max        ==  numpy.array([ 1000., 1000.])).all()
     assert (blackboard.cost_time_multiplier         ==  numpy.array([ 1., 1.])).all()
     assert (blackboard.cost_distance_multiplier     ==  numpy.array([ 1., 1.])).all()
-    assert (blackboard.vehicle_capacity             ==  numpy.array([ 100., 100.])).all()
+    assert (blackboard.vehicle_capacities           ==  numpy.array([ 100., 100.])).all()
     assert (blackboard.vehicles_TW_starts           ==  numpy.array([ 0., 0.])).all()
     assert (blackboard.vehicles_TW_ends             ==  numpy.array([ 1000., 910.])).all()
     assert (blackboard.previous_vehicle             ==  numpy.array([ -1., 0.])).all()
@@ -74,9 +80,6 @@ def test_no_attributes_second_vehicles():
     del blackboard.problem["vehicles"][1]['distance']
     del blackboard.problem["vehicles"][1]['costTimeMultiplier']
     del blackboard.problem["vehicles"][1]['costDistanceMultiplier']
-    del blackboard.problem["vehicles"][1]['capacities']
-    del blackboard.problem["vehicles"][0]['capacities'][0]['overloadMultiplier']
-
     knowledge_source = CreateVehiclesAttributesFromProblem(blackboard)
 
     knowledge_source.process()
@@ -84,8 +87,8 @@ def test_no_attributes_second_vehicles():
     assert (blackboard.vehicles_distance_max        ==  numpy.array([ 1000., -1.])).all()
     assert (blackboard.cost_time_multiplier         ==  numpy.array([ 1., 0.])).all()
     assert (blackboard.cost_distance_multiplier     ==  numpy.array([ 1., 0.])).all()
-    assert (blackboard.vehicle_capacity             ==  numpy.array([ 100., -1.])).all()
-    assert (blackboard.vehicles_overload_multiplier ==  numpy.array([ 0., 0.])).all()
+    assert (blackboard.vehicle_capacities           ==  numpy.array([ [100.], [100.]])).all()
+    assert (blackboard.vehicles_overload_multiplier ==  numpy.array([ [100.], [100.]])).all()
 
 
 

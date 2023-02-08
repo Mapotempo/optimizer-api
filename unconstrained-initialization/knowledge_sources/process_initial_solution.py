@@ -87,41 +87,40 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
             raise AttributeError("start_tw vector is None, not possible to initialize a solution")
         if not isinstance(self.blackboard.start_tw, numpy.ndarray):
             raise AttributeError("start_tw vector is not of type numpy.array, not possible to initialize a solution")
-        if self.blackboard.start_tw.shape[0] != self.blackboard.size + 1 :
+        if self.blackboard.start_tw.shape[0] != self.blackboard.size :
             raise AttributeError("Lengh of start_tw vector is not equal to the number of services, not possible to initialize a solution")
 
         if self.blackboard.end_tw is None:
             raise AttributeError("end_tw vector is None, not possible to initialize a solution")
         if not isinstance(self.blackboard.end_tw, numpy.ndarray):
             raise AttributeError("end_tw vector is not of type numpy.array, not possible to initialize a solution")
-        if self.blackboard.end_tw.shape[0] != self.blackboard.size + 1 :
+        if self.blackboard.end_tw.shape[0] != self.blackboard.size :
             raise AttributeError("Lengh of end_tw vector is not equal to the number of services, not possible to initialize a solution")
 
         if self.blackboard.durations is None:
             raise AttributeError("durations vector is None, not possible to initialize a solution")
         if not isinstance(self.blackboard.durations, numpy.ndarray):
             raise AttributeError("durations vector is not of type numpy.array, not possible to initialize a solution")
-        if self.blackboard.durations.shape[0] != self.blackboard.size + 1 :
+        if self.blackboard.durations.shape[0] != self.blackboard.size :
             raise AttributeError("Lengh of durations vector is not equal to the number of services, not possible to initialize a solution")
 
         if self.blackboard.setup_durations is None:
             raise AttributeError("setup_durations vector is None, not possible to initialize a solution")
         if not isinstance(self.blackboard.setup_durations, numpy.ndarray):
             raise AttributeError("setup_durations vector is not of type numpy.array, not possible to initialize a solution")
-        if self.blackboard.setup_durations.shape[0] != self.blackboard.size + 1 :
+        if self.blackboard.setup_durations.shape[0] != self.blackboard.size :
             raise AttributeError("Lengh of setup_durations vector is not equal to the number of services, not possible to initialize a solution")
 
         if self.blackboard.services_volumes is None:
             raise AttributeError("services_volume vector is None, not possible to initialize a solution")
         if not isinstance(self.blackboard.services_volumes, numpy.ndarray):
             raise AttributeError("services_volume vector is not of type numpy.array, not possible to initialize a solution")
-        if self.blackboard.services_volumes.shape[0] != self.blackboard.size + 1 :
+        if self.blackboard.services_volumes.shape[0] != self.blackboard.size :
             raise AttributeError("Lengh of services_volume vector is not equal to the number of services, not possible to initialize a solution")
 
         return True
 
     def process(self):
-
         self.blackboard.solution = cvrptw.CVRPTW(
             self.blackboard.paths,
             self.blackboard.distance_matrices,
@@ -141,5 +140,7 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
             self.blackboard.vehicles_TW_starts,
             self.blackboard.vehicles_TW_ends,
             self.blackboard.vehicles_matrix_index,
+            self.blackboard.vehicle_start_index,
+            self.blackboard.vehicle_end_index,
             self.blackboard.num_units
         )

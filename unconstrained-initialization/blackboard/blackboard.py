@@ -44,6 +44,8 @@ class Blackboard(object):
         self.vehicles_overload_multiplier = None
         self.previous_vehicle = None
         self.paths = None
+        self.vehicle_start_index = None
+        self.vehicle_end_index = None
 
 
     def add_knowledge_source(self, knowledge_source):

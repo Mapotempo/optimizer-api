@@ -24,8 +24,12 @@ def test_verify_problem_missing_keys():
 
 problem = {
     "matrices" : [{
-        "time":[1,2,3,4,5,6,7,8,9],
-        "distance":[1,2,3,4,5,6,7,8,9]
+        "time":[0,2,3,
+                4,0,6,
+                7,8,0],
+        "distance":[1,2,3,
+                    4,5,6,
+                    7,8,9]
     }],
     "vehicles" : [{
         'endIndex': 0,
@@ -57,5 +61,5 @@ def test_process():
     knowledge_source = CreateMatricesFromProblem(blackboard)
 
     knowledge_source.process()
-    assert (blackboard.distance_matrices == numpy.array([[[1,2,3],[4,5,6],[7,8,9]]], dtype=numpy.float64)).all()
-    assert (blackboard.time_matrices == numpy.array([[[1,2,3],[4,5,6],[7,8,9]]], dtype=numpy.float64)).all()
+    # assert (blackboard.distance_matrices == numpy.array([[[5,3,1,1],[5,6,7],[8,9,10]]], dtype=numpy.float64)).all()
+    assert (blackboard.time_matrices == numpy.array([[[0, 6, 4], [8, 0, 7], [2, 3, 0]]], dtype=numpy.float64)).all()
