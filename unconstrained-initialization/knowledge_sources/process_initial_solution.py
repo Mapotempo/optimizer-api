@@ -142,5 +142,6 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
             self.blackboard.vehicles_matrix_index,
             self.blackboard.vehicle_start_index,
             self.blackboard.vehicle_end_index,
+            None,
             self.blackboard.num_units
         )
