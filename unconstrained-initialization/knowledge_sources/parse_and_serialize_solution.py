@@ -42,11 +42,11 @@ class ParseAndSerializeSolution(AbstractKnowledgeSource):
                 store.start_time = int(self.blackboard.solution.vehicle_starts[path_index])
                 store.type = "start"
                 for stop_index,stop in enumerate(path):
-                    if stop != -1 :
+                    if stop != -1 and (stop not in (numpy.concatenate((self.blackboard.vehicle_start_index,self.blackboard.vehicle_end_index)))):
                         activity = route.activities.add()
                         activity.id = self.blackboard.service_index_to_id[stop]
                         activity.index = stop
-                        activity.start_time = int(self.blackboard.solution.starts[path_index, stop_index])
+                        activity.start_time = int(self.blackboard.solution.starts[path_index, stop_index+1])
                         activity.type = "service"
                 store_return = route.activities.add()
                 store_return.id = "store"

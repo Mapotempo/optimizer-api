@@ -48,7 +48,7 @@ problem =  { "vehicles":
                     },
                     "distance" : 1000,
                     "matrixIndex":0,
-                    "startIndex": 0,
+                    "startIndex": 2,
                     "endIndex": 0
                 }
             ],
@@ -74,6 +74,8 @@ def test_arrays():
     assert (blackboard.vehicles_TW_ends             ==  numpy.array([ 1000., 910.])).all()
     assert (blackboard.previous_vehicle             ==  numpy.array([ -1., 0.])).all()
     assert (blackboard.vehicles_overload_multiplier ==  numpy.array([ 100., 100.])).all()
+    assert (blackboard.vehicle_end_index            ==  numpy.array([ 2., 2.])).all()
+    assert (blackboard.vehicle_start_index          ==  numpy.array([ 2., 3.])).all()
 
 def test_no_attributes_second_vehicles():
     blackboard = Mock(problem = copy.deepcopy(problem))
