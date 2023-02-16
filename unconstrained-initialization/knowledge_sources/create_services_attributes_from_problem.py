@@ -7,6 +7,19 @@ log = log.getLogger(Path(__file__).stem)
 #KS imports
 import numpy
 
+
+def fill_every_services_tw(tw_array):
+    # trouver la longueur maximale des listes dans votre tableau
+    max_length = max(len(l) for l in tw_array)
+
+    # ajouter des valeurs de remplissage aux listes plus courtes
+    padded_list = [numpy.pad(l, (0, max_length - len(l)), 'constant', constant_values=-1) for l in tw_array]
+
+    final_array = numpy.array(padded_list, dtype=numpy.float64)
+
+    return final_array
+
+
 class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
     """
     Create all services attributes from problem
@@ -31,23 +44,26 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
 
         num_units   = max(len(problem['vehicles'][0]['capacities']),1)
 
+        num_depots  = len(list(set([vehicle['startIndex'] for vehicle in problem['vehicles']])))
+
         # Services attributes
-        services_TW_starts        = []
-        services_TW_ends          = []
+        services_TW_starts        = [[] for service in problem["services"]]
+        services_TW_ends          = [[] for service in problem["services"]]
         services_duration         = []
         services_setup_duration   = []
-        services_quantities       = [[] for i in problem['services']]
+        services_quantities       = [[] for service in problem['services']]
         for service_index, service in enumerate(problem['services']):
             if len(service['timeWindows']) > 0:
-                services_TW_starts.append(service['timeWindows'][0]['start'])
-                if "maximumLateness" in service['timeWindows'][0] and service['lateMultiplier'] > 0:
-                    maxLateness = service['timeWindows'][0]["maximumLateness"]
-                else :
-                    maxLateness = 0
-                services_TW_ends.append(service['timeWindows'][0]['end'] + maxLateness)
+                for timeWindow in service['timeWindows'] :
+                    services_TW_starts[service_index].append(timeWindow['start'])
+                    if "maximumLateness" in timeWindow and service['lateMultiplier'] > 0:
+                        maxLateness = timeWindow["maximumLateness"]
+                    else :
+                        maxLateness = 0
+                    services_TW_ends[service_index].append(timeWindow['end'] + maxLateness)
             else :
-                services_TW_starts.append(0)
-                services_TW_ends.append(-1)
+                services_TW_starts[service_index].append(0)
+                services_TW_ends[service_index].append(-1)
             services_duration.append(service['duration'])
             if "setupDuration" in service:
                 services_setup_duration.append(service['setupDuration'])
@@ -58,12 +74,28 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
                     services_quantities[service_index].append(quantity)
             else :
                 services_quantities[service_index].append(0)
+        num_services = len(problem['services'])
+
+        for store_index in range(num_depots):
+            services_duration.append(0)
+            services_setup_duration.append(0)
+            services_quantities.append([0 for i in range(num_units)])
+            services_TW_ends.append([-1 for i in range(num_units)])
+            services_TW_starts.append([0 for i in range(num_units)])
+
+
+        services_TW_starts  = fill_every_services_tw(services_TW_starts)
+        services_TW_ends    = fill_every_services_tw(services_TW_ends)
+
+        print("tw starts : ", services_TW_starts)
+        print("tw ends : ", services_TW_ends)
+
 
         # Services attributes
-        self.blackboard.start_tw            = numpy.array(services_TW_starts, dtype=numpy.float64)
-        self.blackboard.end_tw              = numpy.array(services_TW_ends, dtype=numpy.float64)
+        self.blackboard.start_tw            = services_TW_starts
+        self.blackboard.end_tw              = services_TW_ends
         self.blackboard.durations           = numpy.array(services_duration, dtype=numpy.float64)
         self.blackboard.setup_durations     = numpy.array(services_setup_duration, dtype=numpy.float64)
         self.blackboard.services_volumes    = numpy.array(services_quantities, dtype=numpy.float64)
-        self.blackboard.size                = len(problem['services'])
+        self.blackboard.size                = num_services + len(list(set([vehicle['startIndex'] for vehicle in problem['vehicles']])))
         self.blackboard.num_units           = num_units

@@ -7,6 +7,23 @@ log = log.getLogger(Path(__file__).stem)
 #KS imports
 import numpy
 
+def tw_select(solution, service, start):
+    tw_index_selected = 0
+    for tw_index,tw in enumerate(solution.start_time_windows[service]):
+        if (solution.end_time_windows[service][tw_index] >= start) and (solution.start_time_windows[service][tw_index] <= start):
+            tw_index_selected = tw_index
+            break
+    return tw_index_selected
+
+def service_is_late(solution, service, start):
+    tw_index_selected = tw_select(solution, service, start)
+    return start > solution.end_time_windows[service][tw_index_selected]
+
+def service_is_early(solution, service, start):
+    check_if_service_is_early = lambda tw_start : tw_start > start
+    early = all(check_if_service_is_early(tw_start) for tw_start in solution.start_time_windows[service])
+    return early
+
 class PrintKpis(AbstractKnowledgeSource):
     """
     Create all services attributes from problem
@@ -47,20 +64,22 @@ class PrintKpis(AbstractKnowledgeSource):
                 vehicle_late_time += solution.vehicle_ends[vehicle] - solution.vehicle_end_time_window[vehicle]
 
             for point in range(solution.vehicle_num_services[vehicle]):
-                start = solution.starts[vehicle][point+1]
-                service = solution.paths[vehicle][point]
-                s_tw = solution.start_time_windows[service]
-                e_tw = solution.end_time_windows[service]
+                if solution.paths[vehicle][point] not in (numpy.concatenate((self.blackboard.vehicle_start_index, self.blackboard.vehicle_end_index))):
+                    start = solution.starts[vehicle][point]
+                    service = solution.paths[vehicle][point]
+                    tw_index_select = tw_select(solution, service, start)
+                    s_tw = solution.start_time_windows[service][tw_index_select]
+                    e_tw = solution.end_time_windows[service][tw_index_select]
 
-                if start < s_tw :
-                    early += 1
-                    cumul +=  s_tw - start
-                elif e_tw > -1 and start > e_tw:
-                    #print(start, s_tw, e_tw, vehicle, point)
-                    lates += 1
-                    cumul += start - e_tw
-                    if start - e_tw > max_late:
-                        max_late = start - e_tw
+                    if service_is_early(solution, service, start) :
+                        early += 1
+                        cumul +=  s_tw - start
+                    elif service_is_late(solution, service, start):
+                        #print(start, s_tw, e_tw, vehicle, point)
+                        lates += 1
+                        cumul += start - e_tw
+                        if start - e_tw > max_late:
+                            max_late = start - e_tw
 
         vehicle_mean_late = vehicle_late_time/60/vehicle_late if vehicle_late > 0 else 0
 
