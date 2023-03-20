@@ -46,24 +46,25 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         vehicle_matrix_index            = []
         vehicle_start_index             = []
         vehicle_end_index               = []
+        force_start                     = []
         vehicle_id_index                = {}
         previous_vehicle = problem['vehicles'][0]
-        differents_start_index      = 0
-        differents_end_index        = 0
 
         for vehicle_index,vehicle in enumerate(problem['vehicles']) :
             vehicle_id_index[vehicle['id']] = vehicle_index
             vehicle_matrix_index.append(vehicle["matrixIndex"])
 
-            if vehicle_index > 0 :
-                if vehicle["startIndex"] != previous_vehicle["startIndex"]:
-                    differents_start_index += 1
-                if vehicle["endIndex"] != previous_vehicle["endIndex"]:
-                    differents_end_index += 1
+            vehicle_start_index.append(vehicle["startIndex"])
 
-            vehicle_start_index.append(num_services + differents_start_index)
+            vehicle_end_index.append(vehicle["endIndex"])
 
-            vehicle_end_index.append(num_services + differents_end_index)
+            if "shiftPreference" in vehicle:
+                if vehicle["shiftPreference"] == "force_start":
+                    force_start.append(1)
+                else :
+                    force_start.append(0)
+            else :
+                force_start.append(0)
 
             if "costFixed" in vehicle:
                 vehicles_fixed_costs.append(vehicle["costFixed"])
@@ -101,7 +102,10 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
                 vehicles_TW_starts.append(0)
                 vehicles_TW_ends.append(-1)
             if "distance" in vehicle:
-                vehicles_distance_max.append(vehicle['distance'])
+                if vehicle["distance"]==0:
+                    vehicles_distance_max.append(-1)
+                else :
+                    vehicles_distance_max.append(vehicle['distance'])
             else :
                 vehicles_distance_max.append(-1)
             previous_vehicle = vehicle
@@ -109,6 +113,7 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
             self.blackboard.max_capacity = int(problem['vehicles'][0]['capacities'][0]['limit'])
         else:
             self.blackboard.max_capacity = 2**30
+
 
         # Vehicles attributes
         self.blackboard.cost_time_multiplier         = numpy.array(cost_time_multiplier,         dtype=numpy.float64)
@@ -120,6 +125,7 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         self.blackboard.vehicles_fixed_costs         = numpy.array(vehicles_fixed_costs,         dtype=numpy.float64)
         self.blackboard.vehicles_overload_multiplier = numpy.array(vehicles_overload_multiplier, dtype=numpy.float64)
         self.blackboard.vehicles_matrix_index        = numpy.array(vehicle_matrix_index,         dtype=numpy.int32)
+        self.blackboard.force_start                  = numpy.array(force_start,         dtype=numpy.int32)
 
         self.blackboard.vehicle_end_index            = numpy.array(vehicle_end_index, dtype=numpy.int32)
         self.blackboard.vehicle_start_index          = numpy.array(vehicle_start_index, dtype=numpy.int32)

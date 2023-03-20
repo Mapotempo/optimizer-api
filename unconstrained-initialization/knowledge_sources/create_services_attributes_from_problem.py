@@ -9,7 +9,7 @@ import numpy
 
 
 def fill_every_services_tw(tw_array):
-    # trouver la longueur maximale des listes dans votre tableau
+    # trouver la longueur maximale des listes dans le tableau
     max_length = max(len(l) for l in tw_array)
 
     # ajouter des valeurs de remplissage aux listes plus courtes
@@ -52,7 +52,13 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
         services_duration         = []
         services_setup_duration   = []
         services_quantities       = [[] for service in problem['services']]
+        services_matrix_index     = []
+        services_sticky_vehicles  = {}
+
         for service_index, service in enumerate(problem['services']):
+            if "vehicleIndices" in service:
+                services_sticky_vehicles[service_index] = numpy.array(service["vehicleIndices"], dtype=numpy.int32)
+            services_matrix_index.append(service["matrixIndex"])
             if len(service['timeWindows']) > 0:
                 for timeWindow in service['timeWindows'] :
                     services_TW_starts[service_index].append(timeWindow['start'])
@@ -76,22 +82,12 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
                 services_quantities[service_index].append(0)
         num_services = len(problem['services'])
 
-        for store_index in range(num_depots):
-            services_duration.append(0)
-            services_setup_duration.append(0)
-            services_quantities.append([0 for i in range(num_units)])
-            services_TW_ends.append([-1 for i in range(num_units)])
-            services_TW_starts.append([0 for i in range(num_units)])
-
 
         services_TW_starts  = fill_every_services_tw(services_TW_starts)
         services_TW_ends    = fill_every_services_tw(services_TW_ends)
 
-        print("tw starts : ", services_TW_starts)
-        print("tw ends : ", services_TW_ends)
-
-
         # Services attributes
+        self.blackboard.service_matrix_index = numpy.array(services_matrix_index, dtype=numpy.int32)
         self.blackboard.start_tw            = services_TW_starts
         self.blackboard.end_tw              = services_TW_ends
         self.blackboard.durations           = numpy.array(services_duration, dtype=numpy.float64)
@@ -99,3 +95,7 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
         self.blackboard.services_volumes    = numpy.array(services_quantities, dtype=numpy.float64)
         self.blackboard.size                = num_services + len(list(set([vehicle['startIndex'] for vehicle in problem['vehicles']])))
         self.blackboard.num_units           = num_units
+        self.blackboard.num_services        = num_services
+        self.blackboard.service_sticky_vehicles = services_sticky_vehicles
+
+        log.info(f"service matrix index : {self.blackboard.service_matrix_index}")

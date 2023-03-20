@@ -31,21 +31,35 @@ class ProcessClusteringInitialPaths(AbstractKnowledgeSource):
         log.info("Process Initial Solution")
         log.debug("-- Clustering")
         num_vehicle = self.blackboard.num_vehicle
-        num_depots  = len(list(set(self.blackboard.vehicle_start_index)))
-        matrix = self.blackboard.time_matrices[0]
+        # recalculate matrix for AgglomerativeClustering
+        # TODO : use custom metric 'precomputed'
+
+        matrix = []
+
+        time_matrix = self.blackboard.problem["matrices"][0]["time"]
+        matrix_size = self.blackboard.problem["matrices"][0]["size"]
+        problem     = self.blackboard.problem
+
+        for serviceFrom in problem["services"]:
+            matrix_row = []
+            for serviceTo in problem["services"]:
+                matrix_row.append(time_matrix[serviceFrom["matrixIndex"] * matrix_size + serviceTo["matrixIndex"]])
+            matrix.append(matrix_row)
+
+        matrix = numpy.array(matrix)
+
         cluster = AgglomerativeClustering(n_clusters=min(num_vehicle, matrix.shape[0]), metric='precomputed', linkage='complete').fit(matrix)
         log.debug("-- Compute initial solution")
         num_services = numpy.zeros(num_vehicle, dtype=int)
-        for i in range(0, cluster.labels_.size-num_depots):
+        for i in range(0, cluster.labels_.size):
             vehicle = cluster.labels_[i]
             num_services[vehicle] += 1
 
         max_capacity = numpy.max(num_services) + 10 #Add margin to let algorithm the possibility to optimize something
         num_services = numpy.zeros(num_vehicle, dtype=int)
 
-        self.blackboard.paths = numpy.full((num_vehicle, max_capacity), -1, dtype=numpy.int32)
-
-        for i in range(0, cluster.labels_.size-num_depots):
+        self.blackboard.paths = numpy.full((num_vehicle, len(problem["services"]) + 1), -1, dtype=numpy.int32)
+        for i in range(0, cluster.labels_.size):
             vehicle = cluster.labels_[i]
             position = num_services[vehicle]
             self.blackboard.paths[vehicle][position] = i

@@ -20,21 +20,10 @@ ENV LANG C.UTF-8
 # Set correct environment variables.
 ENV HOME /root
 
-RUN add-apt-repository ppa:deadsnakes/ppa
-
-RUN apt-get update
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 \
-    python3-pip \
-    python3-dev \
-    && \
-apt-get clean && \
-rm -rf /var/lib/apt/lists/*
-
-RUN pip3 install --upgrade pip
-
-RUN pip install protobuf==3.20.*
+RUN apt update && apt install -y python3.8 python3-pip && \
+	 pip3 install protobuf==3.20.* && \
+   pip3 install schema && \
+   pip3 install scikit-learn
 
 # Trick to install passenger-docker on Ruby 2.5. Othwerwise `apt-get update` fails with a
 # certificate error. See following links for explanantion:
@@ -59,7 +48,7 @@ RUN install -d --owner app /srv/app/archives
 USER root
 WORKDIR /srv/app
 
-RUN pip3 install unconstrained-initialization/dependencies/fastvrpy-0.2.1.tar.gz --user
+RUN pip3 install unconstrained-initialization/dependencies/fastvrpy-0.3.0.tar.gz --user
 
 
 

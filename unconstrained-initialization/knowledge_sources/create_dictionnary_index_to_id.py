@@ -32,3 +32,28 @@ class CreateDictionnaryIndexId(AbstractKnowledgeSource):
         self.blackboard.service_index_to_id = {}
         for service_index, service in enumerate(problem['services']):
             self.blackboard.service_index_to_id[service_index] = service["id"]
+
+        # Services attributes
+        self.blackboard.service_index_to_id = {}
+        self.blackboard.service_id_to_index_in_problem = {}
+        total_visit_number = 0
+
+        for service_index, service in enumerate(problem['services']):
+            visits_number = 1
+            id = service["id"]
+            if "visitsNumber" in service :
+                visits_number = service["visitsNumber"]
+            for visit in range(visits_number):
+                if visits_number > 1 :
+                    self.blackboard.service_id_to_index_in_problem[id] = service_index
+                    self.blackboard.service_index_to_id[total_visit_number] = f"{id}_{visit}"
+                    total_visit_number += 1
+                else :
+                    self.blackboard.service_id_to_index_in_problem[id] = service_index
+                    self.blackboard.service_index_to_id[total_visit_number] = f"{id}"
+                    total_visit_number += 1
+
+        # Services attributes
+        self.blackboard.service_index_in_paths_to_pb_index = {}
+        total_visit_number = 0
+        num_depot = 0

@@ -46,7 +46,11 @@ class Blackboard(object):
         self.paths = None
         self.vehicle_start_index = None
         self.vehicle_end_index = None
-
+        self.service_matrix_index = None
+        self.num_service = None
+        self.service_id_to_index_in_problem = None
+        self.service_sticky_vehicles = None
+        self.force_start = None
 
     def add_knowledge_source(self, knowledge_source):
         """Adds a new knowlegde source to the blackboard

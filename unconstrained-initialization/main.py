@@ -34,15 +34,15 @@ def main():
         # Add the knowledge sources
         blackboard.add_knowledge_source(GetArguments(blackboard))
         blackboard.add_knowledge_source(DeserializeProblem(blackboard))
+        blackboard.add_knowledge_source(CreateVehiclesAttributesFromProblem(blackboard))
         blackboard.add_knowledge_source(CreateServicesAttributesFromProblem(blackboard))
         blackboard.add_knowledge_source(CreateDictionnaryIndexId(blackboard))
-        blackboard.add_knowledge_source(CreateVehiclesAttributesFromProblem(blackboard))
         blackboard.add_knowledge_source(CreateMatricesFromProblem(blackboard))
         blackboard.add_knowledge_source(ProcessClusteringInitialPaths(blackboard))
         blackboard.add_knowledge_source(ProcessInitialSolution(blackboard))
         blackboard.add_knowledge_source(OptimizeSolution(blackboard))
         blackboard.add_knowledge_source(ParseAndSerializeSolution(blackboard))
-        blackboard.add_knowledge_source(PrintKpis(blackboard))
+        # blackboard.add_knowledge_source(PrintKpis(blackboard))
 
         # Initialize the controller and run it
         controller = Controller(blackboard)
