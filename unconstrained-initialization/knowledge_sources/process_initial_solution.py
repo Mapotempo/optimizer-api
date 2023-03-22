@@ -144,6 +144,8 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
             self.blackboard.vehicle_start_index,
             self.blackboard.vehicle_end_index,
             self.blackboard.force_start,
+            self.blackboard.free_approach,
+            self.blackboard.free_return,
             None,
             None,
             None,

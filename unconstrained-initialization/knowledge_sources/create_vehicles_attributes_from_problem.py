@@ -47,6 +47,8 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         vehicle_start_index             = []
         vehicle_end_index               = []
         force_start                     = []
+        free_approach                   = []
+        free_return                     = []
         vehicle_id_index                = {}
         previous_vehicle = problem['vehicles'][0]
 
@@ -57,6 +59,22 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
             vehicle_start_index.append(vehicle["startIndex"])
 
             vehicle_end_index.append(vehicle["endIndex"])
+
+            if "free_approach" in vehicle:
+                if vehicle["free_approach"]:
+                    free_approach.append(1)
+                else:
+                    free_approach.append(0)
+            else:
+                free_approach.append(0)
+
+            if "free_return" in vehicle:
+                if vehicle["free_return"]:
+                    free_return.append(1)
+                else:
+                    free_return.append(0)
+            else:
+                free_return.append(0)
 
             if "shiftPreference" in vehicle:
                 if vehicle["shiftPreference"] == "force_start":
@@ -126,6 +144,8 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         self.blackboard.vehicles_overload_multiplier = numpy.array(vehicles_overload_multiplier, dtype=numpy.float64)
         self.blackboard.vehicles_matrix_index        = numpy.array(vehicle_matrix_index,         dtype=numpy.int32)
         self.blackboard.force_start                  = numpy.array(force_start,         dtype=numpy.int32)
+        self.blackboard.free_approach                = numpy.array(free_approach,        dtype=numpy.int32)
+        self.blackboard.free_return                  = numpy.array(free_return,         dtype=numpy.int32)
 
         self.blackboard.vehicle_end_index            = numpy.array(vehicle_end_index, dtype=numpy.int32)
         self.blackboard.vehicle_start_index          = numpy.array(vehicle_start_index, dtype=numpy.int32)
