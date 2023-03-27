@@ -6,7 +6,7 @@ log = log.getLogger(Path(__file__).stem)
 
 #KS imports
 import math
-import numpy
+import numpy as np
 from schema import Use, Const, And, Schema, Or
 
 class CreateMatricesFromProblem(AbstractKnowledgeSource):
@@ -45,28 +45,29 @@ class CreateMatricesFromProblem(AbstractKnowledgeSource):
         return True
 
     def process(self):
-        time_matrices       = []
-        distance_matrices   = []
 
-        for matrice in self.blackboard.problem['matrices']:
-            time_matrix = []
-            matrix_size = int(math.sqrt(len(matrice['time'])))
-            for pointFrom in range(matrix_size):
-                matrix_row = []
-                for pointTo in range(matrix_size):
-                    matrix_row.append(matrice["time"][pointFrom * matrix_size + pointTo])
-                time_matrix.append(matrix_row)
-            time_matrices.append(time_matrix)
+        matrices = self.blackboard.problem['matrices']
+        num_matrices = len(matrices)
+        matrix_size = int(math.sqrt(len(matrices[0]['time'])))
 
-            distance_matrix = []
-            matrix_size = int(math.sqrt(len(matrice['distance'])))
-            for pointFrom in range(matrix_size):
-                matrix_row = []
-                for pointTo in range(matrix_size):
-                    matrix_row.append(matrice['distance'][pointFrom * matrix_size + pointTo])
-                distance_matrix.append(matrix_row)
-            distance_matrices.append(distance_matrix)
+        # Create empty 3D arrays for time_matrices and distance_matrices
+        time_matrices = np.zeros((num_matrices, matrix_size, matrix_size), dtype=np.float64)
+        distance_matrices = np.zeros((num_matrices, matrix_size, matrix_size), dtype=np.float64)
+
+
+        for matrix_index, matrix in enumerate(matrices):
+                matrix_size = int(math.sqrt(len(matrix['time'])))
+
+                # Create and fill time_matrix
+                for pointFrom in range(matrix_size):
+                    for pointTo in range(matrix_size):
+                        time_matrices[matrix_index, pointFrom, pointTo] = matrix["time"][pointFrom * matrix_size + pointTo]
+
+                # Create and fill distance_matrix
+                for pointFrom in range(matrix_size):
+                    for pointTo in range(matrix_size):
+                        distance_matrices[matrix_index, pointFrom, pointTo] = matrix['distance'][pointFrom * matrix_size + pointTo]
 
         # Matrices
-        self.blackboard.distance_matrices   = numpy.array(distance_matrices, dtype=numpy.float64)
-        self.blackboard.time_matrices       = numpy.array(time_matrices, dtype=numpy.float64)
+        self.blackboard.distance_matrices = distance_matrices
+        self.blackboard.time_matrices = time_matrices

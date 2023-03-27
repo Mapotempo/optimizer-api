@@ -54,40 +54,20 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
 
         for vehicle_index,vehicle in enumerate(problem['vehicles']) :
             vehicle_id_index[vehicle['id']] = vehicle_index
-            vehicle_matrix_index.append(vehicle["matrixIndex"])
+            vehicle_matrix_index.append(vehicle.get("matrixIndex",0))
 
-            vehicle_start_index.append(vehicle["startIndex"])
+            vehicle_start_index.append(vehicle.get("startIndex", 0))
 
-            vehicle_end_index.append(vehicle["endIndex"])
-
-            if "free_approach" in vehicle:
-                if vehicle["free_approach"]:
-                    free_approach.append(1)
-                else:
-                    free_approach.append(0)
-            else:
-                free_approach.append(0)
-
-            if "free_return" in vehicle:
-                if vehicle["free_return"]:
-                    free_return.append(1)
-                else:
-                    free_return.append(0)
-            else:
-                free_return.append(0)
-
-            if "shiftPreference" in vehicle:
-                if vehicle["shiftPreference"] == "force_start":
-                    force_start.append(1)
-                else :
-                    force_start.append(0)
+            vehicle_end_index.append(vehicle.get("endIndex", 0))
+            free_approach.append(vehicle.get("free_approach", 0))
+            free_approach.append(vehicle.get("free_return", 0))
+            shift_preference = vehicle.get("shiftPreference","")
+            if shift_preference == "force_start":
+                force_start.append(2)
             else :
                 force_start.append(0)
 
-            if "costFixed" in vehicle:
-                vehicles_fixed_costs.append(vehicle["costFixed"])
-            else:
-                vehicles_fixed_costs.append(0)
+            vehicles_fixed_costs.append(vehicle.get("costFixed", 0))
             if 'capacities' in vehicle:
                 if len(vehicle['capacities']) > 0:
                     for capacity in vehicle['capacities']:
@@ -99,33 +79,16 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
                 else :
                     vehicles_capacities[vehicle_index].append(-1)
                     vehicles_overload_multiplier[vehicle_index].append(0)
-            if 'costDistanceMultiplier' in vehicle:
-                cost_distance_multiplier.append(vehicle['costDistanceMultiplier'])
-            else :
-                cost_distance_multiplier.append(0)
-            if 'costTimeMultiplier' in vehicle:
-                cost_time_multiplier.append(vehicle['costTimeMultiplier'])
-            else :
-                cost_time_multiplier.append(0)
+            cost_distance_multiplier.append(vehicle.get('costDistanceMultiplier',0))
+            cost_time_multiplier.append(vehicle.get('costTimeMultiplier'))
             if "timeWindow" in vehicle:
-                if 'start' in vehicle['timeWindow']:
-                    vehicles_TW_starts.append(vehicle['timeWindow']["start"])
-                else :
-                    vehicles_TW_starts.append(0)
-                if 'maximumLateness' in vehicle['timeWindow']:
-                    vehicles_TW_ends.append(vehicle['timeWindow']["end"] + vehicle['timeWindow']["maximumLateness"])
-                else :
-                    vehicles_TW_ends.append(vehicle['timeWindow']["end"])
-            else :
-                vehicles_TW_starts.append(0)
-                vehicles_TW_ends.append(-1)
-            if "distance" in vehicle:
-                if vehicle["distance"]==0:
-                    vehicles_distance_max.append(-1)
-                else :
-                    vehicles_distance_max.append(vehicle['distance'])
-            else :
+                vehicles_TW_starts.append(vehicle["timeWindow"].get("start",0))
+                vehicles_TW_ends.append(vehicle["timeWindow"].get("end",-1) + vehicle['timeWindow'].get("maximumLateness",0))
+            distance_max = vehicle.get("distance",0)
+            if distance_max==0:
                 vehicles_distance_max.append(-1)
+            else :
+                vehicles_distance_max.append(distance_max)
             previous_vehicle = vehicle
         if 'capacities' in problem['vehicles'][0] and len(problem['vehicles'][0]['capacities']) > 0:
             self.blackboard.max_capacity = int(problem['vehicles'][0]['capacities'][0]['limit'])

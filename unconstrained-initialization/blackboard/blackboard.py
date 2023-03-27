@@ -28,6 +28,7 @@ class Blackboard(object):
         self.time_matrices = None
         self.start_tw = None
         self.end_tw = None
+        self.services_max_lateness = None
         self.durations = None
         self.setup_durations = None
         self.services_volume = None

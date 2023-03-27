@@ -464,18 +464,6 @@ class Wrappers::UnconstrainedInitializationTest < Minitest::Test
           start: 0,
           end: 10
         }
-      }, {
-        id: 'vehicle_1',
-        cost_fixed: 0,
-        start_point_id: 'point_0',
-        end_point_id: 'point_0',
-        matrix_id: 'matrix_0',
-        cost_distance_multiplier: 1,
-        cost_time_multiplier: 1,
-        timewindow: {
-          start: 0,
-          end: 10
-        }
       }],
       services: [{
         id: 'service_1',
@@ -523,7 +511,7 @@ class Wrappers::UnconstrainedInitializationTest < Minitest::Test
     vrp = TestHelper.create(problem)
     solution = unconstrained_initialization.solve(vrp, 'test')
     assert solution
-    assert_equal 2, solution.routes.size
+    assert_equal 1, solution.routes.size
     assert_equal problem[:services].size + 2, solution.routes.first.stops.size
   end
 

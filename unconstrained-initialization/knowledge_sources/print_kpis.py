@@ -37,14 +37,12 @@ class PrintKpis(AbstractKnowledgeSource):
         return True
 
     def process(self):
-
         solution = self.blackboard.solution
-
         early = 0
         lates = 0
         cumul = 0
         max_late = 0
-        overload = [0 for i in range(solution.num_units)]
+        overloads = [0 for i in range(solution.num_units)]
         vehicle_late = 0
         vehicle_late_time = 0
         vehicle_over_distance = 0
@@ -57,29 +55,29 @@ class PrintKpis(AbstractKnowledgeSource):
             if solution.vehicle_max_distance[vehicle] > -1 and solution.distances[vehicle] > solution.vehicle_max_distance[vehicle] :
                 vehicle_over_distance += 1
             for unit_index in range(solution.num_units):
-                if solution.vehicle_capacities[vehicle, unit_index] > -1 and solution.vehicle_occupancies[vehicle, unit_index] > solution.vehicle_capacities[vehicle, unit_index]:
-                    overload[unit_index] += 1
+                if solution.vehicle_capacities[vehicle,unit_index] > -1 and solution.vehicle_occupancies[vehicle, unit_index] > solution.vehicle_capacities[vehicle, unit_index]:
+                    overloads[unit_index] += 1
             if solution.vehicle_end_time_window[vehicle] > -1 and solution.vehicle_ends[vehicle] > solution.vehicle_end_time_window[vehicle]:
                 vehicle_late += 1
                 vehicle_late_time += solution.vehicle_ends[vehicle] - solution.vehicle_end_time_window[vehicle]
 
             for point in range(solution.vehicle_num_services[vehicle]):
-                if solution.paths[vehicle][point] not in (numpy.concatenate((self.blackboard.vehicle_start_index, self.blackboard.vehicle_end_index))):
-                    start = solution.starts[vehicle][point]
-                    service = solution.paths[vehicle][point]
-                    tw_index_select = tw_select(solution, service, start)
-                    s_tw = solution.start_time_windows[service][tw_index_select]
-                    e_tw = solution.end_time_windows[service][tw_index_select]
+                start = solution.starts[vehicle][point+1]
+                service = solution.paths[vehicle][point]
 
-                    if service_is_early(solution, service, start) :
-                        early += 1
-                        cumul +=  s_tw - start
-                    elif service_is_late(solution, service, start):
-                        #print(start, s_tw, e_tw, vehicle, point)
-                        lates += 1
-                        cumul += start - e_tw
-                        if start - e_tw > max_late:
-                            max_late = start - e_tw
+
+                s_tw = solution.start_time_windows[service,0]
+                e_tw = solution.max_end_time_windows[service]
+
+                if start < s_tw :
+                    early += 1
+                    cumul +=  s_tw - start
+                elif e_tw > -1 and start > e_tw:
+                    #print(start, s_tw, e_tw, vehicle, point)
+                    lates += 1
+                    cumul += start - e_tw
+                    if start - e_tw > max_late:
+                        max_late = start - e_tw
 
         vehicle_mean_late = vehicle_late_time/60/vehicle_late if vehicle_late > 0 else 0
 
@@ -90,7 +88,7 @@ class PrintKpis(AbstractKnowledgeSource):
         log.debug(f"Partial costs \n {numpy.array(solution.costs)}")
         log.debug(f"Number services \n {numpy.array(solution.vehicle_num_services)}")
         log.info(f"Vehicle distance violations {vehicle_over_distance}")
-        log.info(f"Vehicle overloads {overload}")
+        log.info(f"Vehicle overloads {overloads}")
         log.info(f"{vehicle_late} vehicles with working hours overflow (mean {vehicle_mean_late} minutes)" )
         log.info(f"Too early (MUST be 0 by construction) {early}")
         log.info(f"Too lates {lates}" )
