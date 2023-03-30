@@ -32,7 +32,8 @@ class ParseAndSerializeSolution(AbstractKnowledgeSource):
         return True
 
     def process(self):
-        paths = numpy.asarray(self.blackboard.solution.paths)
+        solution = self.blackboard.solution
+        paths = numpy.asarray(solution.paths)
         result = localsearch_result_pb2.Result()
         for path_index,path in enumerate(paths):
             if len(set(path)) > 1 :
@@ -43,12 +44,17 @@ class ParseAndSerializeSolution(AbstractKnowledgeSource):
                 store.start_time = int(self.blackboard.solution.vehicle_starts[path_index])
                 store.type = "start"
                 for stop_index,stop in enumerate(path):
-                    if stop != -1 :
+                    if stop != -1 and solution.is_break[stop] == 0:
                         activity = route.activities.add()
                         activity.id = self.blackboard.service_index_to_id[stop]
                         activity.index = stop
                         activity.start_time = int(self.blackboard.solution.starts[path_index, stop_index+1])
                         activity.type = "service"
+                    elif stop != -1 and solution.is_break[stop] == 1:
+                        rest = route.activities.add()
+                        rest.type = "break"
+                        rest.id = self.blackboard.service_index_to_id[stop]
+                        rest.start_time = int(self.blackboard.solution.starts[path_index, stop_index+1])
                     else:
                         break
                 store_return = route.activities.add()

@@ -48,7 +48,7 @@ RUN install -d --owner app /srv/app/archives
 USER root
 WORKDIR /srv/app
 
-RUN pip3 install unconstrained-initialization/dependencies/fastvrpy-0.4.0.tar.gz --user
+RUN pip3 install unconstrained-initialization/dependencies/fastvrpy-0.4.2.tar.gz --user
 
 
 

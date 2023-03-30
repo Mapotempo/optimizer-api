@@ -42,7 +42,7 @@ def main():
         blackboard.add_knowledge_source(ProcessInitialSolution(blackboard))
         blackboard.add_knowledge_source(OptimizeSolution(blackboard))
         blackboard.add_knowledge_source(ParseAndSerializeSolution(blackboard))
-        # blackboard.add_knowledge_source(PrintKpis(blackboard))
+        blackboard.add_knowledge_source(PrintKpis(blackboard))
 
         # Initialize the controller and run it
         controller = Controller(blackboard)

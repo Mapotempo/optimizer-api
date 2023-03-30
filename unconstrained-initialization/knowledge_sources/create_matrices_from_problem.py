@@ -54,9 +54,7 @@ class CreateMatricesFromProblem(AbstractKnowledgeSource):
         time_matrices = np.zeros((num_matrices, matrix_size, matrix_size), dtype=np.float64)
         distance_matrices = np.zeros((num_matrices, matrix_size, matrix_size), dtype=np.float64)
 
-
         for matrix_index, matrix in enumerate(matrices):
-                matrix_size = int(math.sqrt(len(matrix['time'])))
 
                 # Create and fill time_matrix
                 for pointFrom in range(matrix_size):

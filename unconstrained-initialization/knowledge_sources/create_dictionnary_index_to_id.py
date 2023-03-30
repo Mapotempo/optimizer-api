@@ -53,6 +53,8 @@ class CreateDictionnaryIndexId(AbstractKnowledgeSource):
                     self.blackboard.service_index_to_id[total_visit_number] = f"{id}"
                     total_visit_number += 1
 
+        for rest_index, rest in enumerate(self.blackboard.rests):
+            self.blackboard.service_index_to_id[total_visit_number + rest_index] = rest[0].get("id", f"rest_{rest_index}")
         # Services attributes
         self.blackboard.service_index_in_paths_to_pb_index = {}
         total_visit_number = 0

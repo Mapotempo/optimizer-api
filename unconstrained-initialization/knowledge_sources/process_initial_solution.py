@@ -121,6 +121,7 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
         return True
 
     def process(self):
+        print(f" start tw : {numpy.array(self.blackboard.start_tw)}")
         self.blackboard.solution = cvrptw.CVRPTW(
             self.blackboard.paths,
             self.blackboard.distance_matrices,
@@ -138,6 +139,7 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
             self.blackboard.vehicle_capacities,
             self.blackboard.previous_vehicle,
             self.blackboard.vehicles_distance_max,
+            self.blackboard.vehicles_duration_max,
             self.blackboard.vehicles_fixed_costs,
             self.blackboard.vehicles_overload_multiplier,
             self.blackboard.vehicles_TW_starts,
@@ -150,7 +152,7 @@ class ProcessInitialSolution(AbstractKnowledgeSource):
             self.blackboard.free_return,
             None,
             None,
-            None,
+            self.blackboard.is_break,
             self.blackboard.service_sticky_vehicles,
             self.blackboard.num_units
         )

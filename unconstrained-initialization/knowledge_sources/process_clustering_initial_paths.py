@@ -57,10 +57,21 @@ class ProcessClusteringInitialPaths(AbstractKnowledgeSource):
 
         max_capacity = numpy.max(num_services) + 10 #Add margin to let algorithm the possibility to optimize something
         num_services = numpy.zeros(num_vehicle, dtype=int)
-
-        self.blackboard.paths = numpy.full((num_vehicle, len(problem["services"]) + 1), -1, dtype=numpy.int32)
+        self.blackboard.paths = numpy.full((num_vehicle, self.blackboard.num_services + 1), -1, dtype=numpy.int32)
         for i in range(0, cluster.labels_.size):
             vehicle = cluster.labels_[i]
             position = num_services[vehicle]
             self.blackboard.paths[vehicle][position] = i
             num_services[vehicle] += 1
+
+        reverse_services_dict = {}
+        for index, service_id in self.blackboard.service_index_to_id.items():
+            reverse_services_dict[service_id] = index
+
+        for rest in self.blackboard.rests:
+            print(f"rest :{rest}")
+            vehicle = rest[1]
+            index = reverse_services_dict[rest[0].get("id")]
+            self.blackboard.paths[vehicle][num_services[vehicle]] = index
+            num_services[vehicle] += 1
+        print(f" paths au début : {numpy.array(self.blackboard.paths)}")
