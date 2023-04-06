@@ -55,6 +55,8 @@ class Blackboard(object):
         self.free_approach = None
         self.force_return = None
         self.rests = None
+        self.vehicle_id_index = None
+        self.vehicle_time_window_margin = None
 
     def add_knowledge_source(self, knowledge_source):
         """Adds a new knowlegde source to the blackboard

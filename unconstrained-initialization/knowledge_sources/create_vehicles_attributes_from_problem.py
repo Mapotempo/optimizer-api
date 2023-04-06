@@ -40,6 +40,7 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         vehicles_capacities             = [[] for i in range (self.blackboard.num_vehicle) ]
         vehicles_TW_starts              = []
         vehicles_TW_ends                = []
+        vehicles_TW_margin              = []
         vehicles_distance_max           = []
         vehicles_duration_max           = []
         vehicles_fixed_costs            = []
@@ -66,7 +67,7 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
             if shift_preference == "force_start":
                 force_start.append(2)
             else :
-                force_start.append(0)
+                force_start.append(1)
 
             vehicles_fixed_costs.append(vehicle.get("costFixed", 0))
             if 'capacities' in vehicle:
@@ -84,6 +85,10 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
             cost_time_multiplier.append(vehicle.get('costTimeMultiplier'))
             vehicles_TW_starts.append(vehicle["timeWindow"].get("start",0))
             vehicles_TW_ends.append(vehicle["timeWindow"].get("end",-1))
+            if vehicle.get("costLateMultiplier", 0) > 0:
+                vehicles_TW_margin.append(vehicle.get("maximumLateness", 0))
+            else :
+                vehicles_TW_margin.append(0)
             distance_max = vehicle.get("distance",0)
             if distance_max==0:
                 vehicles_distance_max.append(-1)
@@ -107,6 +112,7 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         self.blackboard.vehicle_capacities           = numpy.array(vehicles_capacities,          dtype=numpy.float64)
         self.blackboard.vehicles_TW_starts           = numpy.array(vehicles_TW_starts,           dtype=numpy.float64)
         self.blackboard.vehicles_TW_ends             = numpy.array(vehicles_TW_ends,             dtype=numpy.float64)
+        self.blackboard.vehicle_time_window_margin   = numpy.array(vehicles_TW_margin,           dtype=numpy.float64)
         self.blackboard.vehicles_distance_max        = numpy.array(vehicles_distance_max,        dtype=numpy.float64)
         self.blackboard.vehicles_duration_max        = numpy.array(vehicles_duration_max,        dtype=numpy.float64)
         self.blackboard.vehicles_fixed_costs         = numpy.array(vehicles_fixed_costs,         dtype=numpy.float64)
@@ -119,6 +125,8 @@ class CreateVehiclesAttributesFromProblem(AbstractKnowledgeSource):
         self.blackboard.vehicle_end_index            = numpy.array(vehicle_end_index, dtype=numpy.int32)
         self.blackboard.vehicle_start_index          = numpy.array(vehicle_start_index, dtype=numpy.int32)
         self.blackboard.previous_vehicle = numpy.array([ -1 for _ in range(self.blackboard.num_vehicle)], dtype= numpy.int32)
+
+        self.blackboard.vehicle_id_index = vehicle_id_index
 
         if "relations" in problem :
             for relation in problem['relations']:

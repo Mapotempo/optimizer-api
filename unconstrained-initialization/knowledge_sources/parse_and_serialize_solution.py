@@ -63,7 +63,10 @@ class ParseAndSerializeSolution(AbstractKnowledgeSource):
                 store_return.start_time = int(self.blackboard.solution.vehicle_ends[path_index])
                 store_return.type = "end"
                 cost_details = route.cost_details
-                cost_details.fixed = 0
+                cost_details.fixed = solution.vehicle_fixed_costs[path_index]
+                cost_details.distance = solution.distances[path_index] * solution.cost_distance_multiplier[path_index]
+                cost_details.time = solution.travel_times[path_index] * solution.cost_time_multiplier[path_index]
+
             else:
                 route = result.routes.add()
                 start_route = route.activities.add()

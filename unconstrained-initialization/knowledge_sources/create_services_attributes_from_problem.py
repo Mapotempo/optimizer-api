@@ -48,7 +48,7 @@ class CreateServicesAttributesFromProblem(AbstractKnowledgeSource):
 
         rests = list_all_rests(problem)
 
-        num_TW        = max(len(service.get('timeWindows',[])) for service in problem['services'])
+        num_TW        = max(max(len(service.get('timeWindows',[])) for service in problem['services']),1)
 
         # Services attributes
         services_TW_starts        = numpy.full((num_services, num_TW), 0, dtype=numpy.float64)
