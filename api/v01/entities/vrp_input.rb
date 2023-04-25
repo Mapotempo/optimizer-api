@@ -177,6 +177,7 @@ module VrpConfiguration
     optional(:stable_iterations, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:stable_coefficient, type: Float, allow_blank: false, documentation: { hidden: true }, desc: 'DEPRECATED : Jsprit solver and related parameters are not supported anymore')
     optional(:initial_time_out, type: Integer, allow_blank: false, documentation: { hidden: true }, desc: '[ DEPRECATED : use minimum_duration instead]')
+    optional(:strict_skills, type: Boolean, allow_blank: false, documentation: { hidden: true }, desc: 'All skills must be taken into during resolution')
     optional(:minimum_duration, type: Integer, allow_blank: false, desc: 'Minimum solve duration before the solve could stop (x10 in order to find the first solution) (ORtools only)')
     optional(:time_out_multiplier, type: Integer, desc: 'The solve could stop itself if the solve duration without finding a new solution is greater than the time currently elapsed multiplicate by this parameter (ORtools only)')
     optional(:vehicle_limit, type: Integer, desc: 'Limit the maximum number of vehicles within a solution. Not available with periodic heuristic.')
