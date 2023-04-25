@@ -5307,4 +5307,69 @@ class Wrappers::OrtoolsTest < Minitest::Test
     unassigned_stops = solution.unassigned_stops
     assert_equal 2, unassigned_stops.size
   end
+
+  def test_strict_skills
+    ortools = OptimizerWrapper.config[:services][:ortools]
+    problem = {
+      matrices: [{
+        id: 'matrix_0',
+        time: [
+          [0, 1, 1],
+          [1, 0, 1],
+          [1, 1, 0]
+        ]
+      }],
+      points: [{
+        id: 'point_0',
+        matrix_index: 0
+      }, {
+        id: 'point_1',
+        matrix_index: 1
+      }, {
+        id: 'point_2',
+        matrix_index: 2
+      }],
+      vehicles: [{
+        id: 'vehicle_0',
+        start_point_id: 'point_0',
+        matrix_id: 'matrix_0'
+      }],
+      services: [{
+        id: 'service_1',
+        skills: ['frozen'],
+        activity: {
+          point_id: 'point_1'
+        }
+      }, {
+        id: 'service_2',
+        skills: ['frozen'],
+        activity: {
+          point_id: 'point_2'
+        }
+      }],
+      configuration: {
+        resolution: {
+          strict_skills: true,
+          duration: 20,
+        }
+      }
+    }
+
+    vrp_strict = TestHelper.create(problem)
+
+    Filters.filter(vrp_strict)
+
+    solution_strict = ortools.solve(vrp_strict, 'test')
+
+    assert_equal 1, solution_strict.routes.size
+    assert_equal problem[:services].size, solution_strict.unassigned_stops.size
+
+    problem_unstrict = Marshal.load(Marshal.dump(problem))
+    problem_unstrict[:configuration][:resolution][:strict_skills] = false
+    vrp_unstrict = TestHelper.create(problem_unstrict)
+    Filters.filter(vrp_unstrict)
+    solution_unstrict = ortools.solve(vrp_unstrict, 'test')
+    assert_equal 1, solution_unstrict.routes.size
+    assert_equal 0, solution_unstrict.unassigned_stops.size
+  end
 end

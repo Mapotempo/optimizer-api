@@ -77,6 +77,7 @@ module Models
     field :variation_ratio, default: nil
     field :batch_heuristic, default: false
     field :repetition, default: nil
+    field :strict_skills, default: false
 
     # random_seed parameter is set by the API during the POST process before dumping the VRP
     # it is to make the runs repeatable/reproducible and simplifies comparing different environments
