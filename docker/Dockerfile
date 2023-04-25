@@ -12,13 +12,18 @@ FROM vroomvrp/vroom-docker:${VROOM_VERSION:-v1.12.0} as vroom
 # optimizer-api repo to force the CI to use a specific mapotempo/optimizer-ortools image.
 # Mapotempo devs can also set this variable to their github username on their own optimizer-api repo
 # to force the CI to use the last succesful username/optimizer-ortools image.
-FROM ${REGISTRY:-registry.mapotempo.com/}mapotempo-${BRANCH:-ce}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.17.1}
+FROM ${REGISTRY:-registry.mapotempo.com/}mapotempo-${BRANCH:-ce}/optimizer-ortools:${OPTIMIZER_ORTOOLS_VERSION:-v1.19.0}
 ARG BUNDLE_WITHOUT
 
 ENV LANG C.UTF-8
 
 # Set correct environment variables.
 ENV HOME /root
+
+RUN apt update && apt install -y python3.8 python3-pip && \
+	 pip3 install protobuf==3.20.* && \
+   pip3 install schema && \
+   pip3 install scikit-learn
 
 # Trick to install passenger-docker on Ruby 2.5. Othwerwise `apt-get update` fails with a
 # certificate error. See following links for explanantion:
@@ -40,9 +45,14 @@ RUN apt-get update > /dev/null && \
 COPY --chown=app . /srv/app/
 RUN install -d --owner app /srv/app/archives
 
-USER app
+USER root
 WORKDIR /srv/app
 
+RUN pip3 install unconstrained-initialization/dependencies/fastvrpy-0.5.2.tar.gz --user
+
+
+
+USER app
 RUN gem install bundler --version 2.2.24 && \
   bundle --version && \
   bundle install --path vendor/bundle --full-index --without ${BUNDLE_WITHOUT} -j $(nproc)
