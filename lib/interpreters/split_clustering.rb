@@ -1473,6 +1473,20 @@ module Interpreters
           end
           log "matrix computed in #{(Time.now - tic).round(2)} seconds"
 
+          max_time_from_depot = 0
+          max_time_to_depot = 0
+
+          time_matrix_from_depot.map{ |matrix|
+            matrix.map{ |time|
+              ((time > max_time_from_depot) && (time != 2147483647)) ? max_time_from_depot = time : nil
+            }
+          }
+          time_matrix_to_depot.map{ |matrix|
+            matrix.map{ |time|
+              ((time > max_time_to_depot) && (time != 2147483647)) ? max_time_to_depot = time : nil
+            }
+          }
+
           v_index = {
             from: vrp.vehicles.collect{ |v|
               start_loc = v.start_point&.location
@@ -1488,8 +1502,10 @@ module Interpreters
             point[4][:duration_from_and_to_depot] = []
 
             vrp.vehicles.each_with_index{ |_vehicle, v_i|
-              duration_from = time_matrix_from_depot[v_index[:from][v_i]][p_index] if v_index[:from][v_i]
-              duration_to = time_matrix_to_depot[p_index][v_index[:to][v_i]] if v_index[:to][v_i]
+              duration_from = [time_matrix_from_depot[v_index[:from][v_i]][p_index], max_time_from_depot * 3].min\
+               if v_index[:from][v_i]
+              duration_to = [time_matrix_to_depot[p_index][v_index[:to][v_i]], max_time_to_depot * 3].min if\
+               v_index[:to][v_i]
 
               # TODO: investigate why division by vehicle.router_options[:speed_multiplier]
               # detoriarates the performance of periodic
