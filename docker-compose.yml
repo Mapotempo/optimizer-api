@@ -35,8 +35,6 @@ x-default-service: &default-service
     context: .
     dockerfile: docker/Dockerfile
   image: dev.example.com/mapotempo/mt-optimizer
-  depends_on:
-    - base
   volumes:
       - ./:/srv/app/
       - ./archives/dump:/tmp/optimizer-api/dump

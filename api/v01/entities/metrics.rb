@@ -31,6 +31,8 @@ module Api
       expose(:count_key, documentation: {type: String, desc: 'Key used for the request' })
       expose(:count_service, documentation: {type: String, desc: 'Service used for the request' })
       expose(:count_transactions, documentation: {type: Integer, desc: 'Transactions in the service for the request' })
+      expose(:count_current_jobs, documentation: {type: Integer, \
+                                                  desc: 'Number of current running jobs for the api key' })
     end
   end
 end

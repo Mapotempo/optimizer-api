@@ -142,6 +142,36 @@ module Api
 
           json
         end
+
+        def count_current_jobs(api_key)
+          OptimizerWrapper.config[:redis_resque].keys("resque:status*").count { |key|
+            JSON.parse(OptimizerWrapper.config[:redis_resque].get(key))['status'] == 'queued' &&
+              JSON.parse(OptimizerWrapper.config[:redis_resque].get(key))['options']['api_key'] == api_key
+          }
+        end
+
+        def metric(key)
+          hkey = split_key(key)
+
+          if redis_count.type(key) == 'hash'
+            hredis = redis_count.hgetall(key)
+            hredis['count_current_jobs'] = count_current_jobs(hkey['key']).to_s
+
+            {
+              count_asset: hkey['asset'],
+              count_date: hkey['date'],
+              count_endpoint: hkey['endpoint'],
+              count_hits: hredis['hits'],
+              count_ip: hkey['ip'],
+              count_key: hkey['key'],
+              count_service: hkey['service'],
+              count_transactions: hredis['transactions'],
+              count_current_jobs: hredis['count_current_jobs'],
+            }
+          else
+            log "Metrics: #{key} is not a hash" && {}
+          end
+        end
       end
 
       before do
@@ -199,21 +229,7 @@ module Api
 
           status 200
           present(
-            redis_count.keys("*#{count_base_key_no_key('optimize').join(':')}*").flat_map{ |key|
-              hkey = split_key(key)
-              hredis = redis_count.hgetall(key)
-
-              {
-                count_asset: hkey['asset'],
-                count_date: hkey['date'],
-                count_endpoint: hkey['endpoint'],
-                count_hits: hredis['hits'],
-                count_ip: hkey['ip'],
-                count_key: hkey['key'],
-                count_service: hkey['service'],
-                count_transactions: hredis['transactions'],
-              }
-            }, with: Metrics
+            redis_count.keys("*#{count_base_key_no_key('*').join(':')}*").flat_map{ |key| metric(key) }, with: Metrics
           )
         end
       end
